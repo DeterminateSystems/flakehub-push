@@ -11,9 +11,6 @@ function finish {
 }
 trap finish EXIT
 
-name=$1
-version=$2
-
 src=$(nix flake metadata --json | nix run nixpkgs#jq -- -r .path)
 
 (
