@@ -14,8 +14,8 @@ trap finish EXIT
 src=$(nix flake metadata --json | nix run nixpkgs#jq -- -r .path)
 
 (
-    cd "$src"
-    tar -czf "$scratch/source.tar.gz" .
+    cd "$src/.."
+    tar -czf "$scratch/source.tar.gz" "$(basename "$src")"
 )
 
 cp "$scratch/source.tar.gz" ./
