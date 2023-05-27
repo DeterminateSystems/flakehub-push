@@ -1,0 +1,12 @@
+name: Publish your flake.
+branding:
+  icon: "box"
+  color: "purple"
+description: "Publish your flake."
+
+runs:
+  using: composite
+  steps:
+    - name: Install Nix
+      shell: bash
+      run: bash $GITHUB_ACTION_PATH/release.sh
