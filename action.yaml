@@ -6,7 +6,7 @@ description: "Publish your flake."
 
 inputs:
   visibility:
-    description: `public` or `hidden`
+    description: "`public` or `hidden`"
     required: true
 
 runs:
