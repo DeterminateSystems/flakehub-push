@@ -11,6 +11,8 @@ function finish {
 }
 trap finish EXIT
 
+visibility=$1
+
 src=$(nix flake metadata --json | nix run nixpkgs#jq -- -r .path)
 
 (
@@ -25,7 +27,28 @@ len=$(wc --bytes < "$scratch/source.tar.gz")
 
 token=$(curl -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" | nix run nixpkgs#jq -- -r .value)
 
-url=$(curl --header "ngrok-skip-browser-warning: please" --header "Authorization: bearer $token" -X POST "$host/upload/$GITHUB_REPOSITORY/$GITHUB_REF_NAME/$len/$hash")
+metadata() (
+  if [ -f ./README.md ]; then
+    nix flake metadata --json \
+        | nix run nixpkgs#jq -- '{ "description": .description, "visibility": $visibility, "readme": $readme }' \
+          --rawfile readme ./README.md \
+          --arg visibility "$visibility"
+  else
+    nix flake metadata --json \
+        | nix run nixpkgs#jq -- '{ "description": .description, "visibility": $visibility, "readme": null }' \
+          --arg visibility "$visibility" 
+  fi
+)
+
+url=$(
+  metadata \
+    | curl \
+      --header "ngrok-skip-browser-warning: please" \
+      --header "Authorization: bearer $token" \
+      -X POST \
+      -d @- \
+      "$host/upload/$GITHUB_REPOSITORY/$GITHUB_REF_NAME/$len/$hash"
+)
 curl \
   -X PUT \
   --header "content-length: $len" \
