@@ -3,7 +3,7 @@
 host=https://nxfr.fly.dev
 #host=http://127.0.0.1:8080
 #host=https://6012-2603-7081-338-c252-0-e41d-2d20-3c20.ngrok-free.app/
-set -eux
+set -eu
 
 scratch=$(mktemp -d -t tmp.XXXXXXXXXX)
 function finish {
