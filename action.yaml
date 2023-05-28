@@ -4,9 +4,14 @@ branding:
   color: "purple"
 description: "Publish your flake."
 
+inputs:
+  visibility:
+    description: `public` or `hidden`
+    required: true
+
 runs:
   using: composite
   steps:
     - name: Push
       shell: bash
-      run: bash $GITHUB_ACTION_PATH/release.sh
+      run: bash $GITHUB_ACTION_PATH/release.sh ${{ inputs.visibility }}
