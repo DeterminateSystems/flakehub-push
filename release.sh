@@ -45,6 +45,7 @@ url=$(
     | curl \
       --header "ngrok-skip-browser-warning: please" \
       --header "Authorization: bearer $token" \
+      --header "Content-Type: application/json" \
       -X POST \
       -d @- \
       "$host/upload/$GITHUB_REPOSITORY/$GITHUB_REF_NAME/$len/$hash"
