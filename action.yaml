@@ -8,8 +8,12 @@ inputs:
   visibility:
     description: "`public` or `hidden`"
     required: true
-  mirrored-from:
-    description: "example: https://github.com/NixOS/nix"
+  mirrored-for:
+    description: "example: NixOS/nix"
+    required: false
+    default: ""
+  mirrored-tag:
+    description: "example: v0.1.1"
     required: false
     default: ""
 
@@ -18,4 +22,4 @@ runs:
   steps:
     - name: Push
       shell: bash
-      run: bash $GITHUB_ACTION_PATH/release.sh ${{ inputs.visibility }} "${{ inputs.mirrored-from }}"
+      run: bash $GITHUB_ACTION_PATH/release.sh ${{ inputs.visibility }} "${{ inputs.mirrored-for }}" "${{ inputs.mirrored-tag }}"
