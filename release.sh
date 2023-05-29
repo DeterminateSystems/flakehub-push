@@ -12,6 +12,7 @@ function finish {
 trap finish EXIT
 
 visibility=$1
+mirroredFrom=$1
 
 src=$(nix flake metadata --json | nix run nixpkgs#jq -- -r .path)
 
@@ -30,13 +31,15 @@ token=$(curl -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTION
 metadata() (
   if [ -f ./README.md ]; then
     nix flake metadata --json \
-        | nix run nixpkgs#jq -- '{ "description": .description, "visibility": $visibility, "readme": $readme }' \
+        | nix run nixpkgs#jq -- '{ "description": .description, "visibility": $visibility, "readme": $readme, "mirrored_from": ($mirrored_from | select(. != "") // null) }' \
           --rawfile readme ./README.md \
-          --arg visibility "$visibility"
+          --arg visibility "$visibility" \
+          --arg mirrored_from "$mirroredFrom"
   else
     nix flake metadata --json \
-        | nix run nixpkgs#jq -- '{ "description": .description, "visibility": $visibility, "readme": null }' \
-          --arg visibility "$visibility" 
+        | nix run nixpkgs#jq -- '{ "description": .description, "visibility": $visibility, "readme": null, "mirrored_from": ($mirrored_from | select(. != "") // null) }' \
+          --arg visibility "$visibility" \
+          --arg mirrored_from "$mirroredFrom"
   fi
 )
 

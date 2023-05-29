@@ -8,10 +8,14 @@ inputs:
   visibility:
     description: "`public` or `hidden`"
     required: true
+  mirrored-from:
+    description: "example: https://github.com/NixOS/nix"
+    required: false
+    default: ""
 
 runs:
   using: composite
   steps:
     - name: Push
       shell: bash
-      run: bash $GITHUB_ACTION_PATH/release.sh ${{ inputs.visibility }}
+      run: bash $GITHUB_ACTION_PATH/release.sh ${{ inputs.visibility }} "${{ inputs.mirrored-from }}"
