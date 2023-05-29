@@ -12,7 +12,16 @@ function finish {
 trap finish EXIT
 
 visibility=$1
-mirroredFrom=$1
+mirroredFrom=$2
+mirroredTag=$3
+
+if [ "$mirroredFrom" != "" ]; then
+  reponame=$mirroredFrom
+  tag=$mirroredTag
+else
+  reponame=$GITHUB_REPOSITORY
+  tag=$GITHUB_REF_NAME
+fi
 
 src=$(nix flake metadata --json | nix run nixpkgs#jq -- -r .path)
 
@@ -51,7 +60,7 @@ url=$(
       --header "Content-Type: application/json" \
       -X POST \
       -d @- \
-      "$host/upload/$GITHUB_REPOSITORY/$GITHUB_REF_NAME/$len/$hash"
+      "$host/upload/$reponame/$tag/$len/$hash"
 )
 curl \
   -X PUT \
