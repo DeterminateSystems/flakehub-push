@@ -14,14 +14,19 @@ trap finish EXIT
 visibility=$1
 name=$2
 mirroredFrom=$3
-mirroredTag=$4
+chosenTag=$4
+
+
+reponame=$GITHUB_REPOSITORY
+tag=$GITHUB_REF_NAME
+
 
 if [ "$mirroredFrom" != "" ]; then
   reponame=$mirroredFrom
-  tag=$mirroredTag
-else
-  reponame=$GITHUB_REPOSITORY
-  tag=$GITHUB_REF_NAME
+fi
+
+if [ "$chosenTag" != "" ]; then
+  tag=$chosenTag
 fi
 
 if [ "$name" != "" ]; then

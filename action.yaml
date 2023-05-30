@@ -20,7 +20,7 @@ inputs:
     description: "example: NixOS/nix"
     required: false
     default: ""
-  mirrored-tag:
+  tag:
     description: "example: v0.1.1"
     required: false
     default: ""
@@ -30,4 +30,4 @@ runs:
   steps:
     - name: Push
       shell: bash
-      run: cd "${{ inputs.directory }}" && $GITHUB_ACTION_PATH/release.sh ${{ inputs.visibility }} "${{ inputs.name }}" "${{ inputs.mirrored-for }}" "${{ inputs.mirrored-tag }}"
+      run: cd "${{ inputs.directory }}" && $GITHUB_ACTION_PATH/release.sh ${{ inputs.visibility }} "${{ inputs.name }}" "${{ inputs.mirrored-for }}" "${{ inputs.tag }}"
