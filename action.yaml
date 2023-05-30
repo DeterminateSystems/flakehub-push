@@ -8,6 +8,14 @@ inputs:
   visibility:
     description: "`public` or `hidden`"
     required: true
+  directory:
+    description: where in the repository is your flake.nix, root is strongly recommended
+    required: true
+    default: .
+  name:
+    description: the name of your published flake, strongly recommended to leave this unchanged
+    required: true
+    default: ""
   mirrored-for:
     description: "example: NixOS/nix"
     required: false
@@ -22,4 +30,4 @@ runs:
   steps:
     - name: Push
       shell: bash
-      run: $GITHUB_ACTION_PATH/release.sh ${{ inputs.visibility }} "${{ inputs.mirrored-for }}" "${{ inputs.mirrored-tag }}"
+      run: cd "${{ inputs.directory }}" && $GITHUB_ACTION_PATH/release.sh ${{ inputs.visibility }} "${{ inputs.name }}" "${{ inputs.mirrored-for }}" "${{ inputs.mirrored-tag }}"

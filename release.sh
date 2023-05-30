@@ -12,8 +12,9 @@ function finish {
 trap finish EXIT
 
 visibility=$1
-mirroredFrom=$2
-mirroredTag=$3
+name=$2
+mirroredFrom=$3
+mirroredTag=$4
 
 if [ "$mirroredFrom" != "" ]; then
   reponame=$mirroredFrom
@@ -21,6 +22,10 @@ if [ "$mirroredFrom" != "" ]; then
 else
   reponame=$GITHUB_REPOSITORY
   tag=$GITHUB_REF_NAME
+fi
+
+if [ "$name" != "" ]; then
+  reponame="$name"
 fi
 
 src=$(nix flake metadata --json | nix run nixpkgs#jq -- -r .path)
