@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 host=https://nxfr.fly.dev
 #host=http://127.0.0.1:8080
