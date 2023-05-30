@@ -13,7 +13,7 @@ inputs:
     required: true
     default: .
   name:
-    description: the name of your published flake, strongly recommended to leave this unchanged
+    description: the name of your published flake, strongly recommended to leave this unchanged. In the format of OrgName/RepoName. OrgName must match your organization's GitHub root name or the publish will fail.
     required: true
     default: ""
   mirrored-for:
