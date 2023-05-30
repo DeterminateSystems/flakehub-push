@@ -22,4 +22,4 @@ runs:
   steps:
     - name: Push
       shell: bash
-      run: bash $GITHUB_ACTION_PATH/release.sh ${{ inputs.visibility }} "${{ inputs.mirrored-for }}" "${{ inputs.mirrored-tag }}"
+      run: $GITHUB_ACTION_PATH/release.sh ${{ inputs.visibility }} "${{ inputs.mirrored-for }}" "${{ inputs.mirrored-tag }}"
