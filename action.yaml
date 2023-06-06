@@ -24,10 +24,20 @@ inputs:
     description: "example: v0.1.1"
     required: false
     default: ""
+  registry_json:
+   description: "if you use a custom nix flake registry json"
+   required: false
+   default: ""
 
 runs:
   using: composite
   steps:
     - name: Push
       shell: bash
-      run: cd "${{ inputs.directory }}" && $GITHUB_ACTION_PATH/release.sh ${{ inputs.visibility }} "${{ inputs.name }}" "${{ inputs.mirrored-for }}" "${{ inputs.tag }}"
+      run: |
+        set -eux
+        cd "${{ inputs.directory }}"
+        cat <<'EOF' > $PWD/registry.json
+        ${{ inputs.registry_json }}
+        EOF
+        $GITHUB_ACTION_PATH/release.sh ${{ inputs.visibility }} "${{ inputs.name }}" "${{ inputs.mirrored-for }}" "${{ inputs.tag }}" "$PWD/registry.json"

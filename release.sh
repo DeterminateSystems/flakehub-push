@@ -15,8 +15,10 @@ visibility=$1
 name=$2
 mirroredFrom=$3
 chosenTag=$4
+registryJson=$5
 
 
+nix_args=()
 reponame=$GITHUB_REPOSITORY
 tag=$GITHUB_REF_NAME
 
@@ -33,7 +35,11 @@ if [ "$name" != "" ]; then
   reponame="$name"
 fi
 
-src=$(nix flake metadata --json | nix run nixpkgs#jq -- -r .path)
+if [ -f "$registryJson" ]; then
+  nix_args+=("--flake-registry" "$registryJson")
+fi
+
+src=$(nix "${nix_args[@]}" flake metadata --json | nix run nixpkgs#jq -- -r .path)
 
 (
     cd "$src/.."
