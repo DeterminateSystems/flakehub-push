@@ -4,6 +4,7 @@ host=https://nxfr.fly.dev
 #host=http://127.0.0.1:8080
 #host=https://6012-2603-7081-338-c252-0-e41d-2d20-3c20.ngrok-free.app/
 set -eux
+set -o pipefail
 
 scratch=$(mktemp -d -t tmp.XXXXXXXXXX)
 function finish {
@@ -33,7 +34,7 @@ if [ "$name" != "" ]; then
   reponame="$name"
 fi
 
-src=$(nix flake metadata --json | nix run nixpkgs#jq -- -r .path)
+src=$(nix flake metadata --json | nix run nixpkgs#jq -- -r '.path + "/" + (.resolved.dir // "")')
 
 (
     cd "$src/.."
@@ -46,7 +47,11 @@ nix flake show file://"$scratch/source.tar.gz" && echo "...ok!"
 hash=$(shasum -a 256 "$scratch/source.tar.gz" | cut -f1 -d\ | nix shell nixpkgs#vim -c xxd -r -p | base64)
 len=$(wc --bytes < "$scratch/source.tar.gz")
 
-token=$(curl -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" | nix run nixpkgs#jq -- -r .value)
+token=$(curl \
+  --fail \
+  --header "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+  "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" \
+  | nix run nixpkgs#jq -- -r .value)
 
 metadata() (
   if [ -f ./README.md ]; then
@@ -66,6 +71,7 @@ metadata() (
 url=$(
   metadata \
     | curl \
+      --fail \
       --header "ngrok-skip-browser-warning: please" \
       --header "Authorization: bearer $token" \
       --header "Content-Type: application/json" \
@@ -74,6 +80,7 @@ url=$(
       "$host/upload/$reponame/$tag/$len/$hash"
 )
 curl \
+  --fail \
   -X PUT \
   --header "content-length: $len" \
   --header "x-amz-checksum-sha256: $hash" \
