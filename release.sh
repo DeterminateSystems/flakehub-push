@@ -33,7 +33,8 @@ if [ "$name" != "" ]; then
   reponame="$name"
 fi
 
-src=$(nix flake metadata --json | nix run nixpkgs#jq -- -r .path)
+nix flake metadata --json > flake-metadata.json
+src=$(cat flake-metadata.json | nix run nixpkgs#jq -- -r '.path + "/" + (.resolved.dir // ""))
 
 (
     cd "$src/.."
