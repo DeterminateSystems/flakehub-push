@@ -34,7 +34,7 @@ if [ "$name" != "" ]; then
 fi
 
 nix flake metadata --json > flake-metadata.json
-src=$(cat flake-metadata.json | nix run nixpkgs#jq -- -r '.path + "/" + (.resolved.dir // ""))
+src=$(cat flake-metadata.json | nix run nixpkgs#jq -- -r '.path + "/" + (.resolved.dir // "")')
 
 (
     cd "$src/.."
