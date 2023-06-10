@@ -97,7 +97,12 @@ src=$(nix flake metadata --json | nix run nixpkgs#jq -- -r '.path + "/" + (.reso
 )
 
 echo "Checking your flake for evaluation safety..."
-nix flake show --all-systems file://"$scratch/source.tar.gz" && echo "...ok!"
+if nix flake show file://"$scratch/source.tar.gz"; then
+  echo "...ok!"
+else
+  echo "failed!"
+  exit 1
+fi
 
 hash=$(shasum -a 256 "$scratch/source.tar.gz" | cut -f1 -d\ | nix shell nixpkgs#vim -c xxd -r -p | base64)
 len=$(wc --bytes < "$scratch/source.tar.gz")
