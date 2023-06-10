@@ -76,7 +76,7 @@ fi
           "description": .description,
           "raw_flake_metadata": .,
           "mirrored_from": ($mirrored_from | select(. != "") // null),
-          "readme": $readme,
+          "readme": ($readme | first),
           "revision": (.revision // null),
           "revCount": $revCount,
           "visibility": $visibility
