@@ -24,10 +24,14 @@ inputs:
     description: "example: v0.1.1"
     required: false
     default: ""
+  rolling-prefix:
+    description: "For untagged releases, set a rolling prefix to be suffixed with the commit count. ie: v0.1 will be suffixed with .123 producing a release named v0.1.123-revision"
+    required: false
+    default: ""
 
 runs:
   using: composite
   steps:
     - name: Push
       shell: bash
-      run: cd "${{ inputs.directory }}" && $GITHUB_ACTION_PATH/release.sh ${{ inputs.visibility }} "${{ inputs.name }}" "${{ inputs.mirrored-for }}" "${{ inputs.tag }}"
+      run: cd "${{ inputs.directory }}" && $GITHUB_ACTION_PATH/release.sh ${{ inputs.visibility }} "${{ inputs.name }}" "${{ inputs.mirrored-for }}" "${{ inputs.tag }}" "${{ inputs.rolling-prefix }}"

@@ -16,6 +16,7 @@ visibility=$1
 name=$2
 mirroredFrom=$3
 chosenTag=$4
+rollingPrefix=$5
 
 
 reponame=$GITHUB_REPOSITORY
@@ -34,6 +35,60 @@ if [ "$name" != "" ]; then
   reponame="$name"
 fi
 
+owner=$(echo "$reponame" | sed -e 's#/.*$##');
+repo=$(echo "$reponame" | sed -e 's#^.*/##');
+
+revision=$(git rev-parse HEAD)
+revisionshort=$(git rev-parse --short HEAD)
+revCount=$(nix run nixpkgs#gh -- api graphql --paginate -f query='
+query {
+  repository(owner:"'"$owner"'", name:"'"$repo"'") {
+    object(expression:"'"$revision"'") {
+      ... on Commit {
+        history {
+          totalCount
+        }
+      }
+    }
+  }
+}
+' | nix run nixpkgs#jq -- -r .data.repository.object.history.totalCount
+)
+
+if [ "$rollingPrefix" != "" ]; then
+  tag="${rollingPrefix}.$revCount-$revisionshort"
+fi
+
+# Generate a .json document with the readme, or null
+(
+  if [ -f ./README.md ]; then
+    nix run nixpkgs#jq -- -n '$readme' --rawfile readme ./README.md
+  else
+    echo null
+  fi
+) > "$scratch/readme.json"
+
+# Generate the overall release's metadata document
+(
+  nix flake metadata --json \
+      | nix run nixpkgs#jq -- '
+        {
+          "description": .description,
+          "raw_flake_metadata": .,
+          "mirrored_from": ($mirrored_from | select(. != "") // null),
+          "readme": $readme,
+          "revision": (.revision // null),
+          "revCount": $revCount,
+          "visibility": $visibility
+        }' \
+        --arg mirrored_from "$mirroredFrom" \
+        --arg revision "$revision" \
+        --arg visibility "$visibility" \
+        --argjson revCount "$revCount" \
+        --slurpfile readme "$scratch/readme.json" \
+        > "$scratch/metadata.json"
+)
+
 src=$(nix flake metadata --json | nix run nixpkgs#jq -- -r '.path + "/" + (.resolved.dir // "")')
 
 (
@@ -42,7 +97,7 @@ src=$(nix flake metadata --json | nix run nixpkgs#jq -- -r '.path + "/" + (.reso
 )
 
 echo "Checking your flake for evaluation safety..."
-nix flake show file://"$scratch/source.tar.gz" && echo "...ok!"
+nix flake show --all-systems file://"$scratch/source.tar.gz" && echo "...ok!"
 
 hash=$(shasum -a 256 "$scratch/source.tar.gz" | cut -f1 -d\ | nix shell nixpkgs#vim -c xxd -r -p | base64)
 len=$(wc --bytes < "$scratch/source.tar.gz")
@@ -53,23 +108,8 @@ token=$(curl \
   "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" \
   | nix run nixpkgs#jq -- -r .value)
 
-metadata() (
-  if [ -f ./README.md ]; then
-    nix flake metadata --json \
-        | nix run nixpkgs#jq -- '{ "description": .description, "visibility": $visibility, "readme": $readme, "mirrored_from": ($mirrored_from | select(. != "") // null) }' \
-          --rawfile readme ./README.md \
-          --arg visibility "$visibility" \
-          --arg mirrored_from "$mirroredFrom"
-  else
-    nix flake metadata --json \
-        | nix run nixpkgs#jq -- '{ "description": .description, "visibility": $visibility, "readme": null, "mirrored_from": ($mirrored_from | select(. != "") // null) }' \
-          --arg visibility "$visibility" \
-          --arg mirrored_from "$mirroredFrom"
-  fi
-)
-
 url=$(
-  metadata \
+  cat "$scratch/metadata.json" \
     | curl \
       --fail \
       --header "ngrok-skip-browser-warning: please" \
