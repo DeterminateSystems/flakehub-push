@@ -56,7 +56,7 @@ query {
 )
 
 if [ "$rollingPrefix" != "" ]; then
-  tag="${rollingPrefix}.$revCount-$revisionshort"
+  tag="${rollingPrefix}.$revCount+rev-$revisionshort"
 fi
 
 # Generate a .json document with the readme, or null
