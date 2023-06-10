@@ -34,4 +34,6 @@ runs:
   steps:
     - name: Push
       shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
       run: cd "${{ inputs.directory }}" && $GITHUB_ACTION_PATH/release.sh ${{ inputs.visibility }} "${{ inputs.name }}" "${{ inputs.mirrored-for }}" "${{ inputs.tag }}" "${{ inputs.rolling-prefix }}"
