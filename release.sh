@@ -96,6 +96,8 @@ src=$(nix flake metadata --json | nix run nixpkgs#jq -- -r '.path + "/" + (.reso
     tar -czf "$scratch/source.tar.gz" "$(basename "$src")"
 )
 
+cat "$scratch/metadata.json" | nix run nixpkgs#jq -- -r '.'
+
 echo "Checking your flake for evaluation safety..."
 if nix flake show file://"$scratch/source.tar.gz"; then
   echo "...ok!"
@@ -112,6 +114,17 @@ token=$(curl \
   --header "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
   "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" \
   | nix run nixpkgs#jq -- -r .value)
+
+cat "$scratch/metadata.json" \
+  | curl \
+    --fail \
+    --header "ngrok-skip-browser-warning: please" \
+    --header "Authorization: bearer $token" \
+    --header "Content-Type: application/json" \
+    -X POST \
+    -d @- \
+    "$host/upload/$reponame/$tag/$len/$hash"
+
 
 url=$(
   cat "$scratch/metadata.json" \
