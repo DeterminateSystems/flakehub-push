@@ -78,7 +78,7 @@ fi
           "mirrored_from": ($mirrored_from | select(. != "") // null),
           "readme": ($readme | first),
           "revision": (.revision // null),
-          "revCount": $revCount,
+          "commit_count": $revCount,
           "visibility": $visibility
         }' \
         --arg mirrored_from "$mirroredFrom" \
