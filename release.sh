@@ -40,7 +40,7 @@ repo=$(echo "$reponame" | sed -e 's#^.*/##');
 
 revision=$(git rev-parse HEAD)
 revisionshort=$(git rev-parse --short HEAD)
-revCount=$(nix run nixpkgs#gh -- api graphql --paginate -f query='
+revCount=$((nix run nixpkgs#gh -- api graphql --paginate -f query='
 query {
   repository(owner:"'"$owner"'", name:"'"$repo"'") {
     object(expression:"'"$revision"'") {
@@ -52,7 +52,7 @@ query {
     }
   }
 }
-' | nix run nixpkgs#jq -- -r .data.repository.object.history.totalCount
+' || echo '{}') | nix run nixpkgs#jq -- -r '.data.repository.object.history.totalCount // null'
 )
 
 if [ "$rollingPrefix" != "" ]; then
