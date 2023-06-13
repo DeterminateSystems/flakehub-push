@@ -52,7 +52,7 @@ query {
     }
   }
 }
-' || echo '{}') | nix run nixpkgs#jq -- -r '.data.repository.object.history.totalCount // null'
+' || true) | nix run nixpkgs#jq -- -r '.data.repository.object.history.totalCount // null'
 )
 
 if [ "$rollingPrefix" != "" ]; then
