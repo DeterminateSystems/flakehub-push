@@ -1,10 +1,9 @@
-#!/bin/bash
+#! /usr/bin/env bash
 
-host=https://nxfr.fly.dev
-#host=http://127.0.0.1:8080
-#host=https://6012-2603-7081-338-c252-0-e41d-2d20-3c20.ngrok-free.app/
 set -eux
 set -o pipefail
+
+: "${nxfr_host:=https://nxfr.fly.dev}"
 
 scratch=$(mktemp -d -t tmp.XXXXXXXXXX)
 function finish {
@@ -68,6 +67,21 @@ fi
   fi
 ) > "$scratch/readme.json"
 
+src=$(nix flake metadata --json | nix run nixpkgs#jq -- -r '.path + "/" + (.resolved.dir // "")')
+
+(
+    cd "$src/.."
+    tar -czf "$scratch/source.tar.gz" "$(basename "$src")"
+)
+
+echo "Checking your flake for evaluation safety..."
+if nix flake show --json file://"$scratch/source.tar.gz" > "$scratch/outputs.json"; then
+  echo "...ok!"
+else
+  echo "failed!"
+  exit 1
+fi
+
 # Generate the overall release's metadata document
 (
   nix flake metadata --json \
@@ -79,32 +93,19 @@ fi
           "readme": ($readme | first),
           "revision": (.revision // null),
           "commit_count": $revCount,
-          "visibility": $visibility
+          "visibility": $visibility,
+          "outputs": $outputs
         }' \
         --arg mirrored_from "$mirroredFrom" \
         --arg revision "$revision" \
         --arg visibility "$visibility" \
         --argjson revCount "$revCount" \
         --slurpfile readme "$scratch/readme.json" \
+        --argjson outputs "$(cat "$scratch/outputs.json")" \
         > "$scratch/metadata.json"
 )
 
-src=$(nix flake metadata --json | nix run nixpkgs#jq -- -r '.path + "/" + (.resolved.dir // "")')
-
-(
-    cd "$src/.."
-    tar -czf "$scratch/source.tar.gz" "$(basename "$src")"
-)
-
 cat "$scratch/metadata.json" | nix run nixpkgs#jq -- -r '.'
-
-echo "Checking your flake for evaluation safety..."
-if nix flake show file://"$scratch/source.tar.gz"; then
-  echo "...ok!"
-else
-  echo "failed!"
-  exit 1
-fi
 
 hash=$(shasum -a 256 "$scratch/source.tar.gz" | cut -f1 -d\ | nix shell nixpkgs#vim -c xxd -r -p | base64)
 len=$(wc --bytes < "$scratch/source.tar.gz")
@@ -123,7 +124,7 @@ cat "$scratch/metadata.json" \
     --header "Content-Type: application/json" \
     -X POST \
     -d @- \
-    "$host/upload/$reponame/$tag/$len/$hash"
+    "$nxfr_host/upload/$reponame/$tag/$len/$hash"
 
 
 url=$(
@@ -135,7 +136,7 @@ url=$(
       --header "Content-Type: application/json" \
       -X POST \
       -d @- \
-      "$host/upload/$reponame/$tag/$len/$hash"
+      "$nxfr_host/upload/$reponame/$tag/$len/$hash"
 )
 curl \
   --fail \
