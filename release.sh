@@ -1,10 +1,9 @@
-#!/bin/bash
+#! /usr/bin/env bash
 
-host=https://nxfr.fly.dev
-#host=http://127.0.0.1:8080
-#host=https://6012-2603-7081-338-c252-0-e41d-2d20-3c20.ngrok-free.app/
 set -eux
 set -o pipefail
+
+: "${nxfr_host:=https://nxfr.fly.dev}"
 
 scratch=$(mktemp -d -t tmp.XXXXXXXXXX)
 function finish {
@@ -123,7 +122,7 @@ cat "$scratch/metadata.json" \
     --header "Content-Type: application/json" \
     -X POST \
     -d @- \
-    "$host/upload/$reponame/$tag/$len/$hash"
+    "$nxfr_host/upload/$reponame/$tag/$len/$hash"
 
 
 url=$(
@@ -135,7 +134,7 @@ url=$(
       --header "Content-Type: application/json" \
       -X POST \
       -d @- \
-      "$host/upload/$reponame/$tag/$len/$hash"
+      "$nxfr_host/upload/$reponame/$tag/$len/$hash"
 )
 curl \
   --fail \
