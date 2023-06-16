@@ -94,14 +94,14 @@ fi
           "revision": (.revision // null),
           "commit_count": $revCount,
           "visibility": $visibility,
-          "outputs": $outputs
+          "outputs": ($outputs | first)
         }' \
         --arg mirrored_from "$mirroredFrom" \
         --arg revision "$revision" \
         --arg visibility "$visibility" \
         --argjson revCount "$revCount" \
         --slurpfile readme "$scratch/readme.json" \
-        --argjson outputs "$(cat "$scratch/outputs.json")" \
+        --slurpfile outputs "$scratch/outputs.json" \
         > "$scratch/metadata.json"
 )
 
