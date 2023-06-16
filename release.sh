@@ -75,7 +75,7 @@ src=$(nix flake metadata --json | nix run nixpkgs#jq -- -r '.path + "/" + (.reso
 )
 
 echo "Checking your flake for evaluation safety..."
-if nix flake show --json --all-systems file://"$scratch/source.tar.gz" > "$scratch/outputs.json"; then
+if nix flake show --json file://"$scratch/source.tar.gz" > "$scratch/outputs.json"; then
   echo "...ok!"
 else
   echo "failed!"
