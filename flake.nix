@@ -50,7 +50,7 @@
 
           nxfr-push = craneLib.buildPackage {
             pname = "nxfr-push";
-            version = "0.0.0";
+            version = "0.1.0";
             src = craneLib.path ./.;
 
             CARGO_BUILD_TARGET = "x86_64-unknown-linux-musl";
