@@ -8,6 +8,10 @@ inputs:
   visibility:
     description: "`public` or `hidden`"
     required: true
+  directory:
+    description: where in the repository is your flake.nix, root is strongly recommended
+    required: true
+    default: .
   name:
     description: the name of your published flake, strongly recommended to leave this unchanged. In the format of OrgName/RepoName. OrgName must match your organization's GitHub root name or the publish will fail.
     required: true
@@ -42,15 +46,37 @@ inputs:
 
 # https://docs.github.com/en/actions/creating-actions/metadata-syntax-for-github-actions#runs-for-docker-container-actions
 runs:
-  using: docker
-  image: "Dockerfile"
-  env:
-    NXFR_PUSH_VISIBLITY: ${{ inputs.visibility }}
-    NXFR_PUSH_MIRRORED_FOR: ${{ inputs.mirrored-for }}
-    NXFR_PUSH_TAG: ${{ inputs.tag }}
-    NXFR_PUSH_ROLLING_PREFIX: ${{ inputs.rolling-prefix }}
-    NXFR_PUSH_HOST: ${{ inputs.host }}
-    NXFR_PUSH_LOG_DIRECTIVES: ${{ inputs.log-directives }}
-    NXFR_PUSH_LOGGER: ${{ inputs.logger }}
-    NXFR_PUSH_GITHUB_TOKEN: ${{ inputs.github-token }}
-    # Also GITHUB_REPOSITORY, GITHUB_REF_NAME, GITHUB_TOKEN, ACTIONS_ID_TOKEN_REQUEST_TOKEN, ACTIONS_ID_TOKEN_REQUEST_URL
+  using: composite
+  steps:
+  - name: Install `nxfr-push`
+    shell: bash
+    env:
+      NXFR_PUSH_DIRECTORY: ${{ inputs.directory }}
+      NXFR_PUSH_VISIBLITY: ${{ inputs.visibility }}
+      NXFR_PUSH_MIRRORED_FOR: ${{ inputs.mirrored-for }}
+      NXFR_PUSH_TAG: ${{ inputs.tag }}
+      NXFR_PUSH_ROLLING_PREFIX: ${{ inputs.rolling-prefix }}
+      NXFR_PUSH_HOST: ${{ inputs.host }}
+      NXFR_PUSH_LOG_DIRECTIVES: ${{ inputs.log-directives }}
+      NXFR_PUSH_LOGGER: ${{ inputs.logger }}
+      NXFR_PUSH_GITHUB_TOKEN: ${{ inputs.github-token }}
+      # Also GITHUB_REPOSITORY, GITHUB_REF_NAME, GITHUB_TOKEN, ACTIONS_ID_TOKEN_REQUEST_TOKEN, ACTIONS_ID_TOKEN_REQUEST_URL
+    run: |
+      if [ -n "${{ inputs.nxfr-push-url }}" ]; then
+        export NXFR_PUSH_URL="${{ inputs.nxfr-push-url }}"
+      else
+        if [ -n "${{ inputs.nxfr-push-pr }}" ]; then
+          export NXFR_PUSH_URL="https://install.determinate.systems/nxfr-push/pr/${{ inputs.nxfr-push-pr }}?ci=github"
+        elif [ -n "${{ inputs.nxfr-push-tag }}" ]; then
+          export NXFR_PUSH_URL="https://install.determinate.systems/nxfr-push/tag/${{ inputs.nxfr-push-tag }}?ci=github"
+        elif [ -n "${{ inputs.nxfr-push-revision }}" ]; then
+          export NXFR_PUSH_URL="https://install.determinate.systems/nxfr-push/rev/${{ inputs.nxfr-push-revision }}?ci=github"
+        elif [ -n "${{ inputs.nxfr-push-branch }}" ]; then
+          export NXFR_PUSH_URL="https://install.determinate.systems/nxfr-push/branch/${{ inputs.nxfr-push-branch }}?ci=github"
+        else
+          export NXFR_PUSH_URL="https://install.determinate.systems/nxfr-push?ci=github"
+        fi
+      fi
+      echo "Set NXFR_PUSH_URL=$NXFR_PUSH_URL"
+      curl --retry 20 -L $NXFR_PUSH_URL | sh
+    
