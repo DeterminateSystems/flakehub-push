@@ -1,0 +1,12 @@
+query RevCountQuery($owner: String!, $name: String!, $revision: String!) {
+  repository(owner: $owner, name: $name) {
+    object(expression: $revision) {
+      __typename
+      ... on Commit {
+        history {
+          totalCount
+        }
+      }
+    }
+  }
+}
