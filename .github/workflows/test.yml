@@ -11,9 +11,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: DeterminateSystems/flake-checker-action@main
+      - uses: DeterminateSystems/nix-installer-action@v4
+      
+      - uses: DeterminateSystems/magic-nix-cache-action@v2
 
-      - uses: DeterminateSystems/nix-installer-action-cache@main
+      - uses: DeterminateSystems/flake-checker-action@main
 
       - name: "Nix formatting"
         run: git ls-files '*.nix' | nix develop --command xargs nixpkgs-fmt --check
