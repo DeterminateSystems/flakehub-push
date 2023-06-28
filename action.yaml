@@ -8,32 +8,49 @@ inputs:
   visibility:
     description: "`public` or `hidden`"
     required: true
-  directory:
-    description: where in the repository is your flake.nix, root is strongly recommended
-    required: true
-    default: .
   name:
     description: the name of your published flake, strongly recommended to leave this unchanged. In the format of OrgName/RepoName. OrgName must match your organization's GitHub root name or the publish will fail.
     required: true
-    default: ""
+    default: null
   mirrored-for:
     description: "example: NixOS/nix"
     required: false
-    default: ""
+    default: null
   tag:
     description: "example: v0.1.1"
     required: false
-    default: ""
+    default: null
   rolling-prefix:
     description: "For untagged releases, set a rolling prefix to be suffixed with the commit count. ie: v0.1 will be suffixed with .123 producing a release named v0.1.123-revision"
     required: false
-    default: ""
+    default: null
+  host:
+    description: "The nxfr server to use"
+    required: false
+    default: "https://nxfr.fly.dev"
+  log-directives:
+    description: A list of Tracing directives, comma separated, `-`s replaced with `_` (eg. `nix_installer=trace`, see https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html#directives)
+    required: false
+    default: "nxfr_push=info"
+  logger:
+    description: The logger to use for install (eg. `pretty`, `json`, `full`, `compact`)
+    required: false
+    default: "full"
+  github-token:
+    description: A GitHub token for making authenticated GitHub API requests
+    default: ${{ github.token }}
 
+# https://docs.github.com/en/actions/creating-actions/metadata-syntax-for-github-actions#runs-for-docker-container-actions
 runs:
-  using: composite
-  steps:
-    - name: Push
-      shell: bash
-      env:
-        GH_TOKEN: ${{ github.token }}
-      run: cd "${{ inputs.directory }}" && $GITHUB_ACTION_PATH/release.sh ${{ inputs.visibility }} "${{ inputs.name }}" "${{ inputs.mirrored-for }}" "${{ inputs.tag }}" "${{ inputs.rolling-prefix }}"
+  using: docker
+  image: "Dockerfile"
+  env:
+    NXFR_PUSH_VISIBLITY: ${{ inputs.visibility }}
+    NXFR_PUSH_MIRRORED_FOR: ${{ inputs.mirrored-for }}
+    NXFR_PUSH_TAG: ${{ inputs.tag }}
+    NXFR_PUSH_ROLLING_PREFIX: ${{ inputs.rolling-prefix }}
+    NXFR_PUSH_HOST: ${{ inputs.host }}
+    NXFR_PUSH_LOG_DIRECTIVES: ${{ inputs.log-directives }}
+    NXFR_PUSH_LOGGER: ${{ inputs.logger }}
+    NXFR_PUSH_GITHUB_TOKEN: ${{ inputs.github-token }}
+    # Also GITHUB_REPOSITORY, GITHUB_REF_NAME, GITHUB_TOKEN, ACTIONS_ID_TOKEN_REQUEST_TOKEN, ACTIONS_ID_TOKEN_REQUEST_URL
