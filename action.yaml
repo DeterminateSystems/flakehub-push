@@ -43,6 +43,24 @@ inputs:
   github-token:
     description: A GitHub token for making authenticated GitHub API requests
     default: ${{ github.token }}
+  nxfr-push-binary:
+    description: Run a version of the `nxfr-push` binary from somewhere already on disk. Conflicts with all other `source-*` options.
+  nxfr-push-branch:
+    description: The branch of `nxfr-push` to use. Conflicts with all other `source-*` options.
+    required: false
+    default: main
+  nxfr-push-pr:
+    description: The PR of `nxfr-push` to use. Conflicts with all other `source-*` options.
+    required: false
+  nxfr-push-revision:
+    description: The revision of `nix-nxfr-push` to use. Conflicts with all other `source-*` options.
+    required: false
+  nxfr-push-tag:
+    description: The tag of `nxfr-push` to use. Conflicts with all other `source-*` options.
+    required: false
+  nxfr-push-url:
+    description: A URL pointing to a `nxfr-push` binary. Overrides all other `source-*` options.
+    required: false
 
 # https://docs.github.com/en/actions/creating-actions/metadata-syntax-for-github-actions#runs-for-docker-container-actions
 runs:
@@ -62,21 +80,44 @@ runs:
       NXFR_PUSH_GITHUB_TOKEN: ${{ inputs.github-token }}
       # Also GITHUB_REPOSITORY, GITHUB_REF_NAME, GITHUB_TOKEN, ACTIONS_ID_TOKEN_REQUEST_TOKEN, ACTIONS_ID_TOKEN_REQUEST_URL
     run: |
+      if [ "${RUNNER_OS}" == "Linux" ]; then
+        export ARCHITECTURE_OS="linux"
+      elif [ "${RUNNER_OS}" == "macOS" ]; then
+        export ARCHITECTURE_OS="darwin"
+      else
+        echo "${RUNNER_OS} not supported"
+      fi
+
+      if [ "${RUNNER_ARCH}" == "X64" ]; then
+        export ARCHITECTURE_ARCH="x86_64"
+      elif [ "${RUNNER_ARCH}" == "ARM64" ]; then
+        export ARCHITECTURE_ARCH="aarch64"
+      else
+        echo "${RUNNER_ARCH} not supported"
+      fi
+
+      export ARCHITECTURE="${ARCHITECTURE_ARCH}-${ARCHITECTURE_OS}"
+
       if [ -n "${{ inputs.nxfr-push-url }}" ]; then
         export NXFR_PUSH_URL="${{ inputs.nxfr-push-url }}"
       else
         if [ -n "${{ inputs.nxfr-push-pr }}" ]; then
-          export NXFR_PUSH_URL="https://install.determinate.systems/nxfr-push/pr/${{ inputs.nxfr-push-pr }}?ci=github"
+          export NXFR_PUSH_URL="https://install.determinate.systems/nxfr-push/pr/${{ inputs.nxfr-push-pr }}/${ARCHITECTURE}?ci=github"
         elif [ -n "${{ inputs.nxfr-push-tag }}" ]; then
-          export NXFR_PUSH_URL="https://install.determinate.systems/nxfr-push/tag/${{ inputs.nxfr-push-tag }}?ci=github"
+          export NXFR_PUSH_URL="https://install.determinate.systems/nxfr-push/tag/${{ inputs.nxfr-push-tag }}/${ARCHITECTURE}?ci=github"
         elif [ -n "${{ inputs.nxfr-push-revision }}" ]; then
-          export NXFR_PUSH_URL="https://install.determinate.systems/nxfr-push/rev/${{ inputs.nxfr-push-revision }}?ci=github"
+          export NXFR_PUSH_URL="https://install.determinate.systems/nxfr-push/rev/${{ inputs.nxfr-push-revision }}/${ARCHITECTURE}?ci=github"
         elif [ -n "${{ inputs.nxfr-push-branch }}" ]; then
-          export NXFR_PUSH_URL="https://install.determinate.systems/nxfr-push/branch/${{ inputs.nxfr-push-branch }}?ci=github"
+          export NXFR_PUSH_URL="https://install.determinate.systems/nxfr-push/branch/${{ inputs.nxfr-push-branch }}/${ARCHITECTURE}?ci=github"
         else
-          export NXFR_PUSH_URL="https://install.determinate.systems/nxfr-push?ci=github"
+          export NXFR_PUSH_URL="https://install.determinate.systems/nxfr-push/stable/${ARCHITECTURE}?ci=github"
         fi
       fi
       echo "Set NXFR_PUSH_URL=$NXFR_PUSH_URL"
-      curl --retry 20 -L $NXFR_PUSH_URL | sh
+
+      if [ -n "${{ inputs.nxfr-push-binary }}"]; then
+        exec ${{ inputs.nxfr-push-binary }}
+      else
+        curl --retry 20 -L $NXFR_PUSH_URL | sh
+      fi
     
