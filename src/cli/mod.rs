@@ -21,11 +21,6 @@ pub(crate) struct NixfrPushCli {
     pub(crate) host: String,
     #[clap(long, env = "NXFR_PUSH_VISIBLITY")]
     pub(crate) visibility: crate::Visibility,
-    /// Will also detect `GITHUB_REPOSITORY`
-    #[clap(long, env = "NXFR_PUSH_NAME")]
-    pub(crate) name: Option<String>,
-    #[clap(long, env = "NXFR_PUSH_MIRRORED_FOR")]
-    pub(crate) mirrored_for: Option<String>,
     // Will also detect `GITHUB_REF_NAME`
     #[clap(long, env = "NXFR_PUSH_TAG")]
     pub(crate) tag: Option<String>,
@@ -34,9 +29,21 @@ pub(crate) struct NixfrPushCli {
     // Also detects `GITHUB_TOKEN`
     #[clap(long, env = "NXFR_PUSH_GITHUB_TOKEN")]
     pub(crate) github_token: Option<String>,
+    /// Will also detect `GITHUB_REPOSITORY`
+    #[clap(long, env = "NXFR_PUSH_UPLOAD_NAME")]
+    pub(crate) upload_name: Option<String>,
+    /// Override the detected repo name, e.g. in case you're uploading multiple subflakes in a single repo as their own flake.
+    ///
+    /// In the format of [org]/[repo].
+    #[clap(long, env = "NXFR_PUSH_REPO")]
+    pub(crate) repo: Option<String>,
     // Also detects `GITHUB_WORKSPACE`
     #[clap(long, env = "NXFR_PUSH_DIRECTORY")]
     pub(crate) directory: Option<PathBuf>,
+    // Also detects `GITHUB_WORKSPACE`
+    #[clap(long, env = "NXFR_PUSH_GIT_ROOT")]
+    pub(crate) git_root: Option<PathBuf>,
+
     // A specific bearer token string which bypasses the normal authentication check in when pushing an upload
     // This is intended for development at this time.
     #[cfg(debug_assertions)]
@@ -65,18 +72,19 @@ impl NixfrPushCli {
         let Self {
             host,
             visibility,
-            name,
-            mirrored_for,
+            upload_name,
             tag,
             rolling_prefix,
             github_token,
             directory,
+            repo,
+            git_root,
             #[cfg(debug_assertions)]
             dev_bearer_token,
             instrumentation: _,
         } = self;
-        let name = name.and_then(empty_to_none);
-        let mirrored_for = mirrored_for.and_then(empty_to_none);
+        let repo = repo.and_then(empty_to_none);
+        let upload_name = upload_name.and_then(empty_to_none);
         let tag = tag.and_then(empty_to_none);
         let rolling_prefix = rolling_prefix.and_then(empty_to_none);
         let github_token = github_token.and_then(empty_to_none);
@@ -87,7 +95,7 @@ impl NixfrPushCli {
             github_token.clone()
         } else {
             std::env::var("GITHUB_TOKEN")
-                .wrap_err("Could not determine Github token, pass `--github-token`, or set either `NIXFR_PUSH_GITHUB_TOKEN` or `GITHUB_TOKEN`")?
+                .wrap_err("Could not determine Github token, pass `--github-token`, or set either `NXFR_PUSH_GITHUB_TOKEN` or `GITHUB_TOKEN`")?
         };
 
         let directory = if let Some(directory) = &directory {
@@ -96,21 +104,20 @@ impl NixfrPushCli {
             tracing::trace!(%github_workspace, "Got $GITHUB_WORKSPACE");
             PathBuf::from(github_workspace)
         } else {
-            std::env::current_dir().map(PathBuf::from).wrap_err("Could not determine Github token, pass `--github-token`, or set either `NIXFR_PUSH_GITHUB_TOKEN` or `GITHUB_TOKEN`")?
+            std::env::current_dir().map(PathBuf::from).wrap_err("Could not determine current directory. Pass `--directory` or set `NXFR_PUSH_DIRECTORY`")?
+        };
+        let git_root = if let Some(git_root) = &git_root {
+            git_root.clone()
+        } else if let Ok(github_workspace) = std::env::var("GITHUB_WORKSPACE") {
+            tracing::trace!(%github_workspace, "Got $GITHUB_WORKSPACE");
+            PathBuf::from(github_workspace)
+        } else {
+            std::env::current_dir().map(PathBuf::from).wrap_err("Could not determine current git_root. Pass `--git-root` or set `NXFR_PUSH_GIT_ROOT`")?
         };
 
-        let owner_and_repository = if let Some(mirrored_for) = &mirrored_for {
-            tracing::trace!(
-                %mirrored_for,
-                "Got `--mirrored-for` argument"
-            );
-            mirrored_for.clone()
-        } else if let Some(name) = name {
-            tracing::trace!(
-                %name,
-                "Got `--name` argument"
-            );
-            name
+        let owner_and_repository = if let Some(repo) = &repo {
+            tracing::trace!(%repo, "Got `--repo` argument");
+            repo.clone()
         } else if let Ok(github_repository) = std::env::var("GITHUB_REPOSITORY") {
             tracing::trace!(
                 %github_repository,
@@ -118,7 +125,7 @@ impl NixfrPushCli {
             );
             github_repository
         } else {
-            return Err(eyre!("Could not determine repository name, pass `--name`, `--mirrored-for` or the `GITHUB_REPOSITORY` formatted like `determinatesystems/nxfr-push`"));
+            return Err(eyre!("Could not determine repository name, pass `--repo` or the `GITHUB_REPOSITORY` formatted like `determinatesystems/nxfr-push`"));
         };
         let mut owner_and_repository_split = owner_and_repository.split('/');
         let project_owner = owner_and_repository_split
@@ -139,10 +146,11 @@ impl NixfrPushCli {
             &host,
             &github_token,
             &directory,
+            &git_root,
             &project_owner,
             &project_name,
+            upload_name.as_deref(),
             visibility,
-            mirrored_for.as_deref(),
             tag.as_deref(),
             rolling_prefix.as_deref(),
             #[cfg(debug_assertions)]
@@ -163,14 +171,16 @@ impl NixfrPushCli {
         source = tracing::field::Empty,
     )
 )]
+#[allow(clippy::too_many_arguments)]
 async fn push_new_release(
     host: &str,
     github_token: &str,
     directory: &Path,
+    git_root: &Path,
     project_owner: &str,
     project_name: &str,
+    upload_name: Option<&str>,
     visibility: Visibility,
-    mirrored_for: Option<&str>,
     tag: Option<&str>,
     rolling_prefix: Option<&str>,
     #[cfg(debug_assertions)] dev_bearer_token: Option<&str>,
@@ -181,7 +191,12 @@ async fn push_new_release(
         eyre!("Could not determine tag or rolling prefix, `--tag`, `GITHUB_REF_NAME`, or `--rolling-prefix` must be set")
     })?;
 
-    tracing::info!("Preparing release of {project_owner}/{project_name}/{rolling_prefix_or_tag}");
+    let upload_owner_repo_pair = if let Some(upload_name) = upload_name {
+        upload_name.to_string()
+    } else {
+        format!("{project_owner}/{project_name}")
+    };
+    tracing::info!("Preparing release of {upload_owner_repo_pair}/{rolling_prefix_or_tag}");
 
     let tempdir = tempfile::Builder::new()
         .prefix("nxfr_push")
@@ -259,11 +274,11 @@ async fn push_new_release(
     let release_metadata = ReleaseMetadata::build(
         github_api_client,
         directory,
+        git_root,
         flake_metadata,
         get_flake_tarball_outputs,
         project_owner,
         project_name,
-        mirrored_for,
         visibility,
     )
     .await
@@ -296,13 +311,7 @@ async fn push_new_release(
     };
 
     let release_metadata_post_url = format!(
-        "{}/upload/{}/{}/{}/{}/{}",
-        host,
-        project_owner,
-        project_name,
-        rolling_prefix_with_postfix_or_tag,
-        flake_tarball_len,
-        flake_tarball_hash_base64
+        "{host}/upload/{upload_owner_repo_pair}/{rolling_prefix_with_postfix_or_tag}/{flake_tarball_len}/{flake_tarball_hash_base64}"
     );
     tracing::debug!(
         url = release_metadata_post_url,
