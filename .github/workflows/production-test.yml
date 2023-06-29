@@ -28,6 +28,8 @@ jobs:
         with:
           name: nxfr-push-X64-Linux
           path: nxfr-push-X64-Linux
+
+      - run: ls -la nxfr-push-X64-Linux
       
       - name: Production test
         if: |
@@ -39,4 +41,4 @@ jobs:
           rolling-prefix: "0.0"
           log-directives: "nxfr_push=trace"
           logger: "pretty"
-          nxfr-push-binary: ./nxfr-push-X64-Linux/nxfr-push-X64-Linux
+          nxfr-push-binary: ./nxfr-push-X64-Linux
