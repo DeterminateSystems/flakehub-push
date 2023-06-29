@@ -39,4 +39,4 @@ jobs:
           rolling-prefix: "0.0"
           log-directives: "nxfr_push=trace"
           logger: "pretty"
-          nxfr-push-binary: ./nxfr-push-X64-Linux
+          nxfr-push-binary: ./nxfr-push-X64-Linux/nxfr-push-X64-Linux
