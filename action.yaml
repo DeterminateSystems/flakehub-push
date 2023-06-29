@@ -116,8 +116,12 @@ runs:
       echo "Set NXFR_PUSH_URL=$NXFR_PUSH_URL"
 
       if [ -n "${{ inputs.nxfr-push-binary }}" ]; then
+        chmod +x ${{ inputs.nxfr-push-binary }}
         exec ${{ inputs.nxfr-push-binary }}
       else
-        curl --retry 20 -L $NXFR_PUSH_URL | sh
+        DEST=$(mktemp -d)
+        curl --retry 20 -L $NXFR_PUSH_URL -o $DEST/nxfr-push
+        chmod +x $DEST/nxfr-push
+        exec $DEST/nxfr-push
       fi
     
