@@ -115,7 +115,7 @@ runs:
       fi
       echo "Set NXFR_PUSH_URL=$NXFR_PUSH_URL"
 
-      if [ -n "${{ inputs.nxfr-push-binary }}"]; then
+      if [ -n "${{ inputs.nxfr-push-binary }}" ]; then
         exec ${{ inputs.nxfr-push-binary }}
       else
         curl --retry 20 -L $NXFR_PUSH_URL | sh
