@@ -16,6 +16,18 @@ jobs:
 
       - uses: DeterminateSystems/magic-nix-cache-action@main
 
+      - name: "Nix formatting"
+        run: git ls-files '*.nix' | nix develop --command xargs nixpkgs-fmt --check
+
+      - name: "Rust formatting"
+        run: nix develop --command cargo fmt --check
+
+      - name: "Clippy"
+        run: nix develop --command cargo clippy --all-targets --all-features --  -Dwarnings
+
+      - name: "Nix Flake Check"
+        run: nix flake check --print-build-logs
+
       - name: Build package
         run: "nix build .# -L --fallback"
 

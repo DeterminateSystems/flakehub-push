@@ -9,7 +9,11 @@ on:
       - labeled
 
 jobs:
+  build:
+    uses: ./.github/workflows/build.yaml
+
   production-test:
+    needs: build
     if: |
         (github.event.action == 'labeled' && github.event.label.name == 'production test')
         || (github.event.action != 'labeled' && contains(github.event.pull_request.labels.*.name, 'production test'))
@@ -19,6 +23,12 @@ jobs:
       contents: read # Specifying id-token wiped this out, so manually specify that this action is allowed to checkout this private repo
     steps:
       - uses: actions/checkout@v3
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: nxfr-push-X64-Linux
+          path: nxfr-push-X64-Linux
+      
       - name: Production test
         if: |
             (github.event.action == 'labeled' && github.event.label.name == 'production test')
@@ -29,3 +39,4 @@ jobs:
           rolling-prefix: "0.0"
           log-directives: "nxfr_push=trace"
           logger: "pretty"
+          nxfr-push-binary: ./nxfr-push-X64-Linux

@@ -44,22 +44,22 @@ inputs:
     description: A GitHub token for making authenticated GitHub API requests
     default: ${{ github.token }}
   nxfr-push-binary:
-    description: Run a version of the `nxfr-push` binary from somewhere already on disk. Conflicts with all other `source-*` options.
+    description: Run a version of the `nxfr-push` binary from somewhere already on disk. Conflicts with all other `nxfr-push-*` options.
   nxfr-push-branch:
-    description: The branch of `nxfr-push` to use. Conflicts with all other `source-*` options.
+    description: The branch of `nxfr-push` to use. Conflicts with all other `nxfr-push-*` options.
     required: false
     default: main
   nxfr-push-pr:
-    description: The PR of `nxfr-push` to use. Conflicts with all other `source-*` options.
+    description: The PR of `nxfr-push` to use. Conflicts with all other `nxfr-push-*` options.
     required: false
   nxfr-push-revision:
-    description: The revision of `nix-nxfr-push` to use. Conflicts with all other `source-*` options.
+    description: The revision of `nix-nxfr-push` to use. Conflicts with all other `nxfr-push-*` options.
     required: false
   nxfr-push-tag:
-    description: The tag of `nxfr-push` to use. Conflicts with all other `source-*` options.
+    description: The tag of `nxfr-push` to use. Conflicts with all other `nxfr-push-*` options.
     required: false
   nxfr-push-url:
-    description: A URL pointing to a `nxfr-push` binary. Overrides all other `source-*` options.
+    description: A URL pointing to a `nxfr-push` binary. Overrides all other `nxfr-push-*` options.
     required: false
 
 # https://docs.github.com/en/actions/creating-actions/metadata-syntax-for-github-actions#runs-for-docker-container-actions
