@@ -51,6 +51,7 @@ pub(crate) async fn get_flake_metadata(directory: &Path) -> color_eyre::Result<s
         .arg("flake")
         .arg("metadata")
         .arg("--json")
+        .arg("--no-write-lock-file")
         .arg(directory)
         .output()
         .await
@@ -85,6 +86,7 @@ pub(crate) async fn get_flake_tarball_outputs(
         .arg("flake")
         .arg("show")
         .arg("--json")
+        .arg("--no-write-lock-file")
         .arg(&file_protocol_path)
         .output()
         .await
