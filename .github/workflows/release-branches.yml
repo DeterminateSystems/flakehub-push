@@ -10,12 +10,6 @@ on:
 jobs:
   build:
     uses: ./.github/workflows/build.yaml
-    if: |
-      github.event.pull_request.head.repo.full_name == 'DeterminateSystems/nxfr-push'
-      && (
-        (github.event.action == 'labeled' && github.event.label.name == 'upload to s3')
-        || (github.event.action != 'labeled' && contains(github.event.pull_request.labels.*.name, 'upload to s3'))
-      )
 
   release:
     needs: build
