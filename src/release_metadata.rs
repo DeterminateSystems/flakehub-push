@@ -8,10 +8,10 @@ use crate::Visibility;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub(crate) struct ReleaseMetadata {
-    pub(crate) description: String,
+    pub(crate) description: Option<String>,
     pub(crate) mirrored_for: Option<String>,
     pub(crate) raw_flake_metadata: serde_json::Value,
-    pub(crate) readme: String,
+    pub(crate) readme: Option<String>,
     pub(crate) revision: String,
     pub(crate) commit_count: i64,
     pub(crate) visibility: Visibility,
@@ -77,18 +77,23 @@ impl ReleaseMetadata {
         .await?;
         span.record("revision_count", revision_count);
 
-        let description = flake_metadata
-            .get("description")
-            .ok_or_else(|| {
-                eyre!("`nix flake metadata --json` does not have a `description` field")
-            })?
-            .as_str()
-            .ok_or_else(|| {
-                eyre!("`nix flake metadata --json` does not have a string `description` field")
-            })?
-            .to_string();
+        let description = if let Some(description) = flake_metadata.get("description") {
+            Some(description
+                .as_str()
+                .ok_or_else(|| {
+                    eyre!("`nix flake metadata --json` does not have a string `description` field")
+                })?
+                .to_string())
+        } else {
+            None
+        };
 
-        let readme = tokio::fs::read_to_string(directory.join("README.md")).await?;
+        let readme_path = directory.join("README.md");
+        let readme = if readme_path.exists() {
+            Some(tokio::fs::read_to_string(readme_path).await?)
+        } else {
+            None
+        };
 
         Ok(ReleaseMetadata {
             description,
