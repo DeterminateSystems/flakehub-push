@@ -24,6 +24,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - uses: DeterminateSystems/nix-installer-action@v4
+      
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
       - uses: actions/download-artifact@v3
         with:
           name: nxfr-push-X64-Linux
