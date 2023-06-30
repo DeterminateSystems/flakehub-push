@@ -86,6 +86,7 @@ runs:
         export ARCHITECTURE_OS="darwin"
       else
         echo "${RUNNER_OS} not supported"
+        exit 1
       fi
 
       if [ "${RUNNER_ARCH}" == "X64" ]; then
@@ -94,6 +95,7 @@ runs:
         export ARCHITECTURE_ARCH="aarch64"
       else
         echo "${RUNNER_ARCH} not supported"
+        exit 1
       fi
 
       export ARCHITECTURE="${ARCHITECTURE_ARCH}-${ARCHITECTURE_OS}"

@@ -11,6 +11,9 @@ on:
 jobs:
   build:
     uses: ./.github/workflows/build.yaml
+    if: |
+      (github.event.action == 'labeled' && github.event.label.name == 'production test')
+      || (github.event.action != 'labeled' && contains(github.event.pull_request.labels.*.name, 'production test'))
 
   production-test:
     needs: build
