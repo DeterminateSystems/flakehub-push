@@ -81,7 +81,7 @@ runs:
       # Also GITHUB_REPOSITORY, GITHUB_REF_NAME, GITHUB_TOKEN, ACTIONS_ID_TOKEN_REQUEST_TOKEN, ACTIONS_ID_TOKEN_REQUEST_URL
     run: |
       if [ "${RUNNER_OS}" == "Linux" ]; then
-        export ARCHITECTURE_OS="linux"
+        export ARCHITECTURE_OS="Linux"
       else
         echo "${RUNNER_OS} not supported"
         exit 1
