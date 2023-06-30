@@ -82,17 +82,13 @@ runs:
     run: |
       if [ "${RUNNER_OS}" == "Linux" ]; then
         export ARCHITECTURE_OS="linux"
-      elif [ "${RUNNER_OS}" == "macOS" ]; then
-        export ARCHITECTURE_OS="darwin"
       else
         echo "${RUNNER_OS} not supported"
         exit 1
       fi
 
       if [ "${RUNNER_ARCH}" == "X64" ]; then
-        export ARCHITECTURE_ARCH="x86_64"
-      elif [ "${RUNNER_ARCH}" == "ARM64" ]; then
-        export ARCHITECTURE_ARCH="aarch64"
+        export ARCHITECTURE_ARCH="X64"
       else
         echo "${RUNNER_ARCH} not supported"
         exit 1
