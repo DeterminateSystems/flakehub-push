@@ -90,7 +90,7 @@ runs:
       fi
 
       if [ "${RUNNER_ARCH}" == "X64" ]; then
-        export ARCHITECTURE_ARCH="x86_64"
+        export ARCHITECTURE_ARCH="X64"
       elif [ "${RUNNER_ARCH}" == "ARM64" ]; then
         export ARCHITECTURE_ARCH="aarch64"
       else
