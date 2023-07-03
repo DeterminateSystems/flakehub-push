@@ -8,14 +8,15 @@ use crate::Visibility;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub(crate) struct ReleaseMetadata {
+    pub(crate) commit_count: i64,
     pub(crate) description: Option<String>,
-    pub(crate) repo: String,
+    pub(crate) outputs: serde_json::Value,
     pub(crate) raw_flake_metadata: serde_json::Value,
     pub(crate) readme: Option<String>,
+    pub(crate) repo: String,
     pub(crate) revision: String,
-    pub(crate) commit_count: i64,
     pub(crate) visibility: Visibility,
-    pub(crate) outputs: serde_json::Value,
+    pub(crate) mirrored: bool,
 }
 
 impl ReleaseMetadata {
@@ -36,6 +37,7 @@ impl ReleaseMetadata {
         flake_outputs: serde_json::Value,
         project_owner: &str,
         project_name: &str,
+        mirrored: bool,
         visibility: Visibility,
     ) -> color_eyre::Result<ReleaseMetadata> {
         let span = tracing::Span::current();
@@ -100,6 +102,7 @@ impl ReleaseMetadata {
             commit_count: revision_count,
             visibility,
             outputs: flake_outputs,
+            mirrored,
         })
     }
 }
