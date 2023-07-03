@@ -22,43 +22,87 @@ pub(crate) struct NixfrPushCli {
     #[clap(long, env = "NXFR_PUSH_VISIBLITY")]
     pub(crate) visibility: crate::Visibility,
     // Will also detect `GITHUB_REF_NAME`
-    #[clap(long, env = "NXFR_PUSH_TAG")]
-    pub(crate) tag: Option<String>,
-    #[clap(long, env = "NXFR_PUSH_ROLLING_PREFIX")]
-    pub(crate) rolling_prefix: Option<String>,
+    #[clap(long, env = "NXFR_PUSH_TAG", value_parser = StringToNoneParser)]
+    pub(crate) tag: OptionString,
+    #[clap(long, env = "NXFR_PUSH_ROLLING_PREFIX", value_parser = StringToNoneParser)]
+    pub(crate) rolling_prefix: OptionString,
     // Also detects `GITHUB_TOKEN`
-    #[clap(long, env = "NXFR_PUSH_GITHUB_TOKEN")]
-    pub(crate) github_token: Option<String>,
+    #[clap(long, env = "NXFR_PUSH_GITHUB_TOKEN", value_parser = StringToNoneParser)]
+    pub(crate) github_token: OptionString,
     /// Will also detect `GITHUB_REPOSITORY`
-    #[clap(long, env = "NXFR_PUSH_UPLOAD_NAME")]
-    pub(crate) upload_name: Option<String>,
+    #[clap(long, env = "NXFR_PUSH_UPLOAD_NAME", value_parser = StringToNoneParser)]
+    pub(crate) upload_name: OptionString,
     /// Override the detected repo name, e.g. in case you're uploading multiple subflakes in a single repo as their own flake.
     ///
     /// In the format of [org]/[repo].
-    #[clap(long, env = "NXFR_PUSH_REPO")]
-    pub(crate) repo: Option<String>,
+    #[clap(long, env = "NXFR_PUSH_REPO", value_parser = StringToNoneParser)]
+    pub(crate) repo: OptionString,
     // Also detects `GITHUB_WORKSPACE`
-    #[clap(long, env = "NXFR_PUSH_DIRECTORY")]
-    pub(crate) directory: Option<PathBuf>,
+    #[clap(long, env = "NXFR_PUSH_DIRECTORY", value_parser = PathBufToNoneParser)]
+    pub(crate) directory: OptionPathBuf,
     // Also detects `GITHUB_WORKSPACE`
-    #[clap(long, env = "NXFR_PUSH_GIT_ROOT")]
-    pub(crate) git_root: Option<PathBuf>,
+    #[clap(long, env = "NXFR_PUSH_GIT_ROOT", value_parser = PathBufToNoneParser)]
+    pub(crate) git_root: OptionPathBuf,
 
     // A specific bearer token string which bypasses the normal authentication check in when pushing an upload
     // This is intended for development at this time.
     #[cfg(debug_assertions)]
-    #[clap(long, env = "NXFR_PUSH_DEV_BEARER_TOKEN")]
-    pub(crate) dev_bearer_token: Option<String>,
+    #[clap(long, env = "NXFR_PUSH_DEV_BEARER_TOKEN", value_parser = StringToNoneParser)]
+    pub(crate) dev_bearer_token: OptionString,
 
     #[clap(flatten)]
     pub instrumentation: instrumentation::Instrumentation,
 }
 
-fn empty_to_none(v: String) -> Option<String> {
-    if v.trim().is_empty() {
-        None
-    } else {
-        Some(v)
+#[derive(Clone, Debug)]
+pub struct OptionString(pub Option<String>);
+
+#[derive(Clone)]
+struct StringToNoneParser;
+
+impl clap::builder::TypedValueParser for StringToNoneParser {
+    type Value = OptionString;
+
+    fn parse_ref(
+        &self,
+        cmd: &clap::Command,
+        arg: Option<&clap::Arg>,
+        value: &std::ffi::OsStr,
+    ) -> Result<Self::Value, clap::Error> {
+        let inner = clap::builder::StringValueParser::new();
+        let val = inner.parse_ref(cmd, arg, value)?;
+
+        if val.is_empty() {
+            Ok(OptionString(None))
+        } else {
+            Ok(OptionString(Some(Into::<String>::into(val))))
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct OptionPathBuf(pub Option<PathBuf>);
+
+#[derive(Clone)]
+struct PathBufToNoneParser;
+
+impl clap::builder::TypedValueParser for PathBufToNoneParser {
+    type Value = OptionPathBuf;
+
+    fn parse_ref(
+        &self,
+        cmd: &clap::Command,
+        arg: Option<&clap::Arg>,
+        value: &std::ffi::OsStr,
+    ) -> Result<Self::Value, clap::Error> {
+        let inner = clap::builder::StringValueParser::new();
+        let val = inner.parse_ref(cmd, arg, value)?;
+
+        if val.is_empty() {
+            Ok(OptionPathBuf(None))
+        } else {
+            Ok(OptionPathBuf(Some(Into::<PathBuf>::into(val))))
+        }
     }
 }
 
@@ -83,22 +127,15 @@ impl NixfrPushCli {
             dev_bearer_token,
             instrumentation: _,
         } = self;
-        let repo = repo.and_then(empty_to_none);
-        let upload_name = upload_name.and_then(empty_to_none);
-        let tag = tag.and_then(empty_to_none);
-        let rolling_prefix = rolling_prefix.and_then(empty_to_none);
-        let github_token = github_token.and_then(empty_to_none);
-        #[cfg(debug_assertions)]
-        let dev_bearer_token = dev_bearer_token.and_then(empty_to_none);
 
-        let github_token = if let Some(github_token) = &github_token.and_then(empty_to_none) {
+        let github_token = if let Some(github_token) = &github_token.0 {
             github_token.clone()
         } else {
             std::env::var("GITHUB_TOKEN")
                 .wrap_err("Could not determine Github token, pass `--github-token`, or set either `NXFR_PUSH_GITHUB_TOKEN` or `GITHUB_TOKEN`")?
         };
 
-        let directory = if let Some(directory) = &directory {
+        let directory = if let Some(directory) = &directory.0 {
             directory.clone()
         } else if let Ok(github_workspace) = std::env::var("GITHUB_WORKSPACE") {
             tracing::trace!(%github_workspace, "Got $GITHUB_WORKSPACE");
@@ -106,7 +143,7 @@ impl NixfrPushCli {
         } else {
             std::env::current_dir().map(PathBuf::from).wrap_err("Could not determine current directory. Pass `--directory` or set `NXFR_PUSH_DIRECTORY`")?
         };
-        let git_root = if let Some(git_root) = &git_root {
+        let git_root = if let Some(git_root) = &git_root.0 {
             git_root.clone()
         } else if let Ok(github_workspace) = std::env::var("GITHUB_WORKSPACE") {
             tracing::trace!(%github_workspace, "Got $GITHUB_WORKSPACE");
@@ -115,7 +152,7 @@ impl NixfrPushCli {
             std::env::current_dir().map(PathBuf::from).wrap_err("Could not determine current git_root. Pass `--git-root` or set `NXFR_PUSH_GIT_ROOT`")?
         };
 
-        let owner_and_repository = if let Some(repo) = &repo {
+        let owner_and_repository = if let Some(repo) = &repo.0 {
             tracing::trace!(%repo, "Got `--repo` argument");
             repo.clone()
         } else if let Ok(github_repository) = std::env::var("GITHUB_REPOSITORY") {
@@ -136,7 +173,7 @@ impl NixfrPushCli {
             .ok_or_else(|| eyre!("Could not determine project, pass `--name`, `--mirrored-for` or the `GITHUB_REPOSITORY` formatted like `determinatesystems/nxfr-push`"))?
             .to_string();
 
-        let tag = if let Some(tag) = &tag {
+        let tag = if let Some(tag) = &tag.0 {
             Some(tag.clone())
         } else {
             std::env::var("GITHUB_REF_NAME").ok()
@@ -149,12 +186,12 @@ impl NixfrPushCli {
             &git_root,
             &project_owner,
             &project_name,
-            upload_name.as_deref(),
+            upload_name.0.as_deref(),
             visibility,
             tag.as_deref(),
-            rolling_prefix.as_deref(),
+            rolling_prefix.0.as_deref(),
             #[cfg(debug_assertions)]
-            dev_bearer_token.as_deref(),
+            dev_bearer_token.0.as_deref(),
         )
         .await?;
 
