@@ -228,10 +228,11 @@ async fn push_new_release(
         eyre!("Could not determine tag or rolling prefix, `--tag`, `GITHUB_REF_NAME`, or `--rolling-prefix` must be set")
     })?;
 
-    let upload_owner_repo_pair = if let Some(upload_name) = upload_name {
-        upload_name.to_string()
+    let project_owner_repo = format!("{project_owner}/{project_name}");
+    let (upload_owner_repo_pair, mirrored) = if let Some(upload_name) = upload_name {
+        (upload_name.to_string(), upload_name != project_owner_repo)
     } else {
-        format!("{project_owner}/{project_name}")
+        (project_owner_repo, false)
     };
     tracing::info!("Preparing release of {upload_owner_repo_pair}/{rolling_prefix_or_tag}");
 
@@ -316,6 +317,7 @@ async fn push_new_release(
         get_flake_tarball_outputs,
         project_owner,
         project_name,
+        mirrored,
         visibility,
     )
     .await
