@@ -170,7 +170,7 @@ impl NixfrPushCli {
                 .ok_or_else(|| eyre!("Could not determine owner, pass `--name`, `--mirrored-for` or the `GITHUB_REPOSITORY` formatted like `determinatesystems/nxfr-push`"))?
                 .to_string();
         let project_name = owner_and_repository_split.next()
-            .ok_or_else(|| eyre!("Could not determine project, pass `--name`, `--mirrored-for` or the `GITHUB_REPOSITORY` formatted like `determinatesystems/nxfr-push`"))?
+            .ok_or_else(|| eyre!("Could not determine project, pass `--upload-name` or `GITHUB_REPOSITORY` formatted like `determinatesystems/nxfr-push`"))?
             .to_string();
 
         let tag = if let Some(tag) = &tag.0 {
