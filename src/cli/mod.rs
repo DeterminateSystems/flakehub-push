@@ -167,7 +167,7 @@ impl NixfrPushCli {
         let mut owner_and_repository_split = owner_and_repository.split('/');
         let project_owner = owner_and_repository_split
                 .next()
-                .ok_or_else(|| eyre!("Could not determine owner, pass `--name`, `--mirrored-for` or the `GITHUB_REPOSITORY` formatted like `determinatesystems/nxfr-push`"))?
+                .ok_or_else(|| eyre!("Could not determine owner, pass `--upload-name` or the `GITHUB_REPOSITORY` formatted like `determinatesystems/nxfr-push`"))?
                 .to_string();
         let project_name = owner_and_repository_split.next()
             .ok_or_else(|| eyre!("Could not determine project, pass `--upload-name` or `GITHUB_REPOSITORY` formatted like `determinatesystems/nxfr-push`"))?
