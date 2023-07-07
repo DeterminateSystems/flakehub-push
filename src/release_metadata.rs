@@ -8,21 +8,21 @@ use crate::Visibility;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub(crate) struct ReleaseMetadata {
+    pub(crate) commit_count: i64,
     pub(crate) description: Option<String>,
-    pub(crate) mirrored_for: Option<String>,
+    pub(crate) outputs: serde_json::Value,
     pub(crate) raw_flake_metadata: serde_json::Value,
     pub(crate) readme: Option<String>,
+    pub(crate) repo: String,
     pub(crate) revision: String,
-    pub(crate) commit_count: i64,
     pub(crate) visibility: Visibility,
-    pub(crate) outputs: serde_json::Value,
+    pub(crate) mirrored: bool,
 }
 
 impl ReleaseMetadata {
     #[tracing::instrument(skip_all, fields(
         directory = %directory.display(),
         description = tracing::field::Empty,
-        mirrored_for = tracing::field::Empty,
         readme_path = tracing::field::Empty,
         revision = tracing::field::Empty,
         revision_count = tracing::field::Empty,
@@ -32,18 +32,16 @@ impl ReleaseMetadata {
     pub(crate) async fn build(
         reqwest_client: reqwest::Client,
         directory: &Path,
+        git_root: &Path,
         flake_metadata: serde_json::Value,
         flake_outputs: serde_json::Value,
         project_owner: &str,
         project_name: &str,
-        mirrored_for: Option<&str>,
+        mirrored: bool,
         visibility: Visibility,
     ) -> color_eyre::Result<ReleaseMetadata> {
         let span = tracing::Span::current();
-        if let Some(mirrored_for) = &mirrored_for {
-            span.record("mirrored_for", mirrored_for);
-        }
-        let gix_repository = gix::open(directory).wrap_err("Opening the Git repository")?;
+        let gix_repository = gix::open(git_root).wrap_err("Opening the Git repository")?;
         let gix_repository_head = gix_repository
             .head()
             .wrap_err("Getting the HEAD revision of the repository")?;
@@ -97,13 +95,14 @@ impl ReleaseMetadata {
 
         Ok(ReleaseMetadata {
             description,
-            mirrored_for: mirrored_for.map(|v| v.to_string()),
+            repo: format!("{project_owner}/{project_name}"),
             raw_flake_metadata: flake_metadata.clone(),
             readme,
             revision: revision_string,
             commit_count: revision_count,
             visibility,
             outputs: flake_outputs,
+            mirrored,
         })
     }
 }
