@@ -22,32 +22,32 @@ pub(crate) struct NixfrPushCli {
     #[clap(long, env = "NXFR_PUSH_VISIBLITY")]
     pub(crate) visibility: crate::Visibility,
     // Will also detect `GITHUB_REF_NAME`
-    #[clap(long, env = "NXFR_PUSH_TAG", value_parser = StringToNoneParser)]
+    #[clap(long, env = "NXFR_PUSH_TAG", value_parser = StringToNoneParser, default_value = "")]
     pub(crate) tag: OptionString,
-    #[clap(long, env = "NXFR_PUSH_ROLLING_PREFIX", value_parser = StringToNoneParser)]
+    #[clap(long, env = "NXFR_PUSH_ROLLING_PREFIX", value_parser = StringToNoneParser, default_value = "")]
     pub(crate) rolling_prefix: OptionString,
     // Also detects `GITHUB_TOKEN`
-    #[clap(long, env = "NXFR_PUSH_GITHUB_TOKEN", value_parser = StringToNoneParser)]
+    #[clap(long, env = "NXFR_PUSH_GITHUB_TOKEN", value_parser = StringToNoneParser, default_value = "")]
     pub(crate) github_token: OptionString,
     /// Will also detect `GITHUB_REPOSITORY`
-    #[clap(long, env = "NXFR_PUSH_UPLOAD_NAME", value_parser = StringToNoneParser)]
+    #[clap(long, env = "NXFR_PUSH_UPLOAD_NAME", value_parser = StringToNoneParser, default_value = "")]
     pub(crate) upload_name: OptionString,
     /// Override the detected repo name, e.g. in case you're uploading multiple subflakes in a single repo as their own flake.
     ///
     /// In the format of [org]/[repo].
-    #[clap(long, env = "NXFR_PUSH_REPO", value_parser = StringToNoneParser)]
+    #[clap(long, env = "NXFR_PUSH_REPO", value_parser = StringToNoneParser, default_value = "")]
     pub(crate) repo: OptionString,
     // Also detects `GITHUB_WORKSPACE`
-    #[clap(long, env = "NXFR_PUSH_DIRECTORY", value_parser = PathBufToNoneParser)]
+    #[clap(long, env = "NXFR_PUSH_DIRECTORY", value_parser = PathBufToNoneParser, default_value = "")]
     pub(crate) directory: OptionPathBuf,
     // Also detects `GITHUB_WORKSPACE`
-    #[clap(long, env = "NXFR_PUSH_GIT_ROOT", value_parser = PathBufToNoneParser)]
+    #[clap(long, env = "NXFR_PUSH_GIT_ROOT", value_parser = PathBufToNoneParser, default_value = "")]
     pub(crate) git_root: OptionPathBuf,
 
     // A specific bearer token string which bypasses the normal authentication check in when pushing an upload
     // This is intended for development at this time.
     #[cfg(debug_assertions)]
-    #[clap(long, env = "NXFR_PUSH_DEV_BEARER_TOKEN", value_parser = StringToNoneParser)]
+    #[clap(long, env = "NXFR_PUSH_DEV_BEARER_TOKEN", value_parser = StringToNoneParser, default_value = "")]
     pub(crate) dev_bearer_token: OptionString,
 
     #[clap(flatten)]
