@@ -343,9 +343,7 @@ async fn push_new_release(
 
     #[cfg(debug_assertions)]
     let upload_bearer_token = match &dev_config.dev_bearer_token.0 {
-        None => get_actions_id_bearer_token()
-            .await
-            .wrap_err("Getting upload bearer token")?,
+        None => "bearer bogus".to_string(),
         Some(dev_token) => {
             tracing::warn!(dev_bearer_token = %dev_token, "This nxfr-push has `dev_bearer_token` set for upload. This is intended for development purposes only.");
             dev_token.to_string()
