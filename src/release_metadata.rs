@@ -23,8 +23,8 @@ pub(crate) struct ReleaseMetadata {
 
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 pub(crate) struct DevMetadata {
-    pub(crate) project_id: Option<i64>,
-    pub(crate) owner_id: Option<i64>,
+    pub(crate) project_id: Option<String>,
+    pub(crate) owner_id: Option<String>,
 }
 
 impl ReleaseMetadata {

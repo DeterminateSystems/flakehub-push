@@ -61,10 +61,10 @@ pub struct DevConfig {
     pub(crate) dev_bearer_token: OptionString,
     // A manually-specified project id (a la GitHub's `databaseId`)
     #[clap(long)]
-    pub(crate) dev_project_id: Option<i64>,
+    pub(crate) dev_project_id: Option<String>,
     // A manually-specified owner id (a la GitHub's `databaseId`)
     #[clap(long)]
-    pub(crate) dev_owner_id: Option<i64>,
+    pub(crate) dev_owner_id: Option<String>,
 }
 
 #[derive(Clone, Debug)]
