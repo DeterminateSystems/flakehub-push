@@ -17,6 +17,14 @@ pub(crate) struct ReleaseMetadata {
     pub(crate) revision: String,
     pub(crate) visibility: Visibility,
     pub(crate) mirrored: bool,
+    #[cfg(debug_assertions)]
+    dev_metadata: DevMetadata,
+}
+
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub(crate) struct DevMetadata {
+    pub(crate) project_id: Option<String>,
+    pub(crate) owner_id: Option<String>,
 }
 
 impl ReleaseMetadata {
@@ -39,6 +47,7 @@ impl ReleaseMetadata {
         project_name: &str,
         mirrored: bool,
         visibility: Visibility,
+        #[cfg(debug_assertions)] dev_metadata: DevMetadata,
     ) -> color_eyre::Result<ReleaseMetadata> {
         let span = tracing::Span::current();
         let gix_repository = gix::open(git_root).wrap_err("Opening the Git repository")?;
@@ -103,6 +112,8 @@ impl ReleaseMetadata {
             visibility,
             outputs: flake_outputs,
             mirrored,
+            #[cfg(debug_assertions)]
+            dev_metadata,
         })
     }
 }
