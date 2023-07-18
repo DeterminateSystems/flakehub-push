@@ -370,7 +370,7 @@ async fn push_new_release(
     );
     tracing::debug!(
         url = release_metadata_post_url,
-        "Got release metadata POST URL"
+        "Computed release metadata POST URL"
     );
 
     let release_metadata_post_response = reqwest_client
@@ -408,20 +408,22 @@ async fn push_new_release(
         .bytes()
         .await
         .wrap_err("Could not get bytes from release metadata POST response")?;
-    let release_metadata_put_string =
+    let release_upload_url =
         String::from_utf8_lossy(&release_metadata_post_response_bytes).to_string();
+
+    tracing::debug!("Got release upload URL {release_upload_url:?}");
 
     if release_metadata_post_response_status != 200 {
         return Err(eyre!(
             "\
                 Status {release_metadata_post_response_status} from metadata POST\n\
-                {release_metadata_put_string}\
+                {release_upload_url}\
             "
         ));
     }
 
     let tarball_put_response = reqwest_client
-        .put(release_metadata_put_string)
+        .put(release_upload_url)
         .headers({
             let mut header_map = HeaderMap::new();
             header_map.insert(
