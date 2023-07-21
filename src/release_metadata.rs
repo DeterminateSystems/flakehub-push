@@ -177,7 +177,7 @@ pub(crate) async fn get_revision_count(
                 .wrap_err("Failed to retrieve RevCountQuery response from Github's GraphQL API")?;
         response_data
     };
-    
+
     tracing::trace!(?graphql_response, "Got response");
     let graphql_repository_object = graphql_response
             .repository
