@@ -118,7 +118,11 @@ impl ReleaseMetadata {
     }
 }
 
-#[tracing::instrument(skip_all)]
+#[tracing::instrument(skip_all, fields(
+    %project_owner,
+    %project_name,
+    %revision,
+))]
 pub(crate) async fn get_revision_count(
     reqwest_client: reqwest::Client,
     project_owner: &str,
@@ -133,6 +137,12 @@ pub(crate) async fn get_revision_count(
             revision: revision.to_string(),
         };
         let query = crate::graphql::RevCountQuery::build_query(variables);
+
+        tracing::trace!(
+            endpoint = %crate::graphql::GITHUB_ENDPOINT,
+            query = serde_json::to_string(&query).unwrap_or_else(|_| "<error serializing>".into()),
+            "Making request"
+        );
         let reqwest_response = reqwest_client
             .post(crate::graphql::GITHUB_ENDPOINT)
             .json(&query)
@@ -167,6 +177,8 @@ pub(crate) async fn get_revision_count(
                 .wrap_err("Failed to retrieve RevCountQuery response from Github's GraphQL API")?;
         response_data
     };
+    
+    tracing::trace!(?graphql_response, "Got response");
     let graphql_repository_object = graphql_response
             .repository
             .ok_or_else(|| eyre!("Did not recieve a `repository` inside RevCountQuery response from Github's GraphQL API"))?
