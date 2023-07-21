@@ -97,7 +97,9 @@ impl ReleaseMetadata {
 
         let readme_path = directory.join("README.md");
         let readme = if readme_path.exists() {
-            Some(tokio::fs::read_to_string(readme_path).await?)
+            let file = tokio::fs::read_to_string(readme_path).await?;
+            let html = cargo_registry_markdown::text_to_html(&file, "README.md", None, None);
+            Some(html)
         } else {
             None
         };

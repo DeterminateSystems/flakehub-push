@@ -15,7 +15,7 @@
 
   outputs = inputs:
     let
-      supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
+      supportedSystems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
 
       forAllSystems = forSystems supportedSystems;
       forDockerSystems = forSystems [ "x86_64-linux" ];
@@ -36,7 +36,6 @@
       overlays.default = final: prev: {
         nxfr-push = inputs.self.packages.${final.stdenv.system}.nxfr-push;
       };
-
 
       packages = forAllSystems ({ system, pkgs, lib, ... }:
         let
@@ -70,7 +69,8 @@
             rustc
             cargo
           ]
-          ++ inputs.self.packages.${system}.nxfr-push.buildInputs;
+          ++ inputs.self.packages.${system}.nxfr-push.buildInputs
+          ++ pkgs.lib.optionals pkgs.stdenv.isDarwin (with pkgs.darwin.apple_sdk.frameworks; [ Security ]);
 
           nativeBuildInputs = with pkgs; [
           ]
