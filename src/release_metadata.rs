@@ -140,7 +140,7 @@ pub(crate) async fn get_revision_count(
 
         tracing::trace!(
             endpoint = %crate::graphql::GITHUB_ENDPOINT,
-            query = serde_json::to_string(&query).unwrap_or_else(|_| "<error serializing>".into()),
+            ?query,
             "Making request"
         );
         let reqwest_response = reqwest_client
