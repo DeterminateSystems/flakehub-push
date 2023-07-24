@@ -17,7 +17,11 @@ use crate::{
 #[derive(Debug, clap::Parser)]
 #[clap(version)]
 pub(crate) struct NixfrPushCli {
-    #[clap(long, env = "FLAKEHUB_PUSH_HOST", default_value = "https://flakehub.fly.dev")]
+    #[clap(
+        long,
+        env = "FLAKEHUB_PUSH_HOST",
+        default_value = "https://flakehub.fly.dev"
+    )]
     pub(crate) host: String,
     #[clap(long, env = "FLAKEHUB_PUSH_VISIBLITY")]
     pub(crate) visibility: crate::Visibility,
@@ -354,7 +358,9 @@ async fn push_new_release(
         .await
         .wrap_err("Getting upload bearer token")?;
 
-    let reqwest_client = reqwest::Client::builder().user_agent("flakehub-push").build()?;
+    let reqwest_client = reqwest::Client::builder()
+        .user_agent("flakehub-push")
+        .build()?;
 
     let rolling_prefix_with_postfix_or_tag = if let Some(rolling_prefix) = &rolling_prefix {
         format!(
