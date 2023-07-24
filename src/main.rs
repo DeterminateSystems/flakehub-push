@@ -1,7 +1,6 @@
 use clap::Parser;
 mod cli;
 mod flake_info;
-mod graphql;
 mod release_metadata;
 
 #[tokio::main]
