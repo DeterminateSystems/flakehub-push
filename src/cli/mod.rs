@@ -10,7 +10,7 @@ use tokio::io::AsyncWriteExt;
 
 use crate::{
     flake_info::{get_flake_metadata, get_flake_tarball, get_flake_tarball_outputs},
-    release_metadata::{DevMetadata, ReleaseMetadata},
+    release_metadata::ReleaseMetadata,
     Visibility,
 };
 
@@ -44,27 +44,14 @@ pub(crate) struct NixfrPushCli {
     #[clap(long, env = "NXFR_PUSH_GIT_ROOT", value_parser = PathBufToNoneParser, default_value = "")]
     pub(crate) git_root: OptionPathBuf,
 
-    #[cfg(debug_assertions)]
-    #[clap(flatten)]
-    pub(crate) dev_config: DevConfig,
+    /// URL of a JWT mock server (like https://github.com/ruiyang/jwt-mock-server) which can issue tokens.
+    ///
+    /// Used instead of ACTIONS_ID_TOKEN_REQUEST_URL/ACTIONS_ID_TOKEN_REQUEST_TOKEN when developing locally.
+    #[clap(long, env = "NXFR_JWT_ISSUER_URI", value_parser = StringToNoneParser, default_value = "")]
+    pub(crate) jwt_issuer_uri: OptionString,
 
     #[clap(flatten)]
     pub instrumentation: instrumentation::Instrumentation,
-}
-
-#[cfg(debug_assertions)]
-#[derive(Debug, clap::Parser)]
-pub struct DevConfig {
-    // A specific bearer token string which bypasses the normal authentication check in when pushing an upload
-    // This is intended for development at this time.
-    #[clap(long, env = "NXFR_PUSH_DEV_BEARER_TOKEN", value_parser = StringToNoneParser, default_value = "")]
-    pub(crate) dev_bearer_token: OptionString,
-    // A manually-specified project id (a la GitHub's `databaseId`)
-    #[clap(long)]
-    pub(crate) dev_project_id: Option<String>,
-    // A manually-specified owner id (a la GitHub's `databaseId`)
-    #[clap(long)]
-    pub(crate) dev_owner_id: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -136,8 +123,7 @@ impl NixfrPushCli {
             directory,
             repo,
             git_root,
-            #[cfg(debug_assertions)]
-            dev_config,
+            jwt_issuer_uri,
             instrumentation: _,
         } = self;
 
@@ -203,8 +189,6 @@ impl NixfrPushCli {
             visibility,
             tag.as_deref(),
             rolling_prefix.0.as_deref(),
-            #[cfg(debug_assertions)]
-            dev_config,
         )
         .await?;
 
@@ -233,7 +217,6 @@ async fn push_new_release(
     visibility: Visibility,
     tag: Option<&str>,
     rolling_prefix: Option<&str>,
-    #[cfg(debug_assertions)] dev_config: DevConfig,
 ) -> color_eyre::Result<()> {
     let span = tracing::Span::current();
 
@@ -332,24 +315,10 @@ async fn push_new_release(
         project_name,
         mirrored,
         visibility,
-        #[cfg(debug_assertions)]
-        DevMetadata {
-            project_id: dev_config.dev_project_id,
-            owner_id: dev_config.dev_owner_id,
-        },
     )
     .await
     .wrap_err("Building release metadata")?;
 
-    #[cfg(debug_assertions)]
-    let upload_bearer_token = match &dev_config.dev_bearer_token.0 {
-        None => "bearer bogus".to_string(),
-        Some(dev_token) => {
-            tracing::warn!(dev_bearer_token = %dev_token, "This nxfr-push has `dev_bearer_token` set for upload. This is intended for development purposes only.");
-            dev_token.to_string()
-        }
-    };
-    #[cfg(not(debug_assertions))]
     let upload_bearer_token = get_actions_id_bearer_token()
         .await
         .wrap_err("Getting upload bearer token")?;
