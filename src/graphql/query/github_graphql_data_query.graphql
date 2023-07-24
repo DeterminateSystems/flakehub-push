@@ -1,4 +1,4 @@
-query RevCountQuery($owner: String!, $name: String!, $revision: String!) {
+query GithubGraphqlDataQuery($owner: String!, $name: String!, $revision: String!) {
   repository(owner: $owner, name: $name) {
     object(expression: $revision) {
       __typename
@@ -7,6 +7,9 @@ query RevCountQuery($owner: String!, $name: String!, $revision: String!) {
           totalCount
         }
       }
+    }
+    licenseInfo {
+      spdxId
     }
   }
 }
