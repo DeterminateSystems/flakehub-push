@@ -33,13 +33,13 @@ inputs:
     required: false
     default: null
   host:
-    description: "The nxfr server to use"
+    description: "The flakehub server to use"
     required: false
-    default: "https://nxfr.fly.dev"
+    default: "https://flakehub.fly.dev"
   log-directives:
     description: A list of Tracing directives, comma separated, `-`s replaced with `_` (eg. `nix_installer=trace`, see https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html#directives)
     required: false
-    default: "nxfr_push=info"
+    default: "flakehub_push=info"
   logger:
     description: The logger to use for install (eg. `pretty`, `json`, `full`, `compact`)
     required: false
@@ -47,43 +47,43 @@ inputs:
   github-token:
     description: A GitHub token for making authenticated GitHub API requests
     default: ${{ github.token }}
-  nxfr-push-binary:
-    description: Run a version of the `nxfr-push` binary from somewhere already on disk. Conflicts with all other `nxfr-push-*` options.
-  nxfr-push-branch:
-    description: The branch of `nxfr-push` to use. Conflicts with all other `nxfr-push-*` options.
+  flakehub-push-binary:
+    description: Run a version of the `flakehub-push` binary from somewhere already on disk. Conflicts with all other `flakehub-push-*` options.
+  flakehub-push-branch:
+    description: The branch of `flakehub-push` to use. Conflicts with all other `flakehub-push-*` options.
     required: false
     default: main
-  nxfr-push-pr:
-    description: The PR of `nxfr-push` to use. Conflicts with all other `nxfr-push-*` options.
+  flakehub-push-pr:
+    description: The PR of `flakehub-push` to use. Conflicts with all other `flakehub-push-*` options.
     required: false
-  nxfr-push-revision:
-    description: The revision of `nix-nxfr-push` to use. Conflicts with all other `nxfr-push-*` options.
+  flakehub-push-revision:
+    description: The revision of `flakehub-push` to use. Conflicts with all other `flakehub-push-*` options.
     required: false
-  nxfr-push-tag:
-    description: The tag of `nxfr-push` to use. Conflicts with all other `nxfr-push-*` options.
+  flakehub-push-tag:
+    description: The tag of `flakehub-push` to use. Conflicts with all other `flakehub-push-*` options.
     required: false
-  nxfr-push-url:
-    description: A URL pointing to a `nxfr-push` binary. Overrides all other `nxfr-push-*` options.
+  flakehub-push-url:
+    description: A URL pointing to a `flakehub-push` binary. Overrides all other `flakehub-push-*` options.
     required: false
 
 # https://docs.github.com/en/actions/creating-actions/metadata-syntax-for-github-actions#runs-for-docker-container-actions
 runs:
   using: composite
   steps:
-  - name: Install `nxfr-push`
+  - name: Install `flakehub-push`
     shell: bash
     env:
-      NXFR_PUSH_VISIBLITY: ${{ inputs.visibility }}
-      NXFR_PUSH_TAG: ${{ inputs.tag }}
-      NXFR_PUSH_ROLLING_PREFIX: ${{ inputs.rolling-prefix }}
-      NXFR_PUSH_HOST: ${{ inputs.host }}
-      NXFR_PUSH_LOG_DIRECTIVES: ${{ inputs.log-directives }}
-      NXFR_PUSH_LOGGER: ${{ inputs.logger }}
-      NXFR_PUSH_GITHUB_TOKEN: ${{ inputs.github-token }}
-      NXFR_PUSH_UPLOAD_NAME: ${{ inputs.upload-name }}
-      NXFR_PUSH_REPO: ${{ inputs.repo }}
-      NXFR_PUSH_DIRECTORY: ${{ inputs.directory }}
-      NXFR_PUSH_GIT_ROOT: ${{ inputs.git-root }}
+      FLAKEHUB_PUSH_VISIBLITY: ${{ inputs.visibility }}
+      FLAKEHUB_PUSH_TAG: ${{ inputs.tag }}
+      FLAKEHUB_PUSH_ROLLING_PREFIX: ${{ inputs.rolling-prefix }}
+      FLAKEHUB_PUSH_HOST: ${{ inputs.host }}
+      FLAKEHUB_PUSH_LOG_DIRECTIVES: ${{ inputs.log-directives }}
+      FLAKEHUB_PUSH_LOGGER: ${{ inputs.logger }}
+      FLAKEHUB_PUSH_GITHUB_TOKEN: ${{ inputs.github-token }}
+      FLAKEHUB_PUSH_UPLOAD_NAME: ${{ inputs.upload-name }}
+      FLAKEHUB_PUSH_REPO: ${{ inputs.repo }}
+      FLAKEHUB_PUSH_DIRECTORY: ${{ inputs.directory }}
+      FLAKEHUB_PUSH_GIT_ROOT: ${{ inputs.git-root }}
       # Also GITHUB_REPOSITORY, GITHUB_REF_NAME, GITHUB_TOKEN, ACTIONS_ID_TOKEN_REQUEST_TOKEN, ACTIONS_ID_TOKEN_REQUEST_URL
     run: |
       if [ "${RUNNER_OS}" == "Linux" ]; then
@@ -102,29 +102,29 @@ runs:
 
       export ARCHITECTURE="${ARCHITECTURE_ARCH}-${ARCHITECTURE_OS}"
 
-      if [ -n "${{ inputs.nxfr-push-url }}" ]; then
-        export NXFR_PUSH_URL="${{ inputs.nxfr-push-url }}"
+      if [ -n "${{ inputs.flakehub-push-url }}" ]; then
+        export FLAKEHUB_PUSH_URL="${{ inputs.flakehub-push-url }}"
       else
-        if [ -n "${{ inputs.nxfr-push-pr }}" ]; then
-          export NXFR_PUSH_URL="https://install.determinate.systems/nxfr-push/pr/${{ inputs.nxfr-push-pr }}/${ARCHITECTURE}?ci=github"
-        elif [ -n "${{ inputs.nxfr-push-tag }}" ]; then
-          export NXFR_PUSH_URL="https://install.determinate.systems/nxfr-push/tag/${{ inputs.nxfr-push-tag }}/${ARCHITECTURE}?ci=github"
-        elif [ -n "${{ inputs.nxfr-push-revision }}" ]; then
-          export NXFR_PUSH_URL="https://install.determinate.systems/nxfr-push/rev/${{ inputs.nxfr-push-revision }}/${ARCHITECTURE}?ci=github"
-        elif [ -n "${{ inputs.nxfr-push-branch }}" ]; then
-          export NXFR_PUSH_URL="https://install.determinate.systems/nxfr-push/branch/${{ inputs.nxfr-push-branch }}/${ARCHITECTURE}?ci=github"
+        if [ -n "${{ inputs.flakehub-push-pr }}" ]; then
+          export FLAKEHUB_PUSH_URL="https://install.determinate.systems/flakehub-push/pr/${{ inputs.flakehub-push-pr }}/${ARCHITECTURE}?ci=github"
+        elif [ -n "${{ inputs.flakehub-push-tag }}" ]; then
+          export FLAKEHUB_PUSH_URL="https://install.determinate.systems/flakehub-push/tag/${{ inputs.flakehub-push-tag }}/${ARCHITECTURE}?ci=github"
+        elif [ -n "${{ inputs.flakehub-push-revision }}" ]; then
+          export FLAKEHUB_PUSH_URL="https://install.determinate.systems/flakehub-push/rev/${{ inputs.flakehub-push-revision }}/${ARCHITECTURE}?ci=github"
+        elif [ -n "${{ inputs.flakehub-push-branch }}" ]; then
+          export FLAKEHUB_PUSH_URL="https://install.determinate.systems/flakehub-push/branch/${{ inputs.flakehub-push-branch }}/${ARCHITECTURE}?ci=github"
         else
-          export NXFR_PUSH_URL="https://install.determinate.systems/nxfr-push/stable/${ARCHITECTURE}?ci=github"
+          export FLAKEHUB_PUSH_URL="https://install.determinate.systems/flakehub-push/stable/${ARCHITECTURE}?ci=github"
         fi
       fi
-      echo "Set NXFR_PUSH_URL=$NXFR_PUSH_URL"
+      echo "Set FLAKEHUB_PUSH_URL=$FLAKEHUB_PUSH_URL"
 
-      if [ -n "${{ inputs.nxfr-push-binary }}" ]; then
-        chmod +x ${{ inputs.nxfr-push-binary }}
-        exec ${{ inputs.nxfr-push-binary }}
+      if [ -n "${{ inputs.flakehub-push-binary }}" ]; then
+        chmod +x ${{ inputs.flakehub-push-binary }}
+        exec ${{ inputs.flakehub-push-binary }}
       else
         DEST=$(mktemp -d)
-        curl --retry 20 -L $NXFR_PUSH_URL -o $DEST/nxfr-push
-        chmod +x $DEST/nxfr-push
-        exec $DEST/nxfr-push
+        curl --retry 20 -L $FLAKEHUB_PUSH_URL -o $DEST/flakehub-push
+        chmod +x $DEST/flakehub-push
+        exec $DEST/flakehub-push
       fi

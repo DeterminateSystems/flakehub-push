@@ -12,7 +12,7 @@ jobs:
   build:
     uses: ./.github/workflows/build.yaml
     if: |
-      github.event.pull_request.head.repo.full_name == 'DeterminateSystems/nxfr-push'
+      github.event.pull_request.head.repo.full_name == 'DeterminateSystems/flakehub-push'
       && (
         (github.event.action == 'labeled' && github.event.label.name == 'upload to s3')
         || (github.event.action != 'labeled' && contains(github.event.pull_request.labels.*.name, 'upload to s3'))
@@ -25,7 +25,7 @@ jobs:
     # Only intra-repo PRs are allowed to have PR artifacts uploaded
     # We only want to trigger once the upload once in the case the upload label is added, not when any label is added
     if: |
-      github.event.pull_request.head.repo.full_name == 'DeterminateSystems/nxfr-push'
+      github.event.pull_request.head.repo.full_name == 'DeterminateSystems/flakehub-push'
       && (
         (github.event.action == 'labeled' && github.event.label.name == 'upload to s3')
         || (github.event.action != 'labeled' && contains(github.event.pull_request.labels.*.name, 'upload to s3'))
@@ -49,11 +49,11 @@ jobs:
 
       - uses: actions/download-artifact@v3
         with:
-          name: nxfr-push-X64-Linux
-          path: nxfr-push-X64-Linux
+          name: flakehub-push-X64-Linux
+          path: flakehub-push-X64-Linux
 
-      - name: Persist the nxfr-push binary
-        run: cp ./nxfr-push-X64-Linux/nxfr-push ./artifacts/nxfr-push-X64-Linux
+      - name: Persist the flakehub-push binary
+        run: cp ./flakehub-push-X64-Linux/flakehub-push ./artifacts/flakehub-push-X64-Linux
 
       - name: Publish Release (PR)
         env:
