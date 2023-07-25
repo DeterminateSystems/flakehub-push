@@ -16,7 +16,7 @@ pub(crate) struct ReleaseMetadata {
     pub(crate) revision: String,
     pub(crate) visibility: Visibility,
     pub(crate) mirrored: bool,
-    pub(crate) spdx_identifier: String,
+    pub(crate) spdx_identifier: Option<String>,
     #[cfg(debug_assertions)]
     dev_metadata: DevMetadata,
 }

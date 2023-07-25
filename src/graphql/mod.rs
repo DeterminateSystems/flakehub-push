@@ -95,8 +95,7 @@ impl GithubGraphqlDataQuery {
 
         let spdx_identifier = graphql_repository.license_info
             .ok_or_else(|| eyre!("Did not recieve a `license_info` inside GithubGraphqlDataQuery response from Github's GraphQL API"))?
-            .spdx_id
-            .ok_or_else(|| eyre!("Did not recieve a `license_info.spdx_id` inside GithubGraphqlDataQuery response from Github's GraphQL API"))?;;
+            .spdx_id;
 
         Ok(GithubGraphqlDataResult { rev_count, spdx_identifier })
     }
@@ -105,5 +104,5 @@ impl GithubGraphqlDataQuery {
 
 pub(crate) struct GithubGraphqlDataResult {
     pub(crate) rev_count: i64,
-    pub(crate) spdx_identifier: String,
+    pub(crate) spdx_identifier: Option<String>,
 }
