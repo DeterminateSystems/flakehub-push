@@ -83,7 +83,7 @@ impl ReleaseMetadata {
             &revision_string,
         )
         .await?;
-        span.record("revision_count", &github_graphql_data_result.rev_count);
+        span.record("revision_count", github_graphql_data_result.rev_count);
         span.record(
             "spdx_identifier",
             &github_graphql_data_result.spdx_identifier,
