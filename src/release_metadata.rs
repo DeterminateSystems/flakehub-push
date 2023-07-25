@@ -1,11 +1,14 @@
 use color_eyre::eyre::{eyre, WrapErr};
 use std::path::Path;
 
+use crate::graphql::rev_count_query::RevCountQueryRepositoryObject;
+use graphql_client::GraphQLQuery;
+
 use crate::Visibility;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub(crate) struct ReleaseMetadata {
-    pub(crate) commit_count: usize,
+    pub(crate) commit_count: i64,
     pub(crate) description: Option<String>,
     pub(crate) outputs: serde_json::Value,
     pub(crate) raw_flake_metadata: serde_json::Value,
@@ -63,7 +66,13 @@ impl ReleaseMetadata {
         let revision_string = revision.to_hex().to_string();
         span.record("revision_string", revision_string.clone());
 
-        let revision_count = gix_repository.rev_walk([revision]).all()?.count();
+        let revision_count = get_revision_count(
+            reqwest_client,
+            project_owner,
+            project_name,
+            &revision_string,
+        )
+        .await?;
         span.record("revision_count", revision_count);
 
         let description = if let Some(description) = flake_metadata.get("description") {
@@ -96,4 +105,76 @@ impl ReleaseMetadata {
             mirrored,
         })
     }
+}
+
+#[tracing::instrument(skip_all)]
+pub(crate) async fn get_revision_count(
+    reqwest_client: reqwest::Client,
+    project_owner: &str,
+    project_name: &str,
+    revision: &str,
+) -> color_eyre::Result<i64> {
+    // Schema from https://docs.github.com/public/schema.docs.graphql
+    let graphql_response = {
+        let variables = crate::graphql::rev_count_query::Variables {
+            owner: project_owner.to_string(),
+            name: project_name.to_string(),
+            revision: revision.to_string(),
+        };
+        let query = crate::graphql::RevCountQuery::build_query(variables);
+        let reqwest_response = reqwest_client
+            .post(crate::graphql::GITHUB_ENDPOINT)
+            .json(&query)
+            .send()
+            .await
+            .wrap_err("Failed to issue RevCountQuery request to Github's GraphQL API")?;
+
+        let response_status = reqwest_response.status();
+        let response_data: serde_json::Value = reqwest_response
+            .json()
+            .await
+            .wrap_err("Failed to retrieve RevCountQuery response from Github's GraphQL API")?;
+
+        if response_status != 200 {
+            tracing::error!(status = %response_status,
+                "Recieved error:\n\
+                {response_data:#?}\n\
+            "
+            );
+            return Err(eyre!(
+                "Got {response_status} status from Github's GraphQL API, expected 200"
+            ));
+        }
+
+        let graphql_data = response_data.get("data").ok_or_else(|| {
+            eyre!(
+                "Did not recieve a `data` inside RevCountQuery response from Github's GraphQL API"
+            )
+        })?;
+        let response_data: <crate::graphql::RevCountQuery as GraphQLQuery>::ResponseData =
+            serde_json::from_value(graphql_data.clone())
+                .wrap_err("Failed to retrieve RevCountQuery response from Github's GraphQL API")?;
+        response_data
+    };
+    let graphql_repository_object = graphql_response
+            .repository
+            .ok_or_else(|| eyre!("Did not recieve a `repository` inside RevCountQuery response from Github's GraphQL API"))?
+            .object
+            .ok_or_else(|| eyre!("Did not recieve a `repository.object` inside RevCountQuery response from Github's GraphQL API"))?;
+
+    let total_count = match graphql_repository_object {
+            RevCountQueryRepositoryObject::Blob
+            | RevCountQueryRepositoryObject::Tag
+            | RevCountQueryRepositoryObject::Tree => {
+                return Err(eyre!(
+                "Retrieved a `repository.object` that was not a `Commit` in the RevCountQuery response from Github's GraphQL API"
+            ))
+            }
+            RevCountQueryRepositoryObject::Commit(crate::graphql::rev_count_query::RevCountQueryRepositoryObjectOnCommit {
+                history: crate::graphql::rev_count_query::RevCountQueryRepositoryObjectOnCommitHistory {
+                    total_count,
+                }
+            }) => total_count,
+        };
+    Ok(total_count)
 }
