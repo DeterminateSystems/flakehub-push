@@ -66,13 +66,18 @@ impl ReleaseMetadata {
         let revision_string = revision.to_hex().to_string();
         span.record("revision_string", revision_string.clone());
 
-        let revision_count = get_revision_count(
-            reqwest_client,
-            project_owner,
-            project_name,
-            &revision_string,
-        )
-        .await?;
+        let local_revision_count = gix_repository.rev_walk([revision]).all().map(|rev_iter| rev_iter.count());
+        tracing::debug!("Got revision count from local repository: {local_revision_count:?}");
+
+        let revision_count = match local_revision_count {
+            Ok(n) => n as i64,
+            Err(_e) => get_revision_count_from_github(
+                reqwest_client,
+                project_owner,
+                project_name,
+                &revision_string,
+            ).await?
+        };
         span.record("revision_count", revision_count);
 
         let description = if let Some(description) = flake_metadata.get("description") {
@@ -108,7 +113,7 @@ impl ReleaseMetadata {
 }
 
 #[tracing::instrument(skip_all)]
-pub(crate) async fn get_revision_count(
+pub(crate) async fn get_revision_count_from_github(
     reqwest_client: reqwest::Client,
     project_owner: &str,
     project_name: &str,
