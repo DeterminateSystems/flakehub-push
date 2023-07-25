@@ -1,11 +1,11 @@
-# `flakehub-push`
+# `nxfr-push`
 
-A [flakehub](https://flakehub.com/) pusher.
+A [nxfr](https://nxfr.com/) pusher.
 
 ## Example
 
 ```yaml
-name: flakehub
+name: nxfr
 
 on:
   workflow_dispatch:
@@ -21,8 +21,8 @@ jobs:
       contents: read # Specifying id-token wiped this out, so manually specify that this action is allowed to checkout this private repo
     steps:
       - uses: actions/checkout@v3
-      - name: Push to flakehub
-        uses: determinatesystems/flakehub
+      - name: Push to nxfr
+        uses: determinatesystems/nxfr
         with:
           visibility: "hidden" # or "public"
 ```

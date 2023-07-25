@@ -33,8 +33,8 @@ jobs:
 
       - uses: actions/download-artifact@v3
         with:
-          name: flakehub-push-X64-Linux
-          path: flakehub-push-X64-Linux
+          name: nxfr-push-X64-Linux
+          path: nxfr-push-X64-Linux
       
       - name: Production test
         if: |
@@ -44,6 +44,6 @@ jobs:
         with:
           visibility: "hidden"
           rolling-prefix: "0.0"
-          log-directives: "flakehub_push=trace"
+          log-directives: "nxfr_push=trace"
           logger: "pretty"
-          flakehub-push-binary: ./flakehub-push-X64-Linux/flakehub-push
+          nxfr-push-binary: ./nxfr-push-X64-Linux/nxfr-push

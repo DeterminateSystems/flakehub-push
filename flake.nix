@@ -1,5 +1,5 @@
 {
-  description = "A https://flakehub.com/ pusher.";
+  description = "A https://nxfr.com/ pusher.";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -34,7 +34,7 @@
     in
     {
       overlays.default = final: prev: {
-        flakehub-push = inputs.self.packages.${final.stdenv.system}.flakehub-push;
+        nxfr-push = inputs.self.packages.${final.stdenv.system}.nxfr-push;
       };
 
 
@@ -46,10 +46,10 @@
           };
         in
         rec {
-          default = flakehub-push;
+          default = nxfr-push;
 
-          flakehub-push = craneLib.buildPackage {
-            pname = "flakehub-push";
+          nxfr-push = craneLib.buildPackage {
+            pname = "nxfr-push";
             version = "0.1.0";
             src = craneLib.path ./.;
 
@@ -70,22 +70,22 @@
             rustc
             cargo
           ]
-          ++ inputs.self.packages.${system}.flakehub-push.buildInputs;
+          ++ inputs.self.packages.${system}.nxfr-push.buildInputs;
 
           nativeBuildInputs = with pkgs; [
           ]
-          ++ inputs.self.packages.${system}.flakehub-push.nativeBuildInputs;
+          ++ inputs.self.packages.${system}.nxfr-push.nativeBuildInputs;
         };
       });
 
 
       dockerImages = forDockerSystems ({ system, pkgs, ... }: {
         default = pkgs.dockerTools.buildLayeredImage {
-          name = pkgs.flakehub-push.name;
+          name = pkgs.nxfr-push.name;
           contents = [ pkgs.cacert ];
           config = {
             #ExposedPorts."8080/tcp" = { };
-            Cmd = [ "${pkgs.flakehub-push}/bin/flakehub-push" ];
+            Cmd = [ "${pkgs.nxfr-push}/bin/nxfr-push" ];
             Env = [
               "NIX_SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
             ];

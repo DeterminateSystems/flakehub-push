@@ -66,18 +66,18 @@ fi
 
 
 cat <<-EOF >> $GITHUB_STEP_SUMMARY
-This commit's flakehub-push binaries can be fetched from:
+This commit's nxfr-push binaries can be fetched from:
 
 Intel macOS:
 
 \`\`\`
-curl --output flakehub-push --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/flakehub-push/rev/$GIT_ISH/X64-macOS
+curl --output nxfr-push --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nxfr-push/rev/$GIT_ISH/X64-macOS
 \`\`\`
 
 x86_64 Linux:
 
 \`\`\`
-curl --output flakehub-push --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/flakehub-push/rev/$GIT_ISH/X64-Linux
+curl --output nxfr-push --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nxfr-push/rev/$GIT_ISH/X64-Linux
 \`\`\`
 
 Or generally from this ${TYPE}:
@@ -85,12 +85,12 @@ Or generally from this ${TYPE}:
 Intel macOS:
 
 \`\`\`
-curl --output flakehub-push --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/flakehub-push/${TYPE}/${TYPE_ID}/X64-macOS
+curl --output nxfr-push --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nxfr-push/${TYPE}/${TYPE_ID}/X64-macOS
 \`\`\`
 
 x86_64 Linux:
 
 \`\`\`
-curl --output flakehub-push --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/flakehub-push/${TYPE}/${TYPE_ID}/X64-Linux
+curl --output nxfr-push --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nxfr-push/${TYPE}/${TYPE_ID}/X64-Linux
 \`\`\`
 EOF
