@@ -84,7 +84,10 @@ impl ReleaseMetadata {
         )
         .await?;
         span.record("revision_count", &github_graphql_data_result.rev_count);
-        span.record("spdx_identifier", &github_graphql_data_result.spdx_identifier);
+        span.record(
+            "spdx_identifier",
+            &github_graphql_data_result.spdx_identifier,
+        );
 
         let description = if let Some(description) = flake_metadata.get("description") {
             Some(description
@@ -120,4 +123,3 @@ impl ReleaseMetadata {
         })
     }
 }
-

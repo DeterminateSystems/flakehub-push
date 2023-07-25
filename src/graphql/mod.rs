@@ -1,7 +1,7 @@
 // Get the schema from https://docs.github.com/public/schema.docs.graphql
 
-use graphql_client::GraphQLQuery;
 use color_eyre::eyre::{eyre, WrapErr};
+use graphql_client::GraphQLQuery;
 
 use self::github_graphql_data_query::GithubGraphqlDataQueryRepositoryObject;
 
@@ -42,13 +42,13 @@ impl GithubGraphqlDataQuery {
                 .send()
                 .await
                 .wrap_err("Failed to issue RevCountQuery request to Github's GraphQL API")?;
-    
+
             let response_status = reqwest_response.status();
             let response_data: serde_json::Value = reqwest_response
                 .json()
                 .await
                 .wrap_err("Failed to retrieve RevCountQuery response from Github's GraphQL API")?;
-    
+
             if response_status != 200 {
                 tracing::error!(status = %response_status,
                     "Recieved error:\n\
@@ -59,7 +59,7 @@ impl GithubGraphqlDataQuery {
                     "Got {response_status} status from Github's GraphQL API, expected 200"
                 ));
             }
-    
+
             let graphql_data = response_data.get("data").ok_or_else(|| {
                 eyre!(
                     "Did not recieve a `data` inside GithubGraphqlDataQuery response from Github's GraphQL API"
@@ -73,11 +73,11 @@ impl GithubGraphqlDataQuery {
         let graphql_repository = graphql_response
             .repository
             .ok_or_else(|| eyre!("Did not recieve a `repository` inside GithubGraphqlDataQuery response from Github's GraphQL API"))?;
-        
+
         let graphql_repository_object = graphql_repository
                 .object
                 .ok_or_else(|| eyre!("Did not recieve a `repository.object` inside GithubGraphqlDataQuery response from Github's GraphQL API"))?;
-    
+
         let rev_count = match graphql_repository_object {
                 GithubGraphqlDataQueryRepositoryObject::Blob
                 | GithubGraphqlDataQueryRepositoryObject::Tag
@@ -97,10 +97,12 @@ impl GithubGraphqlDataQuery {
             .ok_or_else(|| eyre!("Did not recieve a `license_info` inside GithubGraphqlDataQuery response from Github's GraphQL API"))?
             .spdx_id;
 
-        Ok(GithubGraphqlDataResult { rev_count, spdx_identifier })
+        Ok(GithubGraphqlDataResult {
+            rev_count,
+            spdx_identifier,
+        })
     }
 }
-
 
 pub(crate) struct GithubGraphqlDataResult {
     pub(crate) rev_count: i64,
