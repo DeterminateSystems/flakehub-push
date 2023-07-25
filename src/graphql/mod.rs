@@ -11,12 +11,17 @@ pub(crate) const GITHUB_ENDPOINT: &str = "https://api.github.com/graphql";
 #[graphql(
     schema_path = "src/graphql/github_schema.graphql",
     query_path = "src/graphql/query/github_graphql_data_query.graphql",
-    response_derives = "Debug"
+    response_derives = "Debug",
+    variables_derives = "Debug"
 )]
 pub(crate) struct GithubGraphqlDataQuery;
 
 impl GithubGraphqlDataQuery {
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(skip_all, fields(
+        %project_owner,
+        %project_name,
+        %revision,
+    ))]
     pub(crate) async fn get(
         reqwest_client: reqwest::Client,
         project_owner: &str,
@@ -91,7 +96,7 @@ impl GithubGraphqlDataQuery {
         let spdx_identifier = graphql_repository.license_info
             .ok_or_else(|| eyre!("Did not recieve a `license_info` inside GithubGraphqlDataQuery response from Github's GraphQL API"))?
             .spdx_id
-            .ok_or_else(|| eyre!("Did not recieve a `license_info.spdx_id` inside GithubGraphqlDataQuery response from Github's GraphQL API"))?;
+            .ok_or_else(|| eyre!("Did not recieve a `license_info.spdx_id` inside GithubGraphqlDataQuery response from Github's GraphQL API"))?;;
 
         Ok(GithubGraphqlDataResult { rev_count, spdx_identifier })
     }

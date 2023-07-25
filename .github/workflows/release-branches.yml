@@ -34,11 +34,11 @@ jobs:
 
       - uses: actions/download-artifact@v3
         with:
-          name: nxfr-push-X64-Linux
-          path: nxfr-push-X64-Linux
+          name: flakehub-push-X64-Linux
+          path: flakehub-push-X64-Linux
 
-      - name: Persist the nxfr-push binary
-        run: cp ./nxfr-push-X64-Linux/nxfr-push ./artifacts/nxfr-push-X64-Linux
+      - name: Persist the flakehub-push binary
+        run: cp ./flakehub-push-X64-Linux/flakehub-push ./artifacts/flakehub-push-X64-Linux
 
       - name: Publish Release (Branch)
         env:

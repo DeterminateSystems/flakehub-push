@@ -1,5 +1,5 @@
 [package]
-name = "nxfr-push"
+name = "flakehub-push"
 # 0.0.x versions are used for dev pushes.
 version = "0.1.0"
 edition = "2021"
