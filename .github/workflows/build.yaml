@@ -38,6 +38,6 @@ jobs:
         uses: actions/upload-artifact@v3.1.2
         with:
           # Artifact name
-          name: nxfr-push-X64-Linux
-          path: result/bin/nxfr-push
+          name: flakehub-push-X64-Linux
+          path: result/bin/flakehub-push
           retention-days: 1
