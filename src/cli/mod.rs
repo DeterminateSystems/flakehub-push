@@ -106,6 +106,11 @@ impl clap::builder::TypedValueParser for PathBufToNoneParser {
     }
 }
 
+fn build_http_client() -> reqwest::ClientBuilder {
+    reqwest::Client::builder()
+        .user_agent("nxfr-push")
+}
+
 impl NixfrPushCli {
     #[tracing::instrument(
         name = "nxfr_push"
@@ -237,8 +242,7 @@ async fn push_new_release(
         .tempdir()
         .wrap_err("Creating tempdir")?;
 
-    let github_api_client = reqwest::Client::builder()
-        .user_agent("nxfr-push")
+    let github_api_client = build_http_client()
         .default_headers(
             std::iter::once((
                 reqwest::header::AUTHORIZATION,
@@ -319,11 +323,7 @@ async fn push_new_release(
     .await
     .wrap_err("Building release metadata")?;
 
-    let upload_bearer_token = get_actions_id_bearer_token()
-        .await
-        .wrap_err("Getting upload bearer token")?;
-
-    let reqwest_client = reqwest::Client::builder().user_agent("nxfr-push").build()?;
+    let flakehub_client = build_http_client().build()?;
 
     let rolling_prefix_with_postfix_or_tag = if let Some(rolling_prefix) = &rolling_prefix {
         format!(
@@ -342,7 +342,7 @@ async fn push_new_release(
         "Computed release metadata POST URL"
     );
 
-    let release_metadata_post_response = reqwest_client
+    let release_metadata_post_response = flakehub_client
         .post(release_metadata_post_url)
         .headers({
             let mut header_map = HeaderMap::new();
@@ -391,7 +391,7 @@ async fn push_new_release(
         ));
     }
 
-    let tarball_put_response = reqwest_client
+    let tarball_put_response = flakehub_client
         .put(release_upload_url)
         .headers({
             let mut header_map = HeaderMap::new();
@@ -444,8 +444,7 @@ async fn get_actions_id_bearer_token() -> color_eyre::Result<String> {
                # ...\n\
         ")?;
     let actions_id_token_request_url = std::env::var("ACTIONS_ID_TOKEN_REQUEST_URL").wrap_err("`ACTIONS_ID_TOKEN_REQUEST_URL` required if `ACTIONS_ID_TOKEN_REQUEST_TOKEN` is also present")?;
-    let actions_id_token_client = reqwest::Client::builder()
-        .user_agent("nxfr-push")
+    let actions_id_token_client = build_http_client()
         .default_headers(
             std::iter::once((
                 reqwest::header::AUTHORIZATION,
