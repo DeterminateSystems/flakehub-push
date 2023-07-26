@@ -70,7 +70,7 @@ impl ReleaseMetadata {
             .rev_walk([revision])
             .all()
             .map(|rev_iter| rev_iter.count());
-        tracing::debug!("Got revision count from local repository: {local_revision_count:?}");
+        tracing::debug!("Got revision count from local repository: {local_revision_count}");
 
         let revision_count = match local_revision_count {
             Ok(n) => n as i64,
