@@ -478,6 +478,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "flakehub-push"
+version = "0.1.0"
+dependencies = [
+ "atty",
+ "base64",
+ "clap",
+ "color-eyre",
+ "flate2",
+ "github-actions-oidc-claims",
+ "gix",
+ "gix-ref",
+ "graphql_client",
+ "reqwest",
+ "ring",
+ "serde",
+ "serde_json",
+ "tar",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "tracing-error",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "flate2"
 version = "1.0.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1774,31 +1799,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2819ce041d2ee131036f4fc9d6ae7ae125a3a40e97ba64d04fe799ad9dabbb44"
 dependencies = [
  "libc",
-]
-
-[[package]]
-name = "nxfr-push"
-version = "0.1.0"
-dependencies = [
- "atty",
- "base64",
- "clap",
- "color-eyre",
- "flate2",
- "github-actions-oidc-claims",
- "gix",
- "gix-ref",
- "graphql_client",
- "reqwest",
- "ring",
- "serde",
- "serde_json",
- "tar",
- "tempfile",
- "tokio",
- "tracing",
- "tracing-error",
- "tracing-subscriber",
 ]
 
 [[package]]
