@@ -1,7 +1,7 @@
 use color_eyre::eyre::{eyre, WrapErr};
 use std::path::Path;
 
-use crate::graphql::{github_graphql_data_query, GithubGraphqlDataQuery};
+use crate::graphql::GithubGraphqlDataQuery;
 
 use crate::Visibility;
 
