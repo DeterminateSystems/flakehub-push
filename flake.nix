@@ -48,7 +48,6 @@
             ++ inputs.self.packages.${system}.flakehub-push.buildInputs
             ++ (with pkgs; [
             nixpkgs-fmt
-            rustfmt
             cargo-outdated
             cargo-watch
           ]);
