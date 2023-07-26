@@ -152,14 +152,6 @@ impl NixfrPushCli {
                 .wrap_err("Could not determine Github token, pass `--github-token`, or set either `FLAKEHUB_PUSH_GITHUB_TOKEN` or `GITHUB_TOKEN`")?
         };
 
-        let directory = if let Some(directory) = &directory.0 {
-            directory.clone()
-        } else if let Ok(github_workspace) = std::env::var("GITHUB_WORKSPACE") {
-            tracing::trace!(%github_workspace, "Got $GITHUB_WORKSPACE");
-            PathBuf::from(github_workspace)
-        } else {
-            std::env::current_dir().map(PathBuf::from).wrap_err("Could not determine current directory. Pass `--directory` or set `FLAKEHUB_PUSH_DIRECTORY`")?
-        };
         let git_root = if let Some(git_root) = &git_root.0 {
             git_root.clone()
         } else if let Ok(github_workspace) = std::env::var("GITHUB_WORKSPACE") {
@@ -167,6 +159,15 @@ impl NixfrPushCli {
             PathBuf::from(github_workspace)
         } else {
             std::env::current_dir().map(PathBuf::from).wrap_err("Could not determine current git_root. Pass `--git-root` or set `FLAKEHUB_PUSH_GIT_ROOT`")?
+        };
+
+        let directory = if let Some(directory) = &directory.0 {
+            directory.clone()
+        } else if let Ok(github_workspace) = std::env::var("GITHUB_WORKSPACE") {
+            tracing::trace!(%github_workspace, "Got $GITHUB_WORKSPACE");
+            PathBuf::from(github_workspace)
+        } else {
+            git_root.clone()
         };
 
         let owner_and_repository = if let Some(repo) = &repo.0 {
