@@ -183,9 +183,22 @@ impl NixfrPushCli {
             std::env::var("GITHUB_REF_NAME").ok()
         };
 
+        let upload_bearer_token = match jwt_issuer_uri.0 {
+            None => get_actions_id_bearer_token()
+            .await
+            .wrap_err("Getting upload bearer token")?,
+            Some(jwt_issuer_uri) => {
+                let client = build_http_client().build()?;
+                let claims = github_actions_oidc_claims::Claims::make_dummy();
+                let response = client.post(jwt_issuer_uri).header("Content-Type", "application/json").json(&claims).send().await?;
+                response.text().await?
+            }
+        };
+
         push_new_release(
             &host,
             &github_token,
+            &upload_bearer_token,
             &directory,
             &git_root,
             &project_owner,
@@ -214,6 +227,7 @@ impl NixfrPushCli {
 async fn push_new_release(
     host: &str,
     github_token: &str,
+    upload_bearer_token: &str,
     directory: &Path,
     git_root: &Path,
     project_owner: &str,
@@ -415,7 +429,7 @@ async fn push_new_release(
         status = tracing::field::display(release_metadata_post_response_status),
         "Got tarball PUT response"
     );
-    if tarball_put_response_status != 200 {
+    if !tarball_put_response_status.is_success() {
         return Err(eyre!(
             "Got {tarball_put_response_status} status from PUT request"
         ));
