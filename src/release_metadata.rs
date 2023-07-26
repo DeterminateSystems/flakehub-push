@@ -66,17 +66,23 @@ impl ReleaseMetadata {
         let revision_string = revision.to_hex().to_string();
         span.record("revision_string", revision_string.clone());
 
-        let local_revision_count = gix_repository.rev_walk([revision]).all().map(|rev_iter| rev_iter.count());
+        let local_revision_count = gix_repository
+            .rev_walk([revision])
+            .all()
+            .map(|rev_iter| rev_iter.count());
         tracing::debug!("Got revision count from local repository: {local_revision_count:?}");
 
         let revision_count = match local_revision_count {
             Ok(n) => n as i64,
-            Err(_e) => get_revision_count_from_github(
-                reqwest_client,
-                project_owner,
-                project_name,
-                &revision_string,
-            ).await?
+            Err(_e) => {
+                get_revision_count_from_github(
+                    reqwest_client,
+                    project_owner,
+                    project_name,
+                    &revision_string,
+                )
+                .await?
+            }
         };
         span.record("revision_count", revision_count);
 

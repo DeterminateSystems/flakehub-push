@@ -107,8 +107,7 @@ impl clap::builder::TypedValueParser for PathBufToNoneParser {
 }
 
 fn build_http_client() -> reqwest::ClientBuilder {
-    reqwest::Client::builder()
-        .user_agent("nxfr-push")
+    reqwest::Client::builder().user_agent("nxfr-push")
 }
 
 impl NixfrPushCli {
