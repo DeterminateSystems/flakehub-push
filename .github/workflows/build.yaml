@@ -8,16 +8,16 @@ on:
     branches: [main]
 
 jobs:
-  build-artifacts-X64-Linux:
+  checks:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
 
-      - uses: DeterminateSystems/nix-installer-action@main
-      
-      - uses: DeterminateSystems/magic-nix-cache-action@main
-
       - uses: DeterminateSystems/flake-checker-action@main
+
+      - uses: DeterminateSystems/nix-installer-action@main
+
+      - uses: DeterminateSystems/magic-nix-cache-action@main
 
       - name: "Nix formatting"
         run: git ls-files '*.nix' | nix develop --command xargs nixpkgs-fmt --check
@@ -27,6 +27,15 @@ jobs:
 
       - name: "Clippy"
         run: nix develop --command cargo clippy --all-targets --all-features --  -Dwarnings
+
+  build-artifacts-X64-Linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: DeterminateSystems/nix-installer-action@main
+      
+      - uses: DeterminateSystems/magic-nix-cache-action@main
 
       - name: "Nix Flake Check"
         run: nix flake check --print-build-logs
@@ -39,5 +48,28 @@ jobs:
         with:
           # Artifact name
           name: flakehub-push-X64-Linux
+          path: result/bin/flakehub-push
+          retention-days: 1
+
+  build-artifacts-X64-macOS:
+    runs-on: macos-12
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: DeterminateSystems/nix-installer-action@main
+      
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: "Nix Flake Check"
+        run: nix flake check --print-build-logs
+
+      - name: Build package
+        run: "nix build .# -L --fallback"
+
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v3.1.2
+        with:
+          # Artifact name
+          name: flakehub-push-X64-macOS
           path: result/bin/flakehub-push
           retention-days: 1

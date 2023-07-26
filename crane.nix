@@ -6,7 +6,6 @@
 , rust-bin
 , nix-gitignore
 , supportedSystems
-, darwinFrameworks ? []
 }:
 
 let
@@ -73,8 +72,10 @@ let
         inherit (crateName) pname version;
         inherit src;
 
-        buildInputs = []
-          ++ lib.optionals pkgs.stdenv.isDarwin darwinFrameworks;
+        buildInputs = with pkgs; [ ]
+          ++ lib.optionals pkgs.stdenv.isDarwin [
+          darwin.apple_sdk.frameworks.Security
+        ];
 
         nativeBuildInputs = with pkgs; [ ]
           # The Rust toolchain from rust-overlay has a dynamic libiconv in depsTargetTargetPropagated
