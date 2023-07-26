@@ -185,13 +185,32 @@ impl NixfrPushCli {
 
         let upload_bearer_token = match jwt_issuer_uri.0 {
             None => get_actions_id_bearer_token()
-            .await
-            .wrap_err("Getting upload bearer token")?,
+                .await
+                .wrap_err("Getting upload bearer token from GitHub")?,
+
             Some(jwt_issuer_uri) => {
                 let client = build_http_client().build()?;
-                let claims = github_actions_oidc_claims::Claims::make_dummy();
-                let response = client.post(jwt_issuer_uri).header("Content-Type", "application/json").json(&claims).send().await?;
-                response.text().await?
+                let mut claims = github_actions_oidc_claims::Claims::make_dummy();
+                // FIXME: we should probably fill in more of these claims.
+                claims.iss = "flakehub-push-dev".to_string();
+                claims.repository = owner_and_repository;
+                claims.repository_owner = project_owner.clone();
+                let response = client
+                    .post(jwt_issuer_uri)
+                    .header("Content-Type", "application/json")
+                    .json(&claims)
+                    .send()
+                    .await
+                    .wrap_err("Sending request to JWT issuer")?;
+                #[derive(serde::Deserialize)]
+                struct Response {
+                    token: String,
+                }
+                let response_deserialized: Response = response
+                    .json()
+                    .await
+                    .wrap_err("Getting token from JWT issuer's response")?;
+                response_deserialized.token
             }
         };
 
