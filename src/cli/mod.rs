@@ -51,7 +51,7 @@ pub(crate) struct NixfrPushCli {
     /// URL of a JWT mock server (like https://github.com/ruiyang/jwt-mock-server) which can issue tokens.
     ///
     /// Used instead of ACTIONS_ID_TOKEN_REQUEST_URL/ACTIONS_ID_TOKEN_REQUEST_TOKEN when developing locally.
-    #[clap(long, env = "NXFR_JWT_ISSUER_URI", value_parser = StringToNoneParser, default_value = "")]
+    #[clap(long, env = "FLAKEHUB_PUSH_JWT_ISSUER_URI", value_parser = StringToNoneParser, default_value = "")]
     pub(crate) jwt_issuer_uri: OptionString,
 
     #[clap(flatten)]
@@ -111,7 +111,7 @@ impl clap::builder::TypedValueParser for PathBufToNoneParser {
 }
 
 fn build_http_client() -> reqwest::ClientBuilder {
-    reqwest::Client::builder().user_agent("nxfr-push")
+    reqwest::Client::builder().user_agent("flakehub-push")
 }
 
 impl NixfrPushCli {
