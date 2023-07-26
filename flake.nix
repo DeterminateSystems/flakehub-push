@@ -15,7 +15,7 @@
 
   outputs = inputs:
     let
-      supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
+      supportedSystems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
 
       forAllSystems = forSystems supportedSystems;
       forDockerSystems = forSystems [ "x86_64-linux" ];
@@ -70,7 +70,8 @@
             rustc
             cargo
           ]
-          ++ inputs.self.packages.${system}.flakehub-push.buildInputs;
+          ++ inputs.self.packages.${system}.flakehub-push.buildInputs
+          ++ pkgs.lib.optionals pkgs.stdenv.isDarwin (with pkgs.darwin.apple_sdk.frameworks; [ Security ]);
 
           nativeBuildInputs = with pkgs; [
           ]
