@@ -109,7 +109,8 @@ impl ReleaseMetadata {
 
         let spdx_identifier = if let Some(spdx_string) = github_graphql_data_result.spdx_identifier
         {
-            let parsed = spdx::Expression::parse(&spdx_string)?;
+            let parsed = spdx::Expression::parse(&spdx_string)
+                .wrap_err("Invalid SPDX license identifier reported from the GitHub API, either you are using a non-standard license or GitHub has returned a value that cannot be validated")?;
             span.record("spdx_identifier", tracing::field::display(&parsed));
             Some(parsed)
         } else {
