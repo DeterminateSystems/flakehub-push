@@ -25,22 +25,17 @@
         pkgs = import inputs.nixpkgs {
           inherit system;
           overlays = [
-            inputs.self.overlays.default
             inputs.rust-overlay.overlays.default
           ];
         };
         cranePkgs = pkgs.callPackage ./crane.nix {
           inherit (inputs) crane;
-          inherit supportedSystems;
+          supportedSystems = s;
         };
         lib = pkgs.lib;
       });
     in
     {
-      overlays.default = final: prev: {
-        flakehub-push = inputs.self.packages.${final.stdenv.system}.flakehub-push;
-      };
-
       packages = forAllSystems ({ cranePkgs, ... }: rec {
         flakehub-push = cranePkgs.package;
         default = flakehub-push;
@@ -49,18 +44,17 @@
       devShells = forAllSystems ({ system, pkgs, cranePkgs, ... }: {
         default = pkgs.mkShell {
           name = "dev";
-          buildInputs = with pkgs; [
-            cranePkgs.rustNightly
+          buildInputs = [ cranePkgs.rustNightly ]
+            ++ inputs.self.packages.${system}.flakehub-push.buildInputs
+            ++ (with pkgs; [
             nixpkgs-fmt
             rustfmt
             cargo-outdated
             cargo-watch
-          ]
-          ++ inputs.self.packages.${system}.flakehub-push.buildInputs;
+          ]);
 
-          nativeBuildInputs = with pkgs; [
-          ]
-          ++ inputs.self.packages.${system}.flakehub-push.nativeBuildInputs;
+          nativeBuildInputs = with pkgs; [ ]
+            ++ inputs.self.packages.${system}.flakehub-push.nativeBuildInputs;
         };
       });
 
