@@ -1,7 +1,7 @@
 use color_eyre::eyre::{eyre, WrapErr};
 use std::path::Path;
 
-use crate::graphql::GithubGraphqlDataQuery;
+use crate::graphql::{GithubGraphqlDataQuery, github_graphql_data_query};
 
 use crate::Visibility;
 
@@ -16,7 +16,8 @@ pub(crate) struct ReleaseMetadata {
     pub(crate) revision: String,
     pub(crate) visibility: Visibility,
     pub(crate) mirrored: bool,
-    pub(crate) spdx_identifier: Option<String>,
+    #[serde(deserialize_with = "option_string_to_spdx", serialize_with = "option_spdx_serialize")]
+    pub(crate) spdx_identifier: Option<spdx::Expression>,
     #[cfg(debug_assertions)]
     dev_metadata: DevMetadata,
 }
@@ -84,10 +85,6 @@ impl ReleaseMetadata {
         )
         .await?;
         span.record("revision_count", github_graphql_data_result.rev_count);
-        span.record(
-            "spdx_identifier",
-            &github_graphql_data_result.spdx_identifier,
-        );
 
         let description = if let Some(description) = flake_metadata.get("description") {
             Some(description
@@ -107,6 +104,19 @@ impl ReleaseMetadata {
             None
         };
 
+        let spdx_identifier = if let Some(spdx_string) = github_graphql_data_result.spdx_identifier {
+            let parsed = spdx::Expression::parse(&spdx_string)?;
+            span.record(
+                "spdx_identifier",
+                tracing::field::display(&parsed),
+            );
+            Some(parsed)
+        } else {
+            None
+        };
+        
+        tracing::trace!("Collected ReleaseMetadata information");
+
         Ok(ReleaseMetadata {
             description,
             repo: format!("{project_owner}/{project_name}"),
@@ -117,9 +127,35 @@ impl ReleaseMetadata {
             visibility,
             outputs: flake_outputs,
             mirrored,
-            spdx_identifier: github_graphql_data_result.spdx_identifier.clone(),
+            spdx_identifier,
             #[cfg(debug_assertions)]
             dev_metadata,
         })
+    }
+}
+
+fn option_string_to_spdx<'de, D>(deserializer: D) -> Result<Option<spdx::Expression>, D::Error>
+where
+    D: serde::de::Deserializer<'de>,
+{
+    let spdx_identifier: Option<&str> = serde::Deserialize::deserialize(deserializer)?;
+
+    if let Some(spdx_identifier) = spdx_identifier {
+        spdx::Expression::parse(spdx_identifier).map_err(serde::de::Error::custom).map(Option::Some)
+    } else {
+        Ok(None)
+    }
+    
+}
+
+fn option_spdx_serialize<S>(spdx_identifier: &Option<spdx::Expression>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::ser::Serializer,
+{
+    if let Some(spdx_identifier) = spdx_identifier {
+        let spdx_string = spdx_identifier.to_string();
+        serializer.serialize_str(&spdx_string)
+    } else {
+        serializer.serialize_none()
     }
 }
