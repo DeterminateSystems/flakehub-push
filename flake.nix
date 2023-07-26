@@ -29,6 +29,11 @@
             inputs.rust-overlay.overlays.default
           ];
         };
+        cranePkgs = pkgs.callPackage ./crane.nix {
+          inherit (inputs) crane;
+          inherit supportedSystems;
+          darwinFrameworks = with pkgs.darwin.apple_sdk.frameworks; [ Security ];
+        };
         lib = pkgs.lib;
       });
     in
@@ -37,38 +42,20 @@
         flakehub-push = inputs.self.packages.${final.stdenv.system}.flakehub-push;
       };
 
+      packages = forAllSystems ({ cranePkgs, ... }: rec {
+        flakehub-push = cranePkgs.package;
+        default = flakehub-push;
+      });
 
-      packages = forAllSystems ({ system, pkgs, lib, ... }:
-        let
-          craneLib = (inputs.crane.mkLib pkgs).overrideToolchain rustToolchain;
-          rustToolchain = pkgs.rust-bin.stable.latest.default.override {
-            targets = [ "x86_64-unknown-linux-musl" ];
-          };
-        in
-        rec {
-          default = flakehub-push;
-
-          flakehub-push = craneLib.buildPackage {
-            pname = "flakehub-push";
-            version = "0.1.0";
-            src = craneLib.path ./.;
-
-            CARGO_BUILD_TARGET = "x86_64-unknown-linux-musl";
-            CARGO_BUILD_RUSTFLAGS = "-C target-feature=+crt-static";
-          };
-        });
-
-      devShells = forAllSystems ({ system, pkgs, ... }: {
+      devShells = forAllSystems ({ system, pkgs, cranePkgs, ... }: {
         default = pkgs.mkShell {
           name = "dev";
           buildInputs = with pkgs; [
+            cranePkgs.rustNightly
             nixpkgs-fmt
             rustfmt
             cargo-outdated
             cargo-watch
-            rust-analyzer
-            rustc
-            cargo
           ]
           ++ inputs.self.packages.${system}.flakehub-push.buildInputs
           ++ pkgs.lib.optionals pkgs.stdenv.isDarwin (with pkgs.darwin.apple_sdk.frameworks; [ Security ]);
@@ -78,7 +65,6 @@
           ++ inputs.self.packages.${system}.flakehub-push.nativeBuildInputs;
         };
       });
-
 
       dockerImages = forDockerSystems ({ system, pkgs, ... }: {
         default = pkgs.dockerTools.buildLayeredImage {
