@@ -3,8 +3,6 @@
 use color_eyre::eyre::{eyre, WrapErr};
 use graphql_client::GraphQLQuery;
 
-use self::github_graphql_data_query::GithubGraphqlDataQueryRepositoryObject;
-
 pub(crate) const GITHUB_ENDPOINT: &str = "https://api.github.com/graphql";
 
 #[derive(GraphQLQuery)]
@@ -30,12 +28,12 @@ impl GithubGraphqlDataQuery {
     ) -> color_eyre::Result<GithubGraphqlDataResult> {
         // Schema from https://docs.github.com/public/schema.docs.graphql
         let graphql_response = {
-            let variables = crate::graphql::github_graphql_data_query::Variables {
+            let variables = github_graphql_data_query::Variables {
                 owner: project_owner.to_string(),
                 name: project_name.to_string(),
                 revision: revision.to_string(),
             };
-            let query = crate::graphql::GithubGraphqlDataQuery::build_query(variables);
+            let query = GithubGraphqlDataQuery::build_query(variables);
             let reqwest_response = reqwest_client
                 .post(crate::graphql::GITHUB_ENDPOINT)
                 .json(&query)
@@ -79,15 +77,15 @@ impl GithubGraphqlDataQuery {
                 .ok_or_else(|| eyre!("Did not recieve a `repository.object` inside GithubGraphqlDataQuery response from Github's GraphQL API"))?;
 
         let rev_count = match graphql_repository_object {
-                GithubGraphqlDataQueryRepositoryObject::Blob
-                | GithubGraphqlDataQueryRepositoryObject::Tag
-                | GithubGraphqlDataQueryRepositoryObject::Tree => {
+                github_graphql_data_query::GithubGraphqlDataQueryRepositoryObject::Blob
+                | github_graphql_data_query::GithubGraphqlDataQueryRepositoryObject::Tag
+                | github_graphql_data_query::GithubGraphqlDataQueryRepositoryObject::Tree => {
                     return Err(eyre!(
                     "Retrieved a `repository.object` that was not a `Commit` in the GithubGraphqlDataQuery response from Github's GraphQL API"
                 ))
                 }
-                GithubGraphqlDataQueryRepositoryObject::Commit(crate::graphql::github_graphql_data_query::GithubGraphqlDataQueryRepositoryObjectOnCommit {
-                    history: crate::graphql::github_graphql_data_query::GithubGraphqlDataQueryRepositoryObjectOnCommitHistory {
+                github_graphql_data_query::GithubGraphqlDataQueryRepositoryObject::Commit(github_graphql_data_query::GithubGraphqlDataQueryRepositoryObjectOnCommit {
+                    history: github_graphql_data_query::GithubGraphqlDataQueryRepositoryObjectOnCommitHistory {
                         total_count,
                     }
                 }) => total_count,
