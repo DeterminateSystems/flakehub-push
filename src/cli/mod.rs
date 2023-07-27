@@ -20,7 +20,7 @@ pub(crate) struct NixfrPushCli {
     #[clap(
         long,
         env = "FLAKEHUB_PUSH_HOST",
-        default_value = "https://flakehub.fly.dev"
+        default_value = "https://api.flakehub.com"
     )]
     pub(crate) host: String,
     #[clap(long, env = "FLAKEHUB_PUSH_VISIBLITY")]
