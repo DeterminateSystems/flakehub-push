@@ -87,7 +87,9 @@ impl ReleaseMetadata {
         let revision_count = match local_revision_count {
             Ok(n) => n as i64,
             Err(e) => {
-                tracing::debug!("Getting revision count locally failed: {e:?}, using data from github instead");
+                tracing::debug!(
+                    "Getting revision count locally failed: {e:?}, using data from github instead"
+                );
                 github_graphql_data_result.rev_count
             }
         };

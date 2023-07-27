@@ -91,7 +91,8 @@ impl GithubGraphqlDataQuery {
                 }) => total_count,
             };
 
-        let spdx_identifier = graphql_repository.license_info
+        let spdx_identifier = graphql_repository
+            .license_info
             .and_then(|info| info.spdx_id);
 
         Ok(GithubGraphqlDataResult {
