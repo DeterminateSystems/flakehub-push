@@ -39,7 +39,7 @@ inputs:
   host:
     description: "The flakehub server to use"
     required: false
-    default: "https://flakehub.fly.dev"
+    default: null
   log-directives:
     description: A list of Tracing directives, comma separated, `-`s replaced with `_` (eg. `nix_installer=trace`, see https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html#directives)
     required: false
