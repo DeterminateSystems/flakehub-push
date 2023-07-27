@@ -40,9 +40,9 @@ impl ReleaseMetadata {
         git_root: &Path,
         flake_metadata: serde_json::Value,
         flake_outputs: serde_json::Value,
-        project_owner: &str,
-        project_name: &str,
-        mirrored: bool,
+        repository: &str,
+        upload_name: &str,
+        mirror: bool,
         visibility: Visibility,
     ) -> color_eyre::Result<ReleaseMetadata> {
         let span = tracing::Span::current();
@@ -71,10 +71,22 @@ impl ReleaseMetadata {
         let revision_string = revision.to_hex().to_string();
         span.record("revision_string", revision_string.clone());
 
+        let mut repository_split = repository.split('/');
+        let project_owner = repository_split
+            .next()
+            .ok_or_else(|| eyre!("Could not determine owner, pass `--repository` or the `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`"))?
+            .to_string();
+        let project_name = repository_split.next()
+            .ok_or_else(|| eyre!("Could not determine project, pass `--repository` or `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`"))?
+            .to_string();
+        if repository_split.next().is_some() {
+            Err(eyre!("Could not determine the owner/project, pass `--repository` or `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`. The passed value has too many slashes (/) to be a valid repository"))?;
+        }
+
         let github_graphql_data_result = GithubGraphqlDataQuery::get(
             reqwest_client,
-            project_owner,
-            project_name,
+            &project_owner,
+            &project_name,
             &revision_string,
         )
         .await?;
@@ -127,14 +139,14 @@ impl ReleaseMetadata {
 
         Ok(ReleaseMetadata {
             description,
-            repo: format!("{project_owner}/{project_name}"),
+            repo: upload_name.to_string(),
             raw_flake_metadata: flake_metadata.clone(),
             readme,
             revision: revision_string,
             commit_count: github_graphql_data_result.rev_count,
             visibility,
             outputs: flake_outputs,
-            mirrored,
+            mirrored: mirror,
             spdx_identifier,
         })
     }

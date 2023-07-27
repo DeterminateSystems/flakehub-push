@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use clap::Parser;
 mod cli;
 mod flake_info;
@@ -28,4 +30,13 @@ async fn main() -> color_eyre::Result<std::process::ExitCode> {
 pub(crate) enum Visibility {
     Public,
     Hidden,
+}
+
+impl Display for Visibility {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Visibility::Public => f.write_str("public"),
+            Visibility::Hidden => f.write_str("hidden"),
+        }
+    }
 }

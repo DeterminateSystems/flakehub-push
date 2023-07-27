@@ -20,7 +20,7 @@ pub(crate) struct NixfrPushCli {
     #[clap(
         long,
         env = "FLAKEHUB_PUSH_HOST",
-        default_value = "https://flakehub.fly.dev"
+        default_value = "https://api.flakehub.com"
     )]
     pub(crate) host: String,
     #[clap(long, env = "FLAKEHUB_PUSH_VISIBLITY")]
@@ -33,21 +33,22 @@ pub(crate) struct NixfrPushCli {
     // Also detects `GITHUB_TOKEN`
     #[clap(long, env = "FLAKEHUB_PUSH_GITHUB_TOKEN", value_parser = StringToNoneParser, default_value = "")]
     pub(crate) github_token: OptionString,
-    /// Will also detect `GITHUB_REPOSITORY`
     #[clap(long, env = "FLAKEHUB_PUSH_UPLOAD_NAME", value_parser = StringToNoneParser, default_value = "")]
     pub(crate) upload_name: OptionString,
-    /// Override the detected repo name, e.g. in case you're uploading multiple subflakes in a single repo as their own flake.
-    ///
-    /// In the format of [org]/[repo].
-    #[clap(long, env = "FLAKEHUB_PUSH_REPO", value_parser = StringToNoneParser, default_value = "")]
-    pub(crate) repo: OptionString,
+    /// Will also detect `GITHUB_REPOSITORY`
+    #[clap(long, env = "FLAKEHUB_PUSH_REPOSITORY", value_parser = StringToNoneParser, default_value = "")]
+    pub(crate) repository: OptionString,
     // Also detects `GITHUB_WORKSPACE`
     #[clap(long, env = "FLAKEHUB_PUSH_DIRECTORY", value_parser = PathBufToNoneParser, default_value = "")]
     pub(crate) directory: OptionPathBuf,
     // Also detects `GITHUB_WORKSPACE`
     #[clap(long, env = "FLAKEHUB_PUSH_GIT_ROOT", value_parser = PathBufToNoneParser, default_value = "")]
     pub(crate) git_root: OptionPathBuf,
-
+    // If the repository is mirrored via DeterminateSystems' mirror functionality
+    //
+    // This should only be used by DeterminateSystems
+    #[clap(long, env = "FLAKEHUB_PUSH_MIRROR", default_value_t = false)]
+    pub(crate) mirror: bool,
     /// URL of a JWT mock server (like https://github.com/ruiyang/jwt-mock-server) which can issue tokens.
     ///
     /// Used instead of ACTIONS_ID_TOKEN_REQUEST_URL/ACTIONS_ID_TOKEN_REQUEST_TOKEN when developing locally.
@@ -129,8 +130,9 @@ impl NixfrPushCli {
             rolling_prefix,
             github_token,
             directory,
-            repo,
+            repository,
             git_root,
+            mirror,
             jwt_issuer_uri,
             instrumentation: _,
         } = self;
@@ -145,7 +147,7 @@ impl NixfrPushCli {
         let git_root = if let Some(git_root) = &git_root.0 {
             git_root.clone()
         } else if let Ok(github_workspace) = std::env::var("GITHUB_WORKSPACE") {
-            tracing::trace!(%github_workspace, "Got $GITHUB_WORKSPACE");
+            tracing::trace!(%github_workspace, "Got `GITHUB_WORKSPACE`");
             PathBuf::from(github_workspace)
         } else {
             std::env::current_dir().map(PathBuf::from).wrap_err("Could not determine current git_root. Pass `--git-root` or set `FLAKEHUB_PUSH_GIT_ROOT`")?
@@ -153,33 +155,22 @@ impl NixfrPushCli {
 
         let directory = if let Some(directory) = &directory.0 {
             directory.clone()
-        } else if let Ok(github_workspace) = std::env::var("GITHUB_WORKSPACE") {
-            tracing::trace!(%github_workspace, "Got $GITHUB_WORKSPACE");
-            PathBuf::from(github_workspace)
         } else {
             git_root.clone()
         };
 
-        let owner_and_repository = if let Some(repo) = &repo.0 {
-            tracing::trace!(%repo, "Got `--repo` argument");
-            repo.clone()
+        let repository = if let Some(repository) = &repository.0 {
+            tracing::trace!(%repository, "Got `--repository` argument");
+            repository.clone()
         } else if let Ok(github_repository) = std::env::var("GITHUB_REPOSITORY") {
             tracing::trace!(
                 %github_repository,
-                "Got `GITHUB_REPOSITORY`"
+                "Got `GITHUB_REPOSITORY` environment"
             );
             github_repository
         } else {
-            return Err(eyre!("Could not determine repository name, pass `--repo` or the `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`"));
+            return Err(eyre!("Could not determine repository name, pass `--repository` or the `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`"));
         };
-        let mut owner_and_repository_split = owner_and_repository.split('/');
-        let project_owner = owner_and_repository_split
-                .next()
-                .ok_or_else(|| eyre!("Could not determine owner, pass `--upload-name` or the `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`"))?
-                .to_string();
-        let project_name = owner_and_repository_split.next()
-            .ok_or_else(|| eyre!("Could not determine project, pass `--upload-name` or `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`"))?
-            .to_string();
 
         let tag = if let Some(tag) = &tag.0 {
             Some(tag.clone())
@@ -187,6 +178,11 @@ impl NixfrPushCli {
             std::env::var("GITHUB_REF_NAME").ok()
         };
 
+        let repository_owner = if let Some(owner) = repository.split('/').next() {
+            owner
+        } else {
+            return Err(eyre!("Could not determine repository owner, pass `--repository` or the `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`"));
+        };
         let upload_bearer_token = match jwt_issuer_uri.0 {
             None => get_actions_id_bearer_token()
                 .await
@@ -197,8 +193,8 @@ impl NixfrPushCli {
                 let mut claims = github_actions_oidc_claims::Claims::make_dummy();
                 // FIXME: we should probably fill in more of these claims.
                 claims.iss = "flakehub-push-dev".to_string();
-                claims.repository = owner_and_repository;
-                claims.repository_owner = project_owner.clone();
+                claims.repository = repository.clone();
+                claims.repository_owner = repository_owner.to_string();
                 let response = client
                     .post(jwt_issuer_uri)
                     .header("Content-Type", "application/json")
@@ -224,9 +220,9 @@ impl NixfrPushCli {
             &upload_bearer_token,
             &directory,
             &git_root,
-            &project_owner,
-            &project_name,
+            &repository,
             upload_name.0.as_deref(),
+            mirror,
             visibility,
             tag.as_deref(),
             rolling_prefix.0.as_deref(),
@@ -240,10 +236,12 @@ impl NixfrPushCli {
 #[tracing::instrument(
     skip_all,
     fields(
-        name = tracing::field::Empty,
-        owner = tracing::field::Empty,
+        repository = %repository,
+        upload_name = tracing::field::Empty,
+        mirror = %mirror,
         tag = tracing::field::Empty,
         source = tracing::field::Empty,
+        mirrored = tracing::field::Empty,
     )
 )]
 #[allow(clippy::too_many_arguments)]
@@ -253,26 +251,22 @@ async fn push_new_release(
     upload_bearer_token: &str,
     directory: &Path,
     git_root: &Path,
-    project_owner: &str,
-    project_name: &str,
+    repository: &str,
     upload_name: Option<&str>,
+    mirror: bool,
     visibility: Visibility,
     tag: Option<&str>,
     rolling_prefix: Option<&str>,
 ) -> color_eyre::Result<()> {
     let span = tracing::Span::current();
+    let upload_name = upload_name.unwrap_or(repository);
+    span.record("upload_name", tracing::field::display(upload_name));
 
     let rolling_prefix_or_tag = rolling_prefix.or(tag).ok_or_else(|| {
         eyre!("Could not determine tag or rolling prefix, `--tag`, `GITHUB_REF_NAME`, or `--rolling-prefix` must be set")
     })?;
 
-    let project_owner_repo = format!("{project_owner}/{project_name}");
-    let (upload_owner_repo_pair, mirrored) = if let Some(upload_name) = upload_name {
-        (upload_name.to_string(), upload_name != project_owner_repo)
-    } else {
-        (project_owner_repo, false)
-    };
-    tracing::info!("Preparing release of {upload_owner_repo_pair}/{rolling_prefix_or_tag}");
+    tracing::info!("Preparing release of {upload_name}/{rolling_prefix_or_tag}");
 
     let tempdir = tempfile::Builder::new()
         .prefix("flakehub_push")
@@ -352,9 +346,9 @@ async fn push_new_release(
         git_root,
         flake_metadata,
         get_flake_tarball_outputs,
-        project_owner,
-        project_name,
-        mirrored,
+        repository,
+        upload_name,
+        mirror,
         visibility,
     )
     .await
@@ -372,7 +366,7 @@ async fn push_new_release(
     };
 
     let release_metadata_post_url = format!(
-        "{host}/upload/{upload_owner_repo_pair}/{rolling_prefix_with_postfix_or_tag}/{flake_tarball_len}/{flake_tarball_hash_base64}"
+        "{host}/upload/{upload_name}/{rolling_prefix_with_postfix_or_tag}/{flake_tarball_len}/{flake_tarball_hash_base64}"
     );
     tracing::debug!(
         url = release_metadata_post_url,
@@ -458,7 +452,9 @@ async fn push_new_release(
         ));
     }
 
-    tracing::info!("Successfully released new version of {project_owner}/{project_name}/{rolling_prefix_with_postfix_or_tag}");
+    tracing::info!(
+        "Successfully released new version of {upload_name}/{rolling_prefix_with_postfix_or_tag}"
+    );
 
     Ok(())
 }

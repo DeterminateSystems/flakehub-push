@@ -68,6 +68,8 @@ impl GithubGraphqlDataQuery {
                     .wrap_err("Failed to retrieve GithubGraphqlDataQuery response from Github's GraphQL API")?;
             response_data
         };
+        tracing::trace!(?graphql_response, "Got GraphQL query response");
+
         let graphql_repository = graphql_response
             .repository
             .ok_or_else(|| eyre!("Did not recieve a `repository` inside GithubGraphqlDataQuery response from Github's GraphQL API"))?;
@@ -102,6 +104,7 @@ impl GithubGraphqlDataQuery {
     }
 }
 
+#[derive(Debug)]
 pub(crate) struct GithubGraphqlDataResult {
     pub(crate) rev_count: i64,
     pub(crate) spdx_identifier: Option<String>,
