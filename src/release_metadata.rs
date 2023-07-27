@@ -88,6 +88,9 @@ impl ReleaseMetadata {
         let project_name = repository_split.next()
             .ok_or_else(|| eyre!("Could not determine project, pass `--repository` or `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`"))?
             .to_string();
+        if repository_split.next().is_some() {
+            Err(eyre!("Could not determine the owner/project, pass `--repository` or `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`. The passed value has too many slashes (/) to be a valid repository"))?;
+        }
 
         let github_graphql_data_result = GithubGraphqlDataQuery::get(
             reqwest_client,

@@ -17,7 +17,7 @@ inputs:
     required: true
     default: null
   mirror:
-    description: If the repository is mirrored via DeterminateSystems' mirror functionality. This should only be used by DeterminateSystems.
+    description: If the repository is mirrored via DeterminateSystems' mirror functionality. This is only usable by DeterminateSystems.
   directory:
     description: the directory of your flake (useful for subflakes)
     required: false
