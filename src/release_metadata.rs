@@ -89,7 +89,6 @@ impl ReleaseMetadata {
             .ok_or_else(|| eyre!("Could not determine project, pass `--repository` or `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`"))?
             .to_string();
 
-
         let github_graphql_data_result = GithubGraphqlDataQuery::get(
             reqwest_client,
             &project_owner,

@@ -45,7 +45,7 @@ pub(crate) struct NixfrPushCli {
     #[clap(long, env = "FLAKEHUB_PUSH_GIT_ROOT", value_parser = PathBufToNoneParser, default_value = "")]
     pub(crate) git_root: OptionPathBuf,
     // If the repository is mirrored via DeterminateSystems' mirror functionality
-    // 
+    //
     // This should only be used by DeterminateSystems
     #[clap(long, env = "FLAKEHUB_PUSH_MIRROR", default_value_t = false)]
     pub(crate) mirror: bool,
@@ -449,7 +449,9 @@ async fn push_new_release(
         ));
     }
 
-    tracing::info!("Successfully released new version of {upload_name}/{rolling_prefix_with_postfix_or_tag}");
+    tracing::info!(
+        "Successfully released new version of {upload_name}/{rolling_prefix_with_postfix_or_tag}"
+    );
 
     Ok(())
 }
