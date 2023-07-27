@@ -157,7 +157,7 @@ impl NixfrPushCli {
         let git_root = if let Some(git_root) = &git_root.0 {
             git_root.clone()
         } else if let Ok(github_workspace) = std::env::var("GITHUB_WORKSPACE") {
-            tracing::trace!(%github_workspace, "Got $GITHUB_WORKSPACE");
+            tracing::trace!(%github_workspace, "Got `GITHUB_WORKSPACE`");
             PathBuf::from(github_workspace)
         } else {
             std::env::current_dir().map(PathBuf::from).wrap_err("Could not determine current git_root. Pass `--git-root` or set `FLAKEHUB_PUSH_GIT_ROOT`")?
@@ -165,9 +165,6 @@ impl NixfrPushCli {
 
         let directory = if let Some(directory) = &directory.0 {
             directory.clone()
-        } else if let Ok(github_workspace) = std::env::var("GITHUB_WORKSPACE") {
-            tracing::trace!(%github_workspace, "Got $GITHUB_WORKSPACE");
-            PathBuf::from(github_workspace)
         } else {
             git_root.clone()
         };

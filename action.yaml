@@ -23,11 +23,11 @@ inputs:
   directory:
     description: the directory of your flake (useful for subflakes)
     required: false
-    default: .
+    default: null
   git-root:
     description: the git root of your flake
     required: false
-    default: null
+    default: .
   tag:
     description: "example: v0.1.1"
     required: false
