@@ -15,7 +15,7 @@ inputs:
   repository:
     description: The actual GitHub repository containing your flake. In the format of OrgName/RepoName.
     required: true
-    default: null
+    default: ${{ github.repository }}
   mirror:
     description: If the repository is mirrored via DeterminateSystems' mirror functionality. This is only usable by DeterminateSystems.
     required: false
