@@ -9,13 +9,15 @@ inputs:
     description: "`public` or `hidden`"
     required: true
   upload-name:
-    description: the name of your published flake
+    description: The name of your published flake. In the format of OrgName/RepoName. OrgName must match your organization's GitHub root name or the publish will fail.
     required: true
     default: null
-  repo:
-    description: the name of your repo, strongly recommended to leave this unchanged. In the format of OrgName/RepoName. OrgName must match your organization's GitHub root name or the publish will fail.
+  repository:
+    description: The actual GitHub repository containing your flake. In the format of OrgName/RepoName.
     required: true
     default: null
+  mirror:
+    description: If the repository is mirrored via DeterminateSystems' mirror functionality. This should only be used by DeterminateSystems.
   directory:
     description: the directory of your flake (useful for subflakes)
     required: false
@@ -81,7 +83,8 @@ runs:
       FLAKEHUB_PUSH_LOGGER: ${{ inputs.logger }}
       FLAKEHUB_PUSH_GITHUB_TOKEN: ${{ inputs.github-token }}
       FLAKEHUB_PUSH_UPLOAD_NAME: ${{ inputs.upload-name }}
-      FLAKEHUB_PUSH_REPO: ${{ inputs.repo }}
+      FLAKEHUB_PUSH_MIRROR: ${{ inputs.mirror }}
+      FLAKEHUB_PUSH_REPOSITORY: ${{ inputs.repostory }}
       FLAKEHUB_PUSH_DIRECTORY: ${{ inputs.directory }}
       FLAKEHUB_PUSH_GIT_ROOT: ${{ inputs.git-root }}
       # Also GITHUB_REPOSITORY, GITHUB_REF_NAME, GITHUB_TOKEN, ACTIONS_ID_TOKEN_REQUEST_TOKEN, ACTIONS_ID_TOKEN_REQUEST_URL
