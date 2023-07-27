@@ -25,6 +25,7 @@ tracing = { version = "0.1.36", default-features = false, features = [ "std", "a
 tracing-error = { version = "0.2.0", default-features = false, features = ["traced-error"] }
 tracing-subscriber = { version = "0.3.15", default-features = false, features = [ "std", "registry", "fmt", "json", "ansi", "env-filter" ] }
 atty = { version = "0.2.14", default-features = false }
+github-actions-oidc-claims = "0.2.0"
 spdx = "0.10.2"
 
 [profile.release]

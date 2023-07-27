@@ -26,3 +26,13 @@ jobs:
         with:
           visibility: "hidden" # or "public"
 ```
+
+## Use with local Flakehub server
+
+Assuming the dev environment is running as described in the flakehub repo:
+
+```
+GITHUB_REPOSITORY=determinatesystems/flakehub-push cargo run -- --visibility hidden --jwt-issuer-uri http://localhost:8081/jwt/token --tag v0.0.$RANDOM --host http://localhost:8080
+```
+
+TODO: autodetect more of this.

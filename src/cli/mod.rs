@@ -10,7 +10,7 @@ use tokio::io::AsyncWriteExt;
 
 use crate::{
     flake_info::{get_flake_metadata, get_flake_tarball, get_flake_tarball_outputs},
-    release_metadata::{DevMetadata, ReleaseMetadata},
+    release_metadata::ReleaseMetadata,
     Visibility,
 };
 
@@ -49,27 +49,14 @@ pub(crate) struct NixfrPushCli {
     // This should only be used by DeterminateSystems
     #[clap(long, env = "FLAKEHUB_PUSH_MIRROR", default_value_t = false)]
     pub(crate) mirror: bool,
-    #[cfg(debug_assertions)]
-    #[clap(flatten)]
-    pub(crate) dev_config: DevConfig,
+    /// URL of a JWT mock server (like https://github.com/ruiyang/jwt-mock-server) which can issue tokens.
+    ///
+    /// Used instead of ACTIONS_ID_TOKEN_REQUEST_URL/ACTIONS_ID_TOKEN_REQUEST_TOKEN when developing locally.
+    #[clap(long, env = "FLAKEHUB_PUSH_JWT_ISSUER_URI", value_parser = StringToNoneParser, default_value = "")]
+    pub(crate) jwt_issuer_uri: OptionString,
 
     #[clap(flatten)]
     pub instrumentation: instrumentation::Instrumentation,
-}
-
-#[cfg(debug_assertions)]
-#[derive(Debug, clap::Parser)]
-pub struct DevConfig {
-    // A specific bearer token string which bypasses the normal authentication check in when pushing an upload
-    // This is intended for development at this time.
-    #[clap(long, env = "FLAKEHUB_PUSH_DEV_BEARER_TOKEN", value_parser = StringToNoneParser, default_value = "")]
-    pub(crate) dev_bearer_token: OptionString,
-    // A manually-specified project id (a la GitHub's `databaseId`)
-    #[clap(long)]
-    pub(crate) dev_project_id: Option<String>,
-    // A manually-specified owner id (a la GitHub's `databaseId`)
-    #[clap(long)]
-    pub(crate) dev_owner_id: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -124,6 +111,10 @@ impl clap::builder::TypedValueParser for PathBufToNoneParser {
     }
 }
 
+fn build_http_client() -> reqwest::ClientBuilder {
+    reqwest::Client::builder().user_agent("flakehub-push")
+}
+
 impl NixfrPushCli {
     #[tracing::instrument(
         name = "flakehub_push"
@@ -142,8 +133,7 @@ impl NixfrPushCli {
             repository,
             git_root,
             mirror,
-            #[cfg(debug_assertions)]
-            dev_config,
+            jwt_issuer_uri,
             instrumentation: _,
         } = self;
 
@@ -188,9 +178,46 @@ impl NixfrPushCli {
             std::env::var("GITHUB_REF_NAME").ok()
         };
 
+        let repository_owner = if let Some(owner) = repository.split('/').next() {
+            owner
+        } else {
+            return Err(eyre!("Could not determine repository owner, pass `--repository` or the `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`"));
+        };
+        let upload_bearer_token = match jwt_issuer_uri.0 {
+            None => get_actions_id_bearer_token()
+                .await
+                .wrap_err("Getting upload bearer token from GitHub")?,
+
+            Some(jwt_issuer_uri) => {
+                let client = build_http_client().build()?;
+                let mut claims = github_actions_oidc_claims::Claims::make_dummy();
+                // FIXME: we should probably fill in more of these claims.
+                claims.iss = "flakehub-push-dev".to_string();
+                claims.repository = repository.clone();
+                claims.repository_owner = repository_owner.to_string();
+                let response = client
+                    .post(jwt_issuer_uri)
+                    .header("Content-Type", "application/json")
+                    .json(&claims)
+                    .send()
+                    .await
+                    .wrap_err("Sending request to JWT issuer")?;
+                #[derive(serde::Deserialize)]
+                struct Response {
+                    token: String,
+                }
+                let response_deserialized: Response = response
+                    .json()
+                    .await
+                    .wrap_err("Getting token from JWT issuer's response")?;
+                response_deserialized.token
+            }
+        };
+
         push_new_release(
             &host,
             &github_token,
+            &upload_bearer_token,
             &directory,
             &git_root,
             &repository,
@@ -199,8 +226,6 @@ impl NixfrPushCli {
             visibility,
             tag.as_deref(),
             rolling_prefix.0.as_deref(),
-            #[cfg(debug_assertions)]
-            dev_config,
         )
         .await?;
 
@@ -223,6 +248,7 @@ impl NixfrPushCli {
 async fn push_new_release(
     host: &str,
     github_token: &str,
+    upload_bearer_token: &str,
     directory: &Path,
     git_root: &Path,
     repository: &str,
@@ -231,7 +257,6 @@ async fn push_new_release(
     visibility: Visibility,
     tag: Option<&str>,
     rolling_prefix: Option<&str>,
-    #[cfg(debug_assertions)] dev_config: DevConfig,
 ) -> color_eyre::Result<()> {
     let span = tracing::Span::current();
     let upload_name = upload_name.unwrap_or(repository);
@@ -248,8 +273,7 @@ async fn push_new_release(
         .tempdir()
         .wrap_err("Creating tempdir")?;
 
-    let github_api_client = reqwest::Client::builder()
-        .user_agent("flakehub-push")
+    let github_api_client = build_http_client()
         .default_headers(
             std::iter::once((
                 reqwest::header::AUTHORIZATION,
@@ -326,31 +350,11 @@ async fn push_new_release(
         upload_name,
         mirror,
         visibility,
-        #[cfg(debug_assertions)]
-        DevMetadata {
-            project_id: dev_config.dev_project_id,
-            owner_id: dev_config.dev_owner_id,
-        },
     )
     .await
     .wrap_err("Building release metadata")?;
 
-    #[cfg(debug_assertions)]
-    let upload_bearer_token = match &dev_config.dev_bearer_token.0 {
-        None => "bearer bogus".to_string(),
-        Some(dev_token) => {
-            tracing::warn!(dev_bearer_token = %dev_token, "This flakehub-push has `dev_bearer_token` set for upload. This is intended for development purposes only.");
-            dev_token.to_string()
-        }
-    };
-    #[cfg(not(debug_assertions))]
-    let upload_bearer_token = get_actions_id_bearer_token()
-        .await
-        .wrap_err("Getting upload bearer token")?;
-
-    let reqwest_client = reqwest::Client::builder()
-        .user_agent("flakehub-push")
-        .build()?;
+    let flakehub_client = build_http_client().build()?;
 
     let rolling_prefix_with_postfix_or_tag = if let Some(rolling_prefix) = &rolling_prefix {
         format!(
@@ -366,10 +370,10 @@ async fn push_new_release(
     );
     tracing::debug!(
         url = release_metadata_post_url,
-        "Got release metadata POST URL"
+        "Computed release metadata POST URL"
     );
 
-    let release_metadata_post_response = reqwest_client
+    let release_metadata_post_response = flakehub_client
         .post(release_metadata_post_url)
         .headers({
             let mut header_map = HeaderMap::new();
@@ -404,20 +408,22 @@ async fn push_new_release(
         .bytes()
         .await
         .wrap_err("Could not get bytes from release metadata POST response")?;
-    let release_metadata_put_string =
+    let release_upload_url =
         String::from_utf8_lossy(&release_metadata_post_response_bytes).to_string();
+
+    tracing::debug!(%release_upload_url, "Got release upload URL");
 
     if release_metadata_post_response_status != 200 {
         return Err(eyre!(
             "\
                 Status {release_metadata_post_response_status} from metadata POST\n\
-                {release_metadata_put_string}\
+                {release_upload_url}\
             "
         ));
     }
 
-    let tarball_put_response = reqwest_client
-        .put(release_metadata_put_string)
+    let tarball_put_response = flakehub_client
+        .put(release_upload_url)
         .headers({
             let mut header_map = HeaderMap::new();
             header_map.insert(
@@ -440,7 +446,7 @@ async fn push_new_release(
         status = tracing::field::display(release_metadata_post_response_status),
         "Got tarball PUT response"
     );
-    if tarball_put_response_status != 200 {
+    if !tarball_put_response_status.is_success() {
         return Err(eyre!(
             "Got {tarball_put_response_status} status from PUT request"
         ));
@@ -471,8 +477,7 @@ async fn get_actions_id_bearer_token() -> color_eyre::Result<String> {
                # ...\n\
         ")?;
     let actions_id_token_request_url = std::env::var("ACTIONS_ID_TOKEN_REQUEST_URL").wrap_err("`ACTIONS_ID_TOKEN_REQUEST_URL` required if `ACTIONS_ID_TOKEN_REQUEST_TOKEN` is also present")?;
-    let actions_id_token_client = reqwest::Client::builder()
-        .user_agent("flakehub-push")
+    let actions_id_token_client = build_http_client()
         .default_headers(
             std::iter::once((
                 reqwest::header::AUTHORIZATION,

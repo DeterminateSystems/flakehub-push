@@ -93,9 +93,9 @@ impl GithubGraphqlDataQuery {
                 }) => total_count,
             };
 
-        let spdx_identifier = graphql_repository.license_info
-            .ok_or_else(|| eyre!("Did not recieve a `license_info` inside GithubGraphqlDataQuery response from Github's GraphQL API"))?
-            .spdx_id;
+        let spdx_identifier = graphql_repository
+            .license_info
+            .and_then(|info| info.spdx_id);
 
         Ok(GithubGraphqlDataResult {
             rev_count,
