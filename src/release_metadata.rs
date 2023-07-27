@@ -1,8 +1,7 @@
 use color_eyre::eyre::{eyre, WrapErr};
 use std::path::Path;
 
-use crate::graphql::rev_count_query::RevCountQueryRepositoryObject;
-use graphql_client::GraphQLQuery;
+use crate::graphql::GithubGraphqlDataQuery;
 
 use crate::Visibility;
 
@@ -17,6 +16,11 @@ pub(crate) struct ReleaseMetadata {
     pub(crate) revision: String,
     pub(crate) visibility: Visibility,
     pub(crate) mirrored: bool,
+    #[serde(
+        deserialize_with = "option_string_to_spdx",
+        serialize_with = "option_spdx_serialize"
+    )]
+    pub(crate) spdx_identifier: Option<spdx::Expression>,
 }
 
 impl ReleaseMetadata {
@@ -27,6 +31,7 @@ impl ReleaseMetadata {
         revision = tracing::field::Empty,
         revision_count = tracing::field::Empty,
         commit_count = tracing::field::Empty,
+        spdx_identifier = tracing::field::Empty,
         visibility = ?visibility,
     ))]
     pub(crate) async fn build(
@@ -66,6 +71,14 @@ impl ReleaseMetadata {
         let revision_string = revision.to_hex().to_string();
         span.record("revision_string", revision_string.clone());
 
+        let github_graphql_data_result = GithubGraphqlDataQuery::get(
+            reqwest_client,
+            project_owner,
+            project_name,
+            &revision_string,
+        )
+        .await?;
+
         let local_revision_count = gix_repository
             .rev_walk([revision])
             .all()
@@ -74,14 +87,8 @@ impl ReleaseMetadata {
         let revision_count = match local_revision_count {
             Ok(n) => n as i64,
             Err(e) => {
-                tracing::debug!("Getting revision count locally failed: {e:?}, trying github instead");
-                get_revision_count_from_github(
-                    reqwest_client,
-                    project_owner,
-                    project_name,
-                    &revision_string,
-                )
-                .await?
+                tracing::debug!("Getting revision count locally failed: {e:?}, using data from github instead");
+                github_graphql_data_result.rev_count
             }
         };
         span.record("revision_count", revision_count);
@@ -104,100 +111,59 @@ impl ReleaseMetadata {
             None
         };
 
+        let spdx_identifier = if let Some(spdx_string) = github_graphql_data_result.spdx_identifier
+        {
+            let parsed = spdx::Expression::parse(&spdx_string)
+                .wrap_err("Invalid SPDX license identifier reported from the GitHub API, either you are using a non-standard license or GitHub has returned a value that cannot be validated")?;
+            span.record("spdx_identifier", tracing::field::display(&parsed));
+            Some(parsed)
+        } else {
+            None
+        };
+
+        tracing::trace!("Collected ReleaseMetadata information");
+
         Ok(ReleaseMetadata {
             description,
             repo: format!("{project_owner}/{project_name}"),
             raw_flake_metadata: flake_metadata.clone(),
             readme,
             revision: revision_string,
-            commit_count: revision_count,
+            commit_count: github_graphql_data_result.rev_count,
             visibility,
             outputs: flake_outputs,
             mirrored,
+            spdx_identifier,
         })
     }
 }
 
-#[tracing::instrument(skip_all, fields(
-    %project_owner,
-    %project_name,
-    %revision,
-))]
-pub(crate) async fn get_revision_count_from_github(
-    reqwest_client: reqwest::Client,
-    project_owner: &str,
-    project_name: &str,
-    revision: &str,
-) -> color_eyre::Result<i64> {
-    // Schema from https://docs.github.com/public/schema.docs.graphql
-    let graphql_response = {
-        let variables = crate::graphql::rev_count_query::Variables {
-            owner: project_owner.to_string(),
-            name: project_name.to_string(),
-            revision: revision.to_string(),
-        };
-        let query = crate::graphql::RevCountQuery::build_query(variables);
+fn option_string_to_spdx<'de, D>(deserializer: D) -> Result<Option<spdx::Expression>, D::Error>
+where
+    D: serde::de::Deserializer<'de>,
+{
+    let spdx_identifier: Option<&str> = serde::Deserialize::deserialize(deserializer)?;
 
-        tracing::trace!(
-            endpoint = %crate::graphql::GITHUB_ENDPOINT,
-            ?query,
-            "Making request"
-        );
-        let reqwest_response = reqwest_client
-            .post(crate::graphql::GITHUB_ENDPOINT)
-            .json(&query)
-            .send()
-            .await
-            .wrap_err("Failed to issue RevCountQuery request to Github's GraphQL API")?;
+    if let Some(spdx_identifier) = spdx_identifier {
+        spdx::Expression::parse(spdx_identifier)
+            .map_err(serde::de::Error::custom)
+            .map(Option::Some)
+    } else {
+        Ok(None)
+    }
+}
 
-        let response_status = reqwest_response.status();
-        let response_data: serde_json::Value = reqwest_response
-            .json()
-            .await
-            .wrap_err("Failed to retrieve RevCountQuery response from Github's GraphQL API")?;
-
-        if response_status != 200 {
-            tracing::error!(status = %response_status,
-                "Recieved error:\n\
-                {response_data:#?}\n\
-            "
-            );
-            return Err(eyre!(
-                "Got {response_status} status from Github's GraphQL API, expected 200"
-            ));
-        }
-
-        let graphql_data = response_data.get("data").ok_or_else(|| {
-            eyre!(
-                "Did not recieve a `data` inside RevCountQuery response from Github's GraphQL API"
-            )
-        })?;
-        let response_data: <crate::graphql::RevCountQuery as GraphQLQuery>::ResponseData =
-            serde_json::from_value(graphql_data.clone())
-                .wrap_err("Failed to retrieve RevCountQuery response from Github's GraphQL API")?;
-        response_data
-    };
-
-    tracing::trace!(?graphql_response, "Got response");
-    let graphql_repository_object = graphql_response
-            .repository
-            .ok_or_else(|| eyre!("Did not recieve a `repository` inside RevCountQuery response from Github's GraphQL API"))?
-            .object
-            .ok_or_else(|| eyre!("Did not recieve a `repository.object` inside RevCountQuery response from Github's GraphQL API"))?;
-
-    let total_count = match graphql_repository_object {
-            RevCountQueryRepositoryObject::Blob
-            | RevCountQueryRepositoryObject::Tag
-            | RevCountQueryRepositoryObject::Tree => {
-                return Err(eyre!(
-                "Retrieved a `repository.object` that was not a `Commit` in the RevCountQuery response from Github's GraphQL API"
-            ))
-            }
-            RevCountQueryRepositoryObject::Commit(crate::graphql::rev_count_query::RevCountQueryRepositoryObjectOnCommit {
-                history: crate::graphql::rev_count_query::RevCountQueryRepositoryObjectOnCommitHistory {
-                    total_count,
-                }
-            }) => total_count,
-        };
-    Ok(total_count)
+fn option_spdx_serialize<S>(
+    spdx_identifier: &Option<spdx::Expression>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: serde::ser::Serializer,
+{
+    if let Some(spdx_identifier) = spdx_identifier {
+        let spdx_string = spdx_identifier.to_string();
+        serializer.serialize_str(&spdx_string)
+    } else {
+        serializer.serialize_none()
+    }
 }
