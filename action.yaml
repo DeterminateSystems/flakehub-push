@@ -86,7 +86,7 @@ runs:
       FLAKEHUB_PUSH_GITHUB_TOKEN: ${{ inputs.github-token }}
       FLAKEHUB_PUSH_UPLOAD_NAME: ${{ inputs.upload-name }}
       FLAKEHUB_PUSH_MIRROR: ${{ inputs.mirror }}
-      FLAKEHUB_PUSH_REPOSITORY: ${{ inputs.repostory }}
+      FLAKEHUB_PUSH_REPOSITORY: ${{ inputs.repository }}
       FLAKEHUB_PUSH_DIRECTORY: ${{ inputs.directory }}
       FLAKEHUB_PUSH_GIT_ROOT: ${{ inputs.git-root }}
       # Also GITHUB_REPOSITORY, GITHUB_REF_NAME, GITHUB_TOKEN, ACTIONS_ID_TOKEN_REQUEST_TOKEN, ACTIONS_ID_TOKEN_REQUEST_URL
