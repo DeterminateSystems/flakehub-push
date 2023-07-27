@@ -21,14 +21,6 @@ pub(crate) struct ReleaseMetadata {
         serialize_with = "option_spdx_serialize"
     )]
     pub(crate) spdx_identifier: Option<spdx::Expression>,
-    #[cfg(debug_assertions)]
-    dev_metadata: DevMetadata,
-}
-
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
-pub(crate) struct DevMetadata {
-    pub(crate) project_id: Option<String>,
-    pub(crate) owner_id: Option<String>,
 }
 
 impl ReleaseMetadata {
@@ -52,7 +44,6 @@ impl ReleaseMetadata {
         project_name: &str,
         mirrored: bool,
         visibility: Visibility,
-        #[cfg(debug_assertions)] dev_metadata: DevMetadata,
     ) -> color_eyre::Result<ReleaseMetadata> {
         let span = tracing::Span::current();
         let gix_repository = gix::open(git_root).wrap_err("Opening the Git repository")?;
@@ -87,7 +78,22 @@ impl ReleaseMetadata {
             &revision_string,
         )
         .await?;
-        span.record("revision_count", github_graphql_data_result.rev_count);
+
+        let local_revision_count = gix_repository
+            .rev_walk([revision])
+            .all()
+            .map(|rev_iter| rev_iter.count());
+
+        let revision_count = match local_revision_count {
+            Ok(n) => n as i64,
+            Err(e) => {
+                tracing::debug!(
+                    "Getting revision count locally failed: {e:?}, using data from github instead"
+                );
+                github_graphql_data_result.rev_count
+            }
+        };
+        span.record("revision_count", revision_count);
 
         let description = if let Some(description) = flake_metadata.get("description") {
             Some(description
@@ -130,8 +136,6 @@ impl ReleaseMetadata {
             outputs: flake_outputs,
             mirrored,
             spdx_identifier,
-            #[cfg(debug_assertions)]
-            dev_metadata,
         })
     }
 }
