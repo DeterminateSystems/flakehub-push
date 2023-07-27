@@ -70,11 +70,11 @@ impl ReleaseMetadata {
             .rev_walk([revision])
             .all()
             .map(|rev_iter| rev_iter.count());
-        tracing::debug!("Got revision count from local repository: {local_revision_count:?}");
 
         let revision_count = match local_revision_count {
             Ok(n) => n as i64,
-            Err(_e) => {
+            Err(e) => {
+                tracing::debug!("Getting revision count locally failed: {e:?}, trying github instead");
                 get_revision_count_from_github(
                     reqwest_client,
                     project_owner,

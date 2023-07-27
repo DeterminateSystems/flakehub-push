@@ -416,7 +416,7 @@ async fn push_new_release(
     let release_upload_url =
         String::from_utf8_lossy(&release_metadata_post_response_bytes).to_string();
 
-    tracing::debug!("Got release upload URL {release_upload_url:?}");
+    tracing::debug!(%release_upload_url, "Got release upload URL");
 
     if release_metadata_post_response_status != 200 {
         return Err(eyre!(
