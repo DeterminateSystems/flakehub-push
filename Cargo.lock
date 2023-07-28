@@ -623,9 +623,9 @@ checksum = "b6c80984affa11d98d1b88b66ac8853f143217b399d3c74116778ff8fdb4ed2e"
 
 [[package]]
 name = "github-actions-oidc-claims"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b91332a6f990cbdee6eda21d9de4efe61ba4e9f4f98d6c356877f1103b8f04f"
+checksum = "b392ef8967e2b2a0443c665ed28706d46aa5599552760936c2f3ac26391c4dc8"
 dependencies = [
  "serde",
 ]
