@@ -325,7 +325,7 @@ async fn push_new_release(
         .pointer("/resolved/dir")
         .and_then(serde_json::Value::as_str);
 
-    let flake_outputs = get_flake_outputs(&flake_locked_url).await?;
+    let flake_outputs = get_flake_outputs(flake_locked_url).await?;
     tracing::debug!("Got flake outputs: {:?}", flake_outputs);
 
     let source = match flake_metadata_value_resolved_dir {
