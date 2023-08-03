@@ -10,7 +10,7 @@ use tokio::io::AsyncWriteExt;
 
 use crate::{
     flake_info::{get_flake_metadata, get_flake_tarball, get_flake_tarball_outputs},
-    release_metadata::ReleaseMetadata,
+    release_metadata::{ReleaseMetadata, RevisionInfo},
     Visibility,
 };
 
@@ -340,10 +340,11 @@ async fn push_new_release(
 
     let get_flake_tarball_outputs = get_flake_tarball_outputs(&flake_tarball_path).await?;
 
+    let revision_info = RevisionInfo::from_git_root(&git_root)?;
     let release_metadata = ReleaseMetadata::build(
         github_api_client,
         directory,
-        git_root,
+        revision_info,
         flake_metadata,
         get_flake_tarball_outputs,
         repository,
