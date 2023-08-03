@@ -16,6 +16,8 @@ pub(crate) struct ReleaseMetadata {
     pub(crate) revision: String,
     pub(crate) visibility: Visibility,
     pub(crate) mirrored: bool,
+    pub(crate) project_id: i64,
+    pub(crate) owner_id: i64,
     #[serde(
         deserialize_with = "option_string_to_spdx",
         serialize_with = "option_spdx_serialize"
@@ -148,6 +150,8 @@ impl ReleaseMetadata {
             outputs: flake_outputs,
             mirrored: mirror,
             spdx_identifier,
+            project_id: github_graphql_data_result.project_id,
+            owner_id: github_graphql_data_result.owner_id,
         })
     }
 }
