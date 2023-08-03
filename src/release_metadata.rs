@@ -1,9 +1,7 @@
 use color_eyre::eyre::{eyre, WrapErr};
 use std::path::Path;
 
-use crate::graphql::GithubGraphqlDataQuery;
-
-use crate::Visibility;
+use crate::{graphql::GithubGraphqlDataResult, Visibility};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub(crate) struct ReleaseMetadata {
@@ -85,39 +83,18 @@ impl ReleaseMetadata {
         visibility = ?visibility,
     ))]
     pub(crate) async fn build(
-        reqwest_client: reqwest::Client,
         directory: &Path,
         revision_info: RevisionInfo,
         flake_metadata: serde_json::Value,
         flake_outputs: serde_json::Value,
-        repository: &str,
         upload_name: &str,
         mirror: bool,
         visibility: Visibility,
+        github_graphql_data_result: GithubGraphqlDataResult,
     ) -> color_eyre::Result<ReleaseMetadata> {
         let span = tracing::Span::current();
 
         span.record("revision_string", &revision_info.revision);
-
-        let mut repository_split = repository.split('/');
-        let project_owner = repository_split
-            .next()
-            .ok_or_else(|| eyre!("Could not determine owner, pass `--repository` or the `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`"))?
-            .to_string();
-        let project_name = repository_split.next()
-            .ok_or_else(|| eyre!("Could not determine project, pass `--repository` or `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`"))?
-            .to_string();
-        if repository_split.next().is_some() {
-            Err(eyre!("Could not determine the owner/project, pass `--repository` or `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`. The passed value has too many slashes (/) to be a valid repository"))?;
-        }
-
-        let github_graphql_data_result = GithubGraphqlDataQuery::get(
-            reqwest_client,
-            &project_owner,
-            &project_name,
-            &revision_info.revision,
-        )
-        .await?;
 
         let revision_count = match revision_info.local_revision_count {
             Some(n) => n as i64,

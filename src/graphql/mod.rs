@@ -21,7 +21,7 @@ impl GithubGraphqlDataQuery {
         %revision,
     ))]
     pub(crate) async fn get(
-        reqwest_client: reqwest::Client,
+        reqwest_client: &reqwest::Client,
         project_owner: &str,
         project_name: &str,
         revision: &str,

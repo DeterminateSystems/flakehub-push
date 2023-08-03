@@ -10,6 +10,7 @@ use tokio::io::AsyncWriteExt;
 
 use crate::{
     flake_info::{get_flake_metadata, get_flake_tarball, get_flake_tarball_outputs},
+    graphql::{GithubGraphqlDataQuery, GithubGraphqlDataResult},
     release_metadata::{ReleaseMetadata, RevisionInfo},
     Visibility,
 };
@@ -178,11 +179,38 @@ impl NixfrPushCli {
             std::env::var("GITHUB_REF_NAME").ok()
         };
 
-        let repository_owner = if let Some(owner) = repository.split('/').next() {
-            owner
-        } else {
-            return Err(eyre!("Could not determine repository owner, pass `--repository` or the `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`"));
-        };
+        let mut repository_split = repository.split('/');
+        let project_owner = repository_split
+            .next()
+            .ok_or_else(|| eyre!("Could not determine owner, pass `--repository` or the `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`"))?
+            .to_string();
+        let project_name = repository_split.next()
+            .ok_or_else(|| eyre!("Could not determine project, pass `--repository` or `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`"))?
+            .to_string();
+        if repository_split.next().is_some() {
+            Err(eyre!("Could not determine the owner/project, pass `--repository` or `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`. The passed value has too many slashes (/) to be a valid repository"))?;
+        }
+
+        let github_api_client = build_http_client()
+            .default_headers(
+                std::iter::once((
+                    reqwest::header::AUTHORIZATION,
+                    reqwest::header::HeaderValue::from_str(&format!("Bearer {}", github_token))
+                        .unwrap(),
+                ))
+                .collect(),
+            )
+            .build()?;
+
+        let revision_info = RevisionInfo::from_git_root(&git_root)?;
+        let github_graphql_data_result = GithubGraphqlDataQuery::get(
+            &github_api_client,
+            &project_owner,
+            &project_name,
+            &revision_info.revision,
+        )
+        .await?;
+
         let upload_bearer_token = match jwt_issuer_uri.0 {
             None => get_actions_id_bearer_token()
                 .await
@@ -194,7 +222,10 @@ impl NixfrPushCli {
                 // FIXME: we should probably fill in more of these claims.
                 claims.iss = "flakehub-push-dev".to_string();
                 claims.repository = repository.clone();
-                claims.repository_owner = repository_owner.to_string();
+                claims.repository_owner = project_owner.to_string();
+                claims.repository_id = github_graphql_data_result.project_id.to_string();
+                claims.repository_owner_id = github_graphql_data_result.owner_id.to_string();
+
                 let response = client
                     .post(jwt_issuer_uri)
                     .header("Content-Type", "application/json")
@@ -216,16 +247,16 @@ impl NixfrPushCli {
 
         push_new_release(
             &host,
-            &github_token,
             &upload_bearer_token,
             &directory,
-            &git_root,
+            revision_info,
             &repository,
             upload_name.0.as_deref(),
             mirror,
             visibility,
             tag.as_deref(),
             rolling_prefix.0.as_deref(),
+            github_graphql_data_result,
         )
         .await?;
 
@@ -247,16 +278,16 @@ impl NixfrPushCli {
 #[allow(clippy::too_many_arguments)]
 async fn push_new_release(
     host: &str,
-    github_token: &str,
     upload_bearer_token: &str,
     directory: &Path,
-    git_root: &Path,
+    revision_info: RevisionInfo,
     repository: &str,
     upload_name: Option<&str>,
     mirror: bool,
     visibility: Visibility,
     tag: Option<&str>,
     rolling_prefix: Option<&str>,
+    github_graphql_data_result: GithubGraphqlDataResult,
 ) -> color_eyre::Result<()> {
     let span = tracing::Span::current();
     let upload_name = upload_name.unwrap_or(repository);
@@ -272,17 +303,6 @@ async fn push_new_release(
         .prefix("flakehub_push")
         .tempdir()
         .wrap_err("Creating tempdir")?;
-
-    let github_api_client = build_http_client()
-        .default_headers(
-            std::iter::once((
-                reqwest::header::AUTHORIZATION,
-                reqwest::header::HeaderValue::from_str(&format!("Bearer {}", github_token))
-                    .unwrap(),
-            ))
-            .collect(),
-        )
-        .build()?;
 
     let flake_metadata = get_flake_metadata(directory)
         .await
@@ -340,17 +360,15 @@ async fn push_new_release(
 
     let get_flake_tarball_outputs = get_flake_tarball_outputs(&flake_tarball_path).await?;
 
-    let revision_info = RevisionInfo::from_git_root(&git_root)?;
     let release_metadata = ReleaseMetadata::build(
-        github_api_client,
         directory,
         revision_info,
         flake_metadata,
         get_flake_tarball_outputs,
-        repository,
         upload_name,
         mirror,
         visibility,
+        github_graphql_data_result,
     )
     .await
     .wrap_err("Building release metadata")?;
