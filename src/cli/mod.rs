@@ -481,19 +481,20 @@ async fn push_new_release(
 #[tracing::instrument(skip_all)]
 async fn get_actions_id_bearer_token() -> color_eyre::Result<String> {
     let actions_id_token_request_token = std::env::var("ACTIONS_ID_TOKEN_REQUEST_TOKEN")
+        // We do want to preserve the whitespace here  
         .wrap_err("\
-            No `ACTIONS_ID_TOKEN_REQUEST_TOKEN` found, `flakehub-push` requires a JWT. To provide this, add `permissions` to your job, eg:\n\
-            \n\
-            # ...\n\
-            jobs:\n\
-              example:\n\
-               runs-on: ubuntu-latest\n\
-               permissions:\n\
-                 id-token: write # In order to request a JWT for AWS auth\n\
-                 contents: read # Specifying id-token wiped this out, so manually specify that this action is allowed to checkout this private repo\n\
-               steps:\n\
-               - uses: actions/checkout@v3\n\
-               # ...\n\
+No `ACTIONS_ID_TOKEN_REQUEST_TOKEN` found, `flakehub-push` requires a JWT. To provide this, add `permissions` to your job, eg:
+
+# ...
+jobs:
+    example:
+    runs-on: ubuntu-latest
+    permissions:
+        id-token: write # Authenticate against FlakeHub
+        contents: read
+    steps:
+    - uses: actions/checkout@v3
+    # ...\n\
         ")?;
     let actions_id_token_request_url = std::env::var("ACTIONS_ID_TOKEN_REQUEST_URL").wrap_err("`ACTIONS_ID_TOKEN_REQUEST_URL` required if `ACTIONS_ID_TOKEN_REQUEST_TOKEN` is also present")?;
     let actions_id_token_client = build_http_client()
