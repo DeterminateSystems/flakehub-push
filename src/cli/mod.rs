@@ -3,7 +3,7 @@ mod instrumentation;
 use color_eyre::eyre::{eyre, WrapErr};
 use reqwest::header::HeaderMap;
 use std::{
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
     process::ExitCode,
 };
 use tokio::io::AsyncWriteExt;
@@ -154,7 +154,24 @@ impl NixfrPushCli {
         };
 
         let directory = if let Some(directory) = &directory.0 {
-            directory.clone()
+            if !directory.is_relative() {
+                return Err(eyre!(
+                    "`--directory` must be a relative path inside the `--git-root`"
+                ));
+            }
+            if directory.components().any(|v| match v {
+                Component::RootDir | Component::CurDir | Component::ParentDir => true,
+                _ => false,
+            }) {
+                return Err(eyre!("`--directory` must be a path which exists inside the `--git-root`, it cannot be absolute or contain `.` or `..` fragments"))?;
+            }
+            let joined = git_root.join(directory);
+            if !joined.is_dir() {
+                return Err(eyre!(
+                    "Specified `--directory` was not a directory inside the `--git-root`"
+                ));
+            }
+            joined
         } else {
             git_root.clone()
         };
