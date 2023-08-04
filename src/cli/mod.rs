@@ -471,8 +471,8 @@ jobs:
     example:
     runs-on: ubuntu-latest
     permissions:
-        id-token: write # In order to request a JWT for AWS auth
-        contents: read # Specifying id-token wiped this out, so manually specify that this action is allowed to checkout this private repo
+        id-token: write # Authenticate against FlakeHub
+        contents: read
     steps:
     - uses: actions/checkout@v3
     # ...\n\
