@@ -9,7 +9,7 @@ use std::{
 use tokio::io::AsyncWriteExt;
 
 use crate::{
-    flake_info::{get_flake_metadata, get_flake_tarball, get_flake_tarball_outputs},
+    flake_info::{get_flake_metadata, get_flake_outputs, get_flake_tarball},
     graphql::{GithubGraphqlDataQuery, GithubGraphqlDataResult},
     release_metadata::{ReleaseMetadata, RevisionInfo},
     Visibility,
@@ -307,8 +307,14 @@ async fn push_new_release(
     let flake_metadata = get_flake_metadata(directory)
         .await
         .wrap_err("Getting flake metadata")?;
-    tracing::debug!("Got flake metadata");
+    tracing::debug!("Got flake metadata: {:?}", flake_metadata);
 
+    let flake_locked_url = flake_metadata
+        .get("url")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| {
+            eyre!("Could not get `url` attribute from `nix flake metadata --json` output")
+        })?;
     let flake_metadata_value_path = flake_metadata
         .get("path")
         .and_then(serde_json::Value::as_str)
@@ -318,6 +324,9 @@ async fn push_new_release(
     let flake_metadata_value_resolved_dir = flake_metadata
         .pointer("/resolved/dir")
         .and_then(serde_json::Value::as_str);
+
+    let flake_outputs = get_flake_outputs(&flake_locked_url).await?;
+    tracing::debug!("Got flake outputs: {:?}", flake_outputs);
 
     let source = match flake_metadata_value_resolved_dir {
         Some(flake_metadata_value_resolved_dir) => {
@@ -358,13 +367,11 @@ async fn push_new_release(
         .await
         .wrap_err("Writing compressed tarball to tempfile")?;
 
-    let get_flake_tarball_outputs = get_flake_tarball_outputs(&flake_tarball_path).await?;
-
     let release_metadata = ReleaseMetadata::build(
         directory,
         revision_info,
         flake_metadata,
-        get_flake_tarball_outputs,
+        flake_outputs,
         upload_name,
         mirror,
         visibility,

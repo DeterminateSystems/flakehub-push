@@ -72,35 +72,38 @@ pub(crate) async fn get_flake_metadata(directory: &Path) -> color_eyre::Result<s
     Ok(output_json)
 }
 
-#[tracing::instrument(
-    skip_all,
-    fields(
-        path = %path.display(),
-    )
-)]
-pub(crate) async fn get_flake_tarball_outputs(
-    path: &Path,
-) -> color_eyre::Result<serde_json::Value> {
-    let file_protocol_path = format!("file:///{}", path.display());
+// FIXME: make this configurable
+pub(crate) const FLAKE_SCHEMAS_LOCKED_URL: &str =
+    "https://api.flakehub.com/f/DeterminateSystems/flake-schemas/0/source.tar.gz?narHash=sha256-LoqS9LgGYFItqDpHDzLCRohhLezqPuaZVZJ9aNCV6EI%3D";
+
+#[tracing::instrument(skip_all, fields(flake_url,))]
+pub(crate) async fn get_flake_outputs(flake_url: &str) -> color_eyre::Result<serde_json::Value> {
     let output = tokio::process::Command::new("nix")
-        .arg("flake")
-        .arg("show")
+        .arg("eval")
         .arg("--json")
         .arg("--no-write-lock-file")
-        .arg(&file_protocol_path)
+        .arg("--expr")
+        .arg(format!(
+            "((builtins.getFlake \"{}\").lib.evalFlake (builtins.getFlake \"{}\")).contents",
+            FLAKE_SCHEMAS_LOCKED_URL, &flake_url
+        ))
         .output()
         .await
-        .wrap_err_with(|| {
-            eyre!(
-                "Failed to execute `nix flake show --json {}` against specified tarball",
-                file_protocol_path
-            )
-        })?;
+        .wrap_err_with(|| eyre!("Failed to get flake outputs from tarball {}", flake_url))?;
+
+    if !output.status.success() {
+        return Err(eyre!(
+            "Failed to get flake outputs from tarball {}: {}",
+            flake_url,
+            String::from_utf8(output.stderr).unwrap()
+        ));
+    }
 
     let output_json = serde_json::from_slice(&output.stdout).wrap_err_with(|| {
         eyre!(
-            "Parsing `nix flake show --json {}` as JSON",
-            file_protocol_path
+            "Parsing flake outputs from {} as JSON: {}",
+            flake_url,
+            String::from_utf8(output.stdout).unwrap(),
         )
     })?;
 
