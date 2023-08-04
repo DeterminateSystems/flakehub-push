@@ -159,9 +159,11 @@ impl NixfrPushCli {
                     "`--directory` must be a relative path inside the `--git-root`"
                 ));
             }
-            if directory.components().any(|v| match v {
-                Component::RootDir | Component::CurDir | Component::ParentDir => true,
-                _ => false,
+            if directory.components().any(|v| {
+                matches!(
+                    v,
+                    Component::RootDir | Component::CurDir | Component::ParentDir
+                )
             }) {
                 return Err(eyre!("`--directory` must be a path which exists inside the `--git-root`, it cannot be absolute or contain `.` or `..` fragments"))?;
             }
