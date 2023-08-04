@@ -21,7 +21,7 @@ impl GithubGraphqlDataQuery {
         %revision,
     ))]
     pub(crate) async fn get(
-        reqwest_client: reqwest::Client,
+        reqwest_client: &reqwest::Client,
         project_owner: &str,
         project_name: &str,
         revision: &str,
@@ -97,9 +97,25 @@ impl GithubGraphqlDataQuery {
             .license_info
             .and_then(|info| info.spdx_id);
 
+        let project_id = graphql_repository
+            .database_id
+            .ok_or_else(|| eyre!("Did not receive a `repository.databaseId` inside GithubGraphqlDataQuery response from Github's GraphQL API"))?;
+        let owner_id = match graphql_repository.owner {
+            github_graphql_data_query::GithubGraphqlDataQueryRepositoryOwner::Organization(org) => {
+                org.database_id
+            }
+            github_graphql_data_query::GithubGraphqlDataQueryRepositoryOwner::User(user) => {
+                user.database_id
+            }
+        };
+        let owner_id = owner_id
+            .ok_or_else(|| eyre!("Did not receive a `repository.owner.databaseId` inside GithubGraphqlDataQuery response from Github's GraphQL API"))?;
+
         Ok(GithubGraphqlDataResult {
             rev_count,
             spdx_identifier,
+            project_id,
+            owner_id,
         })
     }
 }
@@ -108,4 +124,6 @@ impl GithubGraphqlDataQuery {
 pub(crate) struct GithubGraphqlDataResult {
     pub(crate) rev_count: i64,
     pub(crate) spdx_identifier: Option<String>,
+    pub(crate) project_id: i64,
+    pub(crate) owner_id: i64,
 }

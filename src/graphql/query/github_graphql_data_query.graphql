@@ -1,5 +1,19 @@
 query GithubGraphqlDataQuery($owner: String!, $name: String!, $revision: String!) {
-  repository(owner: $owner, name: $name) {
+  repository(name: $name, owner: $owner) {
+    __typename
+    databaseId
+    owner {
+      __typename
+      ... on User {
+        databaseId
+      }
+      ... on Organization {
+        databaseId
+      }
+    }
+    licenseInfo {
+      spdxId
+    }
     object(expression: $revision) {
       __typename
       ... on Commit {
@@ -7,9 +21,6 @@ query GithubGraphqlDataQuery($owner: String!, $name: String!, $revision: String!
           totalCount
         }
       }
-    }
-    licenseInfo {
-      spdxId
     }
   }
 }

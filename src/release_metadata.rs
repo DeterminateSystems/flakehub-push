@@ -1,9 +1,7 @@
 use color_eyre::eyre::{eyre, WrapErr};
 use std::path::Path;
 
-use crate::graphql::GithubGraphqlDataQuery;
-
-use crate::Visibility;
+use crate::{graphql::GithubGraphqlDataResult, Visibility};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub(crate) struct ReleaseMetadata {
@@ -16,11 +14,61 @@ pub(crate) struct ReleaseMetadata {
     pub(crate) revision: String,
     pub(crate) visibility: Visibility,
     pub(crate) mirrored: bool,
+    pub(crate) project_id: i64,
+    pub(crate) owner_id: i64,
     #[serde(
         deserialize_with = "option_string_to_spdx",
         serialize_with = "option_spdx_serialize"
     )]
     pub(crate) spdx_identifier: Option<spdx::Expression>,
+}
+
+#[derive(Clone)]
+pub(crate) struct RevisionInfo {
+    pub(crate) local_revision_count: Option<usize>,
+    pub(crate) revision: String,
+}
+
+impl RevisionInfo {
+    pub(crate) fn from_git_root(git_root: &Path) -> color_eyre::Result<Self> {
+        let gix_repository = gix::open(git_root).wrap_err("Opening the Git repository")?;
+        let gix_repository_head = gix_repository
+            .head()
+            .wrap_err("Getting the HEAD revision of the repository")?;
+
+        let revision = match gix_repository_head.kind {
+            gix::head::Kind::Symbolic(gix_ref::Reference {
+                name: _, target, ..
+            }) => match target {
+                gix_ref::Target::Peeled(object_id) => object_id,
+                gix_ref::Target::Symbolic(_) => {
+                    return Err(eyre!(
+                "Symbolic revision pointing to a symbolic revision is not supported at this time"
+            ))
+                }
+            },
+            gix::head::Kind::Detached {
+                target: object_id, ..
+            } => object_id,
+            gix::head::Kind::Unborn(_) => {
+                return Err(eyre!(
+                    "Newly initialized repository detected, at least one commit is necessary"
+                ))
+            }
+        };
+
+        let local_revision_count = gix_repository
+            .rev_walk([revision])
+            .all()
+            .map(|rev_iter| rev_iter.count())
+            .ok();
+        let revision = revision.to_hex().to_string();
+
+        Ok(Self {
+            local_revision_count,
+            revision,
+        })
+    }
 }
 
 impl ReleaseMetadata {
@@ -35,72 +83,24 @@ impl ReleaseMetadata {
         visibility = ?visibility,
     ))]
     pub(crate) async fn build(
-        reqwest_client: reqwest::Client,
         directory: &Path,
-        git_root: &Path,
+        revision_info: RevisionInfo,
         flake_metadata: serde_json::Value,
         flake_outputs: serde_json::Value,
-        repository: &str,
         upload_name: &str,
         mirror: bool,
         visibility: Visibility,
+        github_graphql_data_result: GithubGraphqlDataResult,
     ) -> color_eyre::Result<ReleaseMetadata> {
         let span = tracing::Span::current();
-        let gix_repository = gix::open(git_root).wrap_err("Opening the Git repository")?;
-        let gix_repository_head = gix_repository
-            .head()
-            .wrap_err("Getting the HEAD revision of the repository")?;
 
-        let revision = match gix_repository_head.kind {
-            gix::head::Kind::Symbolic(gix_ref::Reference { name: _, target, .. }) => {
-                match target {
-                    gix_ref::Target::Peeled(object_id) => object_id,
-                    gix_ref::Target::Symbolic(_) => return Err(eyre!("Recieved a symbolic Git revision pointing to a symbolic Git revision, this is not supported at this time"))
-                }
-            }
-            gix::head::Kind::Detached {
-                target: object_id, ..
-            } => object_id,
-            gix::head::Kind::Unborn(_) => {
-                return Err(eyre!(
-                    "Newly initialized repository detected, at least one commit is necessary"
-                ))
-            }
-        };
+        span.record("revision_string", &revision_info.revision);
 
-        let revision_string = revision.to_hex().to_string();
-        span.record("revision_string", revision_string.clone());
-
-        let mut repository_split = repository.split('/');
-        let project_owner = repository_split
-            .next()
-            .ok_or_else(|| eyre!("Could not determine owner, pass `--repository` or the `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`"))?
-            .to_string();
-        let project_name = repository_split.next()
-            .ok_or_else(|| eyre!("Could not determine project, pass `--repository` or `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`"))?
-            .to_string();
-        if repository_split.next().is_some() {
-            Err(eyre!("Could not determine the owner/project, pass `--repository` or `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`. The passed value has too many slashes (/) to be a valid repository"))?;
-        }
-
-        let github_graphql_data_result = GithubGraphqlDataQuery::get(
-            reqwest_client,
-            &project_owner,
-            &project_name,
-            &revision_string,
-        )
-        .await?;
-
-        let local_revision_count = gix_repository
-            .rev_walk([revision])
-            .all()
-            .map(|rev_iter| rev_iter.count());
-
-        let revision_count = match local_revision_count {
-            Ok(n) => n as i64,
-            Err(e) => {
+        let revision_count = match revision_info.local_revision_count {
+            Some(n) => n as i64,
+            None => {
                 tracing::debug!(
-                    "Getting revision count locally failed: {e:?}, using data from github instead"
+                    "Getting revision count locally failed, using data from github instead"
                 );
                 github_graphql_data_result.rev_count
             }
@@ -142,12 +142,14 @@ impl ReleaseMetadata {
             repo: upload_name.to_string(),
             raw_flake_metadata: flake_metadata.clone(),
             readme,
-            revision: revision_string,
+            revision: revision_info.revision,
             commit_count: github_graphql_data_result.rev_count,
             visibility,
             outputs: flake_outputs,
             mirrored: mirror,
             spdx_identifier,
+            project_id: github_graphql_data_result.project_id,
+            owner_id: github_graphql_data_result.owner_id,
         })
     }
 }
