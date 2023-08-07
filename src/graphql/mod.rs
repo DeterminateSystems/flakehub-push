@@ -101,7 +101,7 @@ impl GithubGraphqlDataQuery {
 
         let project_id = graphql_repository
             .database_id
-            .ok_or_else(|| eyre!("Did not receive a `repository.databaseId` inside GithubGraphqlDataQuery response from Github's GraphQL API. Is GitHub's API being weird?"))?;
+            .ok_or_else(|| eyre!("Did not receive a `repository.databaseId` inside GithubGraphqlDataQuery response from Github's GraphQL API. Is GitHub's API experiencing issues?"))?;
         let owner_id = match graphql_repository.owner {
             github_graphql_data_query::GithubGraphqlDataQueryRepositoryOwner::Organization(org) => {
                 org.database_id
@@ -111,7 +111,7 @@ impl GithubGraphqlDataQuery {
             }
         };
         let owner_id = owner_id
-            .ok_or_else(|| eyre!("Did not receive a `repository.owner.databaseId` inside GithubGraphqlDataQuery response from Github's GraphQL API. Is GitHub's API being weird?"))?;
+            .ok_or_else(|| eyre!("Did not receive a `repository.owner.databaseId` inside GithubGraphqlDataQuery response from Github's GraphQL API. Is GitHub's API experiencing issues?"))?;
 
         Ok(GithubGraphqlDataResult {
             rev_count,
