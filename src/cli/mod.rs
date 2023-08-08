@@ -3,7 +3,7 @@ mod instrumentation;
 use color_eyre::eyre::{eyre, WrapErr};
 use reqwest::header::HeaderMap;
 use std::{
-    path::{Component, Path, PathBuf},
+    path::{Path, PathBuf},
     process::ExitCode,
 };
 use tokio::io::AsyncWriteExt;
