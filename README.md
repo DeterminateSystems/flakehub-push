@@ -28,7 +28,7 @@ jobs:
       - name: Push to flakehub
         uses: determinatesystems/flakehub-push@main
         with:
-          visibility: "hidden" # or "public"
+          visibility: "unlisted" # or "public"
 ```
 
 ## Development against a local Flakehub server
