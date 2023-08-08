@@ -27,7 +27,7 @@ impl GithubGraphqlDataQuery {
         revision: &str,
     ) -> color_eyre::Result<GithubGraphqlDataResult> {
         // Schema from https://docs.github.com/public/schema.docs.graphql
-        let graphql_response = {
+        let graphql_data = {
             let variables = github_graphql_data_query::Variables {
                 owner: project_owner.to_string(),
                 name: project_name.to_string(),
@@ -42,7 +42,9 @@ impl GithubGraphqlDataQuery {
                 .wrap_err("Failed to issue RevCountQuery request to Github's GraphQL API")?;
 
             let response_status = reqwest_response.status();
-            let response_data: serde_json::Value = reqwest_response
+            let response: graphql_client::Response<
+                <crate::graphql::GithubGraphqlDataQuery as GraphQLQuery>::ResponseData,
+            > = reqwest_response
                 .json()
                 .await
                 .wrap_err("Failed to retrieve RevCountQuery response from Github's GraphQL API")?;
@@ -50,7 +52,7 @@ impl GithubGraphqlDataQuery {
             if response_status != 200 {
                 tracing::error!(status = %response_status,
                     "Recieved error:\n\
-                    {response_data:#?}\n\
+                    {response:#?}\n\
                 "
                 );
                 return Err(eyre!(
@@ -58,32 +60,32 @@ impl GithubGraphqlDataQuery {
                 ));
             }
 
-            let graphql_data = response_data.get("data").ok_or_else(|| {
-                eyre!(
-                    "Did not recieve a `data` inside GithubGraphqlDataQuery response from Github's GraphQL API"
-                )
-            })?;
-            let response_data: <crate::graphql::GithubGraphqlDataQuery as GraphQLQuery>::ResponseData =
-                serde_json::from_value(graphql_data.clone())
-                    .wrap_err("Failed to retrieve GithubGraphqlDataQuery response from Github's GraphQL API")?;
-            response_data
-        };
-        tracing::trace!(?graphql_response, "Got GraphQL query response");
+            if response.errors.is_some() {
+                tracing::warn!(?response.errors, "Got errors from GraphQL query");
+            }
 
-        let graphql_repository = graphql_response
+            response.data.ok_or_else(|| {
+                eyre!(
+                    "Did not receive a `data` inside GithubGraphqlDataQuery response from Github's GraphQL API"
+                )
+            })?
+        };
+        tracing::debug!(?graphql_data, "Got response data");
+
+        let graphql_repository = graphql_data
             .repository
-            .ok_or_else(|| eyre!("Did not recieve a `repository` inside GithubGraphqlDataQuery response from Github's GraphQL API"))?;
+            .ok_or_else(|| eyre!("Did not receive a `repository` inside GithubGraphqlDataQuery response from Github's GraphQL API. Does the repository {project_owner}/{project_name} exist on GitHub, and does your GitHub access token have access to it?"))?;
 
         let graphql_repository_object = graphql_repository
                 .object
-                .ok_or_else(|| eyre!("Did not recieve a `repository.object` inside GithubGraphqlDataQuery response from Github's GraphQL API"))?;
+                .ok_or_else(|| eyre!("Did not receive a `repository.object` inside GithubGraphqlDataQuery response from Github's GraphQL API. Is the current commit {revision} pushed to GitHub?"))?;
 
         let rev_count = match graphql_repository_object {
                 github_graphql_data_query::GithubGraphqlDataQueryRepositoryObject::Blob
                 | github_graphql_data_query::GithubGraphqlDataQueryRepositoryObject::Tag
                 | github_graphql_data_query::GithubGraphqlDataQueryRepositoryObject::Tree => {
                     return Err(eyre!(
-                    "Retrieved a `repository.object` that was not a `Commit` in the GithubGraphqlDataQuery response from Github's GraphQL API"
+                    "Retrieved a `repository.object` that was not a `Commit` in the GithubGraphqlDataQuery response from Github's GraphQL API. This shouldn't happen, because only commits can be checked out!"
                 ))
                 }
                 github_graphql_data_query::GithubGraphqlDataQueryRepositoryObject::Commit(github_graphql_data_query::GithubGraphqlDataQueryRepositoryObjectOnCommit {
@@ -99,7 +101,7 @@ impl GithubGraphqlDataQuery {
 
         let project_id = graphql_repository
             .database_id
-            .ok_or_else(|| eyre!("Did not receive a `repository.databaseId` inside GithubGraphqlDataQuery response from Github's GraphQL API"))?;
+            .ok_or_else(|| eyre!("Did not receive a `repository.databaseId` inside GithubGraphqlDataQuery response from Github's GraphQL API. Is GitHub's API experiencing issues?"))?;
         let owner_id = match graphql_repository.owner {
             github_graphql_data_query::GithubGraphqlDataQueryRepositoryOwner::Organization(org) => {
                 org.database_id
@@ -109,7 +111,7 @@ impl GithubGraphqlDataQuery {
             }
         };
         let owner_id = owner_id
-            .ok_or_else(|| eyre!("Did not receive a `repository.owner.databaseId` inside GithubGraphqlDataQuery response from Github's GraphQL API"))?;
+            .ok_or_else(|| eyre!("Did not receive a `repository.owner.databaseId` inside GithubGraphqlDataQuery response from Github's GraphQL API. Is GitHub's API experiencing issues?"))?;
 
         Ok(GithubGraphqlDataResult {
             rev_count,
