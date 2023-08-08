@@ -14,7 +14,9 @@ let
 
   mkLeaf = leaf: { inherit leaf; };
 
-in rec {
+in
+
+rec {
 
   allSchemas = (flake.outputs.schemas or defaultSchemas) // schemaOverrides;
 
@@ -30,15 +32,16 @@ in rec {
 
       Note: the contents of `legacyPackages` are not shown in FlakeHub.
     '';
-    inventory = output: mkChildren {};
+    inventory = output: mkChildren { };
   };
 
   schemas =
-    builtins.listToAttrs (builtins.concatLists (mapAttrsToList (outputName: output:
-      if allSchemas ? ${outputName} then
-        [ { name = outputName; value = allSchemas.${outputName}; }]
-      else
-        [ ])
+    builtins.listToAttrs (builtins.concatLists (mapAttrsToList
+      (outputName: output:
+        if allSchemas ? ${outputName} then
+          [{ name = outputName; value = allSchemas.${outputName}; }]
+        else
+          [ ])
       flake.outputs));
 
   docs =
@@ -48,26 +51,30 @@ in rec {
     builtins.filter (outputName: ! schemas ? ${outputName}) (builtins.attrNames flake.outputs);
 
   inventoryFor = filterFun:
-    builtins.mapAttrs (outputName: schema:
-      let
-        doFilter = attrs:
-          if filterFun attrs
-          then
-            if attrs ? children
+    builtins.mapAttrs
+      (outputName: schema:
+        let
+          doFilter = attrs:
+            if filterFun attrs
             then
-              mkChildren (builtins.mapAttrs (childName: child: doFilter child) attrs.children)
-            else if attrs ? leaf then
-              mkLeaf {
-                forSystems = attrs.leaf.forSystems or null;
-                doc = if attrs.leaf ? doc then try attrs.leaf.doc "«evaluation error»" else null;
-                #evalChecks = attrs.leaf.evalChecks or {};
-              }
+              if attrs ? children
+              then
+                mkChildren (builtins.mapAttrs (childName: child: doFilter child) attrs.children)
+              else if attrs ? leaf then
+                mkLeaf
+                  {
+                    forSystems = attrs.leaf.forSystems or null;
+                    doc = if attrs.leaf ? doc then try attrs.leaf.doc "«evaluation error»" else null;
+                    #evalChecks = attrs.leaf.evalChecks or {};
+                  }
+              else
+                throw "Schema returned invalid tree node."
             else
-              throw "Schema returned invalid tree node."
-          else
-            {};
-      in doFilter ((schema.inventory or (output: {})) flake.outputs.${outputName})
-    ) schemas;
+              { };
+        in
+        doFilter ((schema.inventory or (output: { })) flake.outputs.${outputName})
+      )
+      schemas;
 
   inventoryForSystem = system: inventoryFor (itemSet:
     !itemSet ? forSystems
