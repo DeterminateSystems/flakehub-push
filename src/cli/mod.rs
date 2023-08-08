@@ -309,12 +309,15 @@ async fn push_new_release(
         .wrap_err("Getting flake metadata")?;
     tracing::debug!("Got flake metadata: {:?}", flake_metadata);
 
+    // FIXME: bail out if flake_metadata denotes a dirty tree.
+
     let flake_locked_url = flake_metadata
         .get("url")
         .and_then(serde_json::Value::as_str)
         .ok_or_else(|| {
             eyre!("Could not get `url` attribute from `nix flake metadata --json` output")
         })?;
+    tracing::debug!("Locked URL = {}", flake_locked_url);
     let flake_metadata_value_path = flake_metadata
         .get("path")
         .and_then(serde_json::Value::as_str)

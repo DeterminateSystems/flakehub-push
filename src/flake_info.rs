@@ -72,10 +72,6 @@ pub(crate) async fn get_flake_metadata(directory: &Path) -> color_eyre::Result<s
     Ok(output_json)
 }
 
-// FIXME: make this configurable
-pub(crate) const FLAKE_SCHEMAS_LOCKED_URL: &str =
-    "https://api.flakehub.com/f/pinned/DeterminateSystems/flake-schemas/0.0.5%252Brev-92d8d7803fe5f3a3810a3cceb02fa6a4b65f15a6/0189c11e-9bb8-7bc5-a4fb-2df59ad36d55/source.tar.gz?narHash=sha256-Cv74iWkgDQeTiW3YKmvYC2RBoo4u133V73HZ%2BJnovVk%3D";
-
 #[tracing::instrument(skip_all, fields(flake_url,))]
 pub(crate) async fn get_flake_outputs(flake_url: &str) -> color_eyre::Result<serde_json::Value> {
     let output = tokio::process::Command::new("nix")
@@ -84,8 +80,10 @@ pub(crate) async fn get_flake_outputs(flake_url: &str) -> color_eyre::Result<ser
         .arg("--no-write-lock-file")
         .arg("--expr")
         .arg(format!(
-            "((builtins.getFlake \"{}\").lib.evalFlake (builtins.getFlake \"{}\")).contents",
-            FLAKE_SCHEMAS_LOCKED_URL, &flake_url
+            "(({}) (builtins.getFlake \"{}\")).contents",
+            include_str!("get-flake-outputs.nix"),
+            // FIXME: use --argstr once Nix supports that.
+            flake_url.escape_default(),
         ))
         .output()
         .await
