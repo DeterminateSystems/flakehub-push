@@ -21,7 +21,7 @@ rec {
   allSchemas = (flake.outputs.schemas or defaultSchemas) // schemaOverrides;
 
   # FIXME: make this configurable
-  defaultSchemas = (builtins.getFlake "https://api.flakehub.com/f/pinned/DeterminateSystems/flake-schemas/0.0.6%252Brev-8b320d78bfbc47515f3366b43e1a29c69519f36a/0189d657-3901-716b-9cde-7ec5aacc7cf8/source.tar.gz?narHash=sha256-3H1AXsE4SRqT1tZDb2gxdSwf3JInOgS1F8nq2QsXmHg%3D").schemas;
+  defaultSchemas = (builtins.getFlake "https://api.flakehub.com/f/pinned/DeterminateSystems/flake-schemas/0.0.6+rev-8b320d78bfbc47515f3366b43e1a29c69519f36a/0189d657-3901-716b-9cde-7ec5aacc7cf8/source.tar.gz?narHash=sha256-3H1AXsE4SRqT1tZDb2gxdSwf3JInOgS1F8nq2QsXmHg=").schemas;
 
   # Ignore legacyPackages for now, since it's very big and throws uncatchable errors.
   schemaOverrides.legacyPackages = {
