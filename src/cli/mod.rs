@@ -154,8 +154,12 @@ impl NixfrPushCli {
         };
 
         let directory = if let Some(directory) = &directory.0 {
-            let canonical_git_root = git_root.canonicalize().wrap_err("Failed to canonicalize `--git-root` argument")?;
-            let canonical_directory = directory.canonicalize().wrap_err("Failed to canonicalize `--directory` argument")?;
+            let canonical_git_root = git_root
+                .canonicalize()
+                .wrap_err("Failed to canonicalize `--git-root` argument")?;
+            let canonical_directory = directory
+                .canonicalize()
+                .wrap_err("Failed to canonicalize `--directory` argument")?;
             if !canonical_directory.starts_with(canonical_git_root) {
                 return Err(eyre!(
                     "Specified `--directory` was not a directory inside the `--git-root`"
