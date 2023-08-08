@@ -226,22 +226,21 @@ impl NixfrPushCli {
 
         println!("data: {github_graphql_data_result:#?}");
         if false {
-
-        push_new_release(
-            &host,
-            &upload_bearer_token,
-            &directory,
-            revision_info,
-            &repository,
-            upload_name.0.as_deref(),
-            mirror,
-            visibility,
-            tag.as_deref(),
-            rolling_prefix.0.as_deref(),
-            github_graphql_data_result,
-        )
-        .await?;
-    }
+            push_new_release(
+                &host,
+                &upload_bearer_token,
+                &directory,
+                revision_info,
+                &repository,
+                upload_name.0.as_deref(),
+                mirror,
+                visibility,
+                tag.as_deref(),
+                rolling_prefix.0.as_deref(),
+                github_graphql_data_result,
+            )
+            .await?;
+        }
         Ok(ExitCode::SUCCESS)
     }
 }
