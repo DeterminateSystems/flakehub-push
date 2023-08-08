@@ -72,35 +72,36 @@ pub(crate) async fn get_flake_metadata(directory: &Path) -> color_eyre::Result<s
     Ok(output_json)
 }
 
-#[tracing::instrument(
-    skip_all,
-    fields(
-        path = %path.display(),
-    )
-)]
-pub(crate) async fn get_flake_tarball_outputs(
-    path: &Path,
-) -> color_eyre::Result<serde_json::Value> {
-    let file_protocol_path = format!("file:///{}", path.display());
+#[tracing::instrument(skip_all, fields(flake_url,))]
+pub(crate) async fn get_flake_outputs(flake_url: &str) -> color_eyre::Result<serde_json::Value> {
     let output = tokio::process::Command::new("nix")
-        .arg("flake")
-        .arg("show")
+        .arg("eval")
         .arg("--json")
         .arg("--no-write-lock-file")
-        .arg(&file_protocol_path)
+        .arg("--expr")
+        .arg(format!(
+            "(({}) (builtins.getFlake \"{}\")).contents",
+            include_str!("get-flake-outputs.nix"),
+            // FIXME: use --argstr once Nix supports that.
+            flake_url.escape_default(),
+        ))
         .output()
         .await
-        .wrap_err_with(|| {
-            eyre!(
-                "Failed to execute `nix flake show --json {}` against specified tarball",
-                file_protocol_path
-            )
-        })?;
+        .wrap_err_with(|| eyre!("Failed to get flake outputs from tarball {}", flake_url))?;
+
+    if !output.status.success() {
+        return Err(eyre!(
+            "Failed to get flake outputs from tarball {}: {}",
+            flake_url,
+            String::from_utf8(output.stderr).unwrap()
+        ));
+    }
 
     let output_json = serde_json::from_slice(&output.stdout).wrap_err_with(|| {
         eyre!(
-            "Parsing `nix flake show --json {}` as JSON",
-            file_protocol_path
+            "Parsing flake outputs from {} as JSON: {}",
+            flake_url,
+            String::from_utf8(output.stdout).unwrap(),
         )
     })?;
 
