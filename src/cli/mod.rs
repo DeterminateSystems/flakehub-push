@@ -138,7 +138,7 @@ impl NixfrPushCli {
             instrumentation: _,
         } = self;
 
-        let github_token = if let Some(github_token) = &github_token.0 {
+        let _github_token = if let Some(github_token) = &github_token.0 {
             github_token.clone()
         } else {
             std::env::var("GITHUB_TOKEN")
@@ -191,12 +191,25 @@ impl NixfrPushCli {
             Err(eyre!("Could not determine the owner/project, pass `--repository` or `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`. The passed value has too many slashes (/) to be a valid repository"))?;
         }
 
+        let upload_bearer_token = match jwt_issuer_uri.0 {
+            None => get_actions_id_bearer_token()
+                .await
+                .wrap_err("Getting upload bearer token from GitHub")?,
+
+            Some(_jwt_issuer_uri) => {
+                todo!();
+            }
+        };
+
         let github_api_client = build_http_client()
             .default_headers(
                 std::iter::once((
                     reqwest::header::AUTHORIZATION,
-                    reqwest::header::HeaderValue::from_str(&format!("Bearer {}", github_token))
-                        .unwrap(),
+                    reqwest::header::HeaderValue::from_str(&format!(
+                        "Bearer {}",
+                        upload_bearer_token
+                    ))
+                    .unwrap(),
                 ))
                 .collect(),
             )
@@ -211,39 +224,8 @@ impl NixfrPushCli {
         )
         .await?;
 
-        let upload_bearer_token = match jwt_issuer_uri.0 {
-            None => get_actions_id_bearer_token()
-                .await
-                .wrap_err("Getting upload bearer token from GitHub")?,
-
-            Some(jwt_issuer_uri) => {
-                let client = build_http_client().build()?;
-                let mut claims = github_actions_oidc_claims::Claims::make_dummy();
-                // FIXME: we should probably fill in more of these claims.
-                claims.iss = "flakehub-push-dev".to_string();
-                claims.repository = repository.clone();
-                claims.repository_owner = project_owner.to_string();
-                claims.repository_id = github_graphql_data_result.project_id.to_string();
-                claims.repository_owner_id = github_graphql_data_result.owner_id.to_string();
-
-                let response = client
-                    .post(jwt_issuer_uri)
-                    .header("Content-Type", "application/json")
-                    .json(&claims)
-                    .send()
-                    .await
-                    .wrap_err("Sending request to JWT issuer")?;
-                #[derive(serde::Deserialize)]
-                struct Response {
-                    token: String,
-                }
-                let response_deserialized: Response = response
-                    .json()
-                    .await
-                    .wrap_err("Getting token from JWT issuer's response")?;
-                response_deserialized.token
-            }
-        };
+        println!("data: {github_graphql_data_result:#?}");
+        if false {
 
         push_new_release(
             &host,
@@ -259,7 +241,7 @@ impl NixfrPushCli {
             github_graphql_data_result,
         )
         .await?;
-
+    }
         Ok(ExitCode::SUCCESS)
     }
 }
