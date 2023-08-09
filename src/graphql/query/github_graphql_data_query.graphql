@@ -22,5 +22,14 @@ query GithubGraphqlDataQuery($owner: String!, $name: String!, $revision: String!
         }
       }
     }
+    repositoryTopics(first:5) {
+      edges {
+        node {
+          topic {
+            name
+          }
+        }
+      }
+    }
   }
 }
