@@ -29,14 +29,17 @@ async fn main() -> color_eyre::Result<std::process::ExitCode> {
 #[serde(rename_all = "lowercase")]
 pub(crate) enum Visibility {
     Public,
+    // a backwards-compatible alias to unlisted
+    #[serde(rename = "unlisted")]
     Hidden,
+    Unlisted,
 }
 
 impl Display for Visibility {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Visibility::Public => f.write_str("public"),
-            Visibility::Hidden => f.write_str("hidden"),
+            Visibility::Hidden | Visibility::Unlisted => f.write_str("unlisted"),
         }
     }
 }

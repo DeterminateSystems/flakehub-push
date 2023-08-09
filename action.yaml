@@ -6,7 +6,7 @@ description: "Publish your flake."
 
 inputs:
   visibility:
-    description: "`public` or `hidden`"
+    description: "`public` or `unlisted`"
     required: true
   upload-name:
     description: The name of your published flake. In the format of OrgName/RepoName. OrgName must match your organization's GitHub root name or the publish will fail.
