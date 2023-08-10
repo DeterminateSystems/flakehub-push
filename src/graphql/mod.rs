@@ -4,6 +4,7 @@ use color_eyre::eyre::{eyre, WrapErr};
 use graphql_client::GraphQLQuery;
 
 pub(crate) const GITHUB_ENDPOINT: &str = "https://api.github.com/graphql";
+const MAX_NUM_TOPICS: i64 = 5;
 
 #[derive(GraphQLQuery)]
 #[graphql(
@@ -32,6 +33,7 @@ impl GithubGraphqlDataQuery {
                 owner: project_owner.to_string(),
                 name: project_name.to_string(),
                 revision: revision.to_string(),
+                max_num_topics: MAX_NUM_TOPICS,
             };
             let query = GithubGraphqlDataQuery::build_query(variables);
             let reqwest_response = reqwest_client
