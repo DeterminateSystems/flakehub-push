@@ -145,12 +145,14 @@ impl ReleaseMetadata {
         tracing::trace!("Collected ReleaseMetadata information");
 
         // Here we merge explicitly user-supplied tags and the tags ("topics")
-        // associated with the repo.
+        // associated with the repo. Duplicates are excluded and all
+        // are converted to lower case.
         let tags: Vec<String> = extra_tags
             .into_iter()
             .chain(github_graphql_data_result.topics.into_iter())
             .collect::<HashSet<String>>()
             .into_iter()
+            .map(|s| s.to_lowercase())
             .collect();
 
         Ok(ReleaseMetadata {
