@@ -113,11 +113,23 @@ impl GithubGraphqlDataQuery {
         let owner_id = owner_id
             .ok_or_else(|| eyre!("Did not receive a `repository.owner.databaseId` inside GithubGraphqlDataQuery response from Github's GraphQL API. Is GitHub's API experiencing issues?"))?;
 
+        let topics: Vec<String> = graphql_repository
+            .repository_topics
+            .edges
+            .ok_or_else(|| eyre!("Did not receive repository topics inside GithubGraphqlDataQuery response from Github's GraphQL API. Is GitHub's API experiencing issues?"))?
+            .iter()
+            .flatten()
+            .map(|edge| edge.node.as_ref())
+            .flatten()
+            .map(|node| node.topic.name.clone())
+            .collect();
+
         Ok(GithubGraphqlDataResult {
             rev_count,
             spdx_identifier,
             project_id,
             owner_id,
+            topics,
         })
     }
 }
@@ -128,4 +140,5 @@ pub(crate) struct GithubGraphqlDataResult {
     pub(crate) spdx_identifier: Option<String>,
     pub(crate) project_id: i64,
     pub(crate) owner_id: i64,
+    pub(crate) topics: Vec<String>,
 }

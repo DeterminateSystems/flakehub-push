@@ -16,6 +16,7 @@ pub(crate) struct ReleaseMetadata {
     pub(crate) mirrored: bool,
     pub(crate) project_id: i64,
     pub(crate) owner_id: i64,
+
     #[serde(
         deserialize_with = "option_string_to_spdx",
         serialize_with = "option_spdx_serialize"
