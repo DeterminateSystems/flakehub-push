@@ -23,9 +23,8 @@ pub(crate) struct ReleaseMetadata {
     )]
     pub(crate) spdx_identifier: Option<spdx::Expression>,
 
-    // User-supplied tags. A result of combining the tags specified on the CLI (via the
-    // the GitHub Actions config) and the tags associated with the GitHub repo (they're
-    // called "topics" in GitHub parlance).
+    // A result of combining the tags specified on the CLI via the the GitHub Actions config
+    // and the tags associated with the GitHub repo (they're called "topics" in GitHub parlance).
     pub(crate) tags: Vec<String>,
 }
 
