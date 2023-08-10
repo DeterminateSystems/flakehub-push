@@ -1,7 +1,7 @@
 use color_eyre::eyre::{eyre, WrapErr};
 use std::{collections::HashSet, path::Path};
 
-use crate::{graphql::GithubGraphqlDataResult, Visibility};
+use crate::{graphql::{GithubGraphqlDataResult, MAX_TAG_LENGTH}, Visibility};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub(crate) struct ReleaseMetadata {
@@ -154,7 +154,7 @@ impl ReleaseMetadata {
             .into_iter()
             .map(|s| s.to_lowercase())
             // Tags can be max 32 characters and only hyphens are allowed as special characters
-            .filter(|t| t.len() <= 32 && t.chars().all(|c| c.is_alphabetic() || c == '-'))
+            .filter(|t| t.len() <= MAX_TAG_LENGTH && t.chars().all(|c| c.is_alphanumeric() || c == '-'))
             .collect();
 
         Ok(ReleaseMetadata {
