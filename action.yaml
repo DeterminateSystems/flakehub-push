@@ -52,7 +52,7 @@ inputs:
     description: A GitHub token for making authenticated GitHub API requests
     default: ${{ github.token }}
   extra-tags:
-    description: Extra user-supplied tags for the flake (in addition to the topics associated with the flake's GitHub repo).
+    description: Extra user-supplied tags for the flake (in addition to the topics associated with the flake's GitHub repo). Only alphanumeric characters and hyphens are allowed in tags.
     required: false
     default: ""
   flakehub-push-binary:
