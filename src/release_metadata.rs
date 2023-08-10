@@ -1,5 +1,5 @@
 use color_eyre::eyre::{eyre, WrapErr};
-use std::path::Path;
+use std::{collections::HashSet, path::Path};
 
 use crate::{graphql::GithubGraphqlDataResult, Visibility};
 
@@ -22,6 +22,11 @@ pub(crate) struct ReleaseMetadata {
         serialize_with = "option_spdx_serialize"
     )]
     pub(crate) spdx_identifier: Option<spdx::Expression>,
+
+    // User-supplied tags. A result of combining the tags specified on the CLI (via the
+    // the GitHub Actions config) and the tags associated with the GitHub repo (they're
+    // called "topics" in GitHub parlance).
+    pub(crate) tags: Vec<String>,
 }
 
 #[derive(Clone)]
@@ -92,6 +97,7 @@ impl ReleaseMetadata {
         mirror: bool,
         visibility: Visibility,
         github_graphql_data_result: GithubGraphqlDataResult,
+        extra_tags: Vec<String>,
     ) -> color_eyre::Result<ReleaseMetadata> {
         let span = tracing::Span::current();
 
@@ -138,6 +144,15 @@ impl ReleaseMetadata {
 
         tracing::trace!("Collected ReleaseMetadata information");
 
+        // Here we merge explicitly user-supplied tags and the tags ("topics")
+        // associated with the repo.
+        let tags: Vec<String> = extra_tags
+            .into_iter()
+            .chain(github_graphql_data_result.topics.into_iter())
+            .collect::<HashSet<String>>()
+            .into_iter()
+            .collect();
+
         Ok(ReleaseMetadata {
             description,
             repo: upload_name.to_string(),
@@ -151,6 +166,7 @@ impl ReleaseMetadata {
             spdx_identifier,
             project_id: github_graphql_data_result.project_id,
             owner_id: github_graphql_data_result.owner_id,
+            tags,
         })
     }
 }

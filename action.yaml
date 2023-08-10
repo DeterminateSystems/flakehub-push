@@ -69,6 +69,10 @@ inputs:
   flakehub-push-url:
     description: A URL pointing to a `flakehub-push` binary. Overrides all other `flakehub-push-*` options.
     required: false
+  flakehub-extra-tags:
+    description: Extra user-supplied tags for the flake (in addition to the topics associated with the flake's GitHub repo).
+    required: false
+    default: ""
 
 # https://docs.github.com/en/actions/creating-actions/metadata-syntax-for-github-actions#runs-for-docker-container-actions
 runs:
@@ -89,6 +93,7 @@ runs:
       FLAKEHUB_PUSH_REPOSITORY: ${{ inputs.repository }}
       FLAKEHUB_PUSH_DIRECTORY: ${{ inputs.directory }}
       FLAKEHUB_PUSH_GIT_ROOT: ${{ inputs.git-root }}
+      FLAKEHUB_PUSH_EXTRA_TAGS: ${{ inputs.flakehub-extra-tags }}
       # Also GITHUB_REPOSITORY, GITHUB_REF_NAME, GITHUB_TOKEN, ACTIONS_ID_TOKEN_REQUEST_TOKEN, ACTIONS_ID_TOKEN_REQUEST_URL
     run: |
       if [ "${RUNNER_OS}" == "Linux" ]; then

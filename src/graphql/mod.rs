@@ -116,11 +116,10 @@ impl GithubGraphqlDataQuery {
         let topics: Vec<String> = graphql_repository
             .repository_topics
             .edges
-            .ok_or_else(|| eyre!("Did not receive repository topics inside GithubGraphqlDataQuery response from Github's GraphQL API. Is GitHub's API experiencing issues?"))?
+            .unwrap_or(vec![])
             .iter()
             .flatten()
-            .map(|edge| edge.node.as_ref())
-            .flatten()
+            .filter_map(|edge| edge.node.as_ref())
             .map(|node| node.topic.name.clone())
             .collect();
 
