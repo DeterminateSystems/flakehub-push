@@ -56,6 +56,17 @@ pub(crate) struct NixfrPushCli {
     #[clap(long, env = "FLAKEHUB_PUSH_JWT_ISSUER_URI", value_parser = StringToNoneParser, default_value = "")]
     pub(crate) jwt_issuer_uri: OptionString,
 
+    // User-supplied tags beyond those associated with the GitHub repository.
+    #[clap(
+        long,
+        short = 't',
+        env = "FLAKEHUB_PUSH_EXTRA_TAGS",
+        use_value_delimiter = true,
+        default_value = "",
+        value_delimiter = ','
+    )]
+    pub(crate) extra_tags: Vec<String>,
+
     #[clap(flatten)]
     pub instrumentation: instrumentation::Instrumentation,
 }
@@ -136,6 +147,7 @@ impl NixfrPushCli {
             mirror,
             jwt_issuer_uri,
             instrumentation: _,
+            extra_tags,
         } = self;
 
         let github_token = if let Some(github_token) = &github_token.0 {
@@ -268,6 +280,7 @@ impl NixfrPushCli {
             tag.as_deref(),
             rolling_prefix.0.as_deref(),
             github_graphql_data_result,
+            extra_tags,
         )
         .await?;
 
@@ -299,6 +312,7 @@ async fn push_new_release(
     tag: Option<&str>,
     rolling_prefix: Option<&str>,
     github_graphql_data_result: GithubGraphqlDataResult,
+    extra_tags: Vec<String>,
 ) -> color_eyre::Result<()> {
     let span = tracing::Span::current();
     let upload_name = upload_name.unwrap_or(repository);
@@ -390,6 +404,7 @@ async fn push_new_release(
         mirror,
         visibility,
         github_graphql_data_result,
+        extra_tags,
     )
     .await
     .wrap_err("Building release metadata")?;

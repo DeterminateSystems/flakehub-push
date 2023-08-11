@@ -51,6 +51,13 @@ inputs:
   github-token:
     description: A GitHub token for making authenticated GitHub API requests
     default: ${{ github.token }}
+  extra-tags:
+    description: |
+      Extra user-supplied tags for the flake as a comma-separated string. These tags are added to the topics associated with the flake's GitHub repo. Only alphanumeric characters and hyphens are allowed in tags.
+
+      You can add up to five extra tags; tags beyond the first five will be ignored.
+    required: false
+    default: ""
   flakehub-push-binary:
     description: Run a version of the `flakehub-push` binary from somewhere already on disk. Conflicts with all other `flakehub-push-*` options.
   flakehub-push-branch:
@@ -89,6 +96,7 @@ runs:
       FLAKEHUB_PUSH_REPOSITORY: ${{ inputs.repository }}
       FLAKEHUB_PUSH_DIRECTORY: ${{ inputs.directory }}
       FLAKEHUB_PUSH_GIT_ROOT: ${{ inputs.git-root }}
+      FLAKEHUB_PUSH_EXTRA_TAGS: ${{ inputs.extra-tags }}
       # Also GITHUB_REPOSITORY, GITHUB_REF_NAME, GITHUB_TOKEN, ACTIONS_ID_TOKEN_REQUEST_TOKEN, ACTIONS_ID_TOKEN_REQUEST_URL
     run: |
       if [ "${RUNNER_OS}" == "Linux" ]; then
