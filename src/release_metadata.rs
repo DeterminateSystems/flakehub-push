@@ -2,7 +2,7 @@ use color_eyre::eyre::{eyre, WrapErr};
 use std::{collections::HashSet, path::Path};
 
 use crate::{
-    graphql::{GithubGraphqlDataResult, MAX_TAG_LENGTH},
+    graphql::{GithubGraphqlDataResult, MAX_TAG_LENGTH, MAX_NUM_TOTAL_TAGS},
     Visibility,
 };
 
@@ -154,6 +154,7 @@ impl ReleaseMetadata {
             .chain(github_graphql_data_result.topics.into_iter())
             .collect::<HashSet<String>>()
             .into_iter()
+            .take(MAX_NUM_TOTAL_TAGS)
             .map(|s| s.to_lowercase())
             .filter(|t| {
                 t.len() <= MAX_TAG_LENGTH && t.chars().all(|c| c.is_alphanumeric() || c == '-')
