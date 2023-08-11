@@ -7,6 +7,7 @@ use std::{
     process::ExitCode,
 };
 use tokio::io::AsyncWriteExt;
+use uuid::Uuid;
 
 use crate::{
     flake_info::{get_flake_metadata, get_flake_outputs, get_flake_tarball},
@@ -413,26 +414,28 @@ async fn push_new_release(
         "Computed release metadata POST URL"
     );
 
+    let headers = {
+        let mut header_map = HeaderMap::new();
+
+        header_map.insert(
+            reqwest::header::AUTHORIZATION,
+            reqwest::header::HeaderValue::from_str(&format!("bearer {}", upload_bearer_token))
+                .unwrap(),
+        );
+        header_map.insert(
+            reqwest::header::CONTENT_TYPE,
+            reqwest::header::HeaderValue::from_str("application/json").unwrap(),
+        );
+        header_map.insert(
+            reqwest::header::HeaderName::from_static("ngrok-skip-browser-warning"),
+            reqwest::header::HeaderValue::from_str("please").unwrap(),
+        );
+        header_map
+    };
+
     let release_metadata_post_response = flakehub_client
         .post(release_metadata_post_url)
-        .headers({
-            let mut header_map = HeaderMap::new();
-
-            header_map.insert(
-                reqwest::header::AUTHORIZATION,
-                reqwest::header::HeaderValue::from_str(&format!("bearer {}", upload_bearer_token))
-                    .unwrap(),
-            );
-            header_map.insert(
-                reqwest::header::CONTENT_TYPE,
-                reqwest::header::HeaderValue::from_str("application/json").unwrap(),
-            );
-            header_map.insert(
-                reqwest::header::HeaderName::from_static("ngrok-skip-browser-warning"),
-                reqwest::header::HeaderValue::from_str("please").unwrap(),
-            );
-            header_map
-        })
+        .headers(headers.clone())
         .json(&release_metadata)
         .send()
         .await
@@ -444,26 +447,29 @@ async fn push_new_release(
         "Got release metadata POST response"
     );
 
-    let release_metadata_post_response_bytes = release_metadata_post_response
-        .bytes()
-        .await
-        .wrap_err("Could not get bytes from release metadata POST response")?;
-    let release_upload_url =
-        String::from_utf8_lossy(&release_metadata_post_response_bytes).to_string();
-
-    tracing::debug!(%release_upload_url, "Got release upload URL");
-
     if release_metadata_post_response_status != 200 {
         return Err(eyre!(
             "\
                 Status {release_metadata_post_response_status} from metadata POST\n\
-                {release_upload_url}\
-            "
+                {}\
+            ",
+            String::from_utf8_lossy(&release_metadata_post_response.bytes().await.unwrap())
         ));
     }
 
+    #[derive(serde::Deserialize)]
+    struct Result {
+        s3_upload_url: String,
+        uuid: Uuid,
+    }
+
+    let release_metadata_post_result: Result = release_metadata_post_response
+        .json()
+        .await
+        .wrap_err("Decoding release metadata POST response")?;
+
     let tarball_put_response = flakehub_client
-        .put(release_upload_url)
+        .put(release_metadata_post_result.s3_upload_url)
         .headers({
             let mut header_map = HeaderMap::new();
             header_map.insert(
@@ -489,6 +495,33 @@ async fn push_new_release(
     if !tarball_put_response_status.is_success() {
         return Err(eyre!(
             "Got {tarball_put_response_status} status from PUT request"
+        ));
+    }
+
+    // Make the release we just uploaded visible.
+    let publish_post_url = format!("{host}/publish/{}", release_metadata_post_result.uuid);
+    tracing::debug!(url = publish_post_url, "Computed publish POST URL");
+
+    let publish_response = flakehub_client
+        .post(publish_post_url)
+        .headers(headers)
+        .send()
+        .await
+        .wrap_err("Publishing release")?;
+
+    let publish_response_status = publish_response.status();
+    tracing::trace!(
+        status = tracing::field::display(publish_response_status),
+        "Got publish POST response"
+    );
+
+    if publish_response_status != 200 {
+        return Err(eyre!(
+            "\
+                Status {publish_response_status} from publish POST\n\
+                {}\
+            ",
+            String::from_utf8_lossy(&publish_response.bytes().await.unwrap())
         ));
     }
 
