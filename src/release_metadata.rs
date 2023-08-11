@@ -155,7 +155,6 @@ impl ReleaseMetadata {
             .collect::<HashSet<String>>()
             .into_iter()
             .map(|s| s.to_lowercase())
-            // Tags can be max 32 characters and only hyphens are allowed as special characters
             .filter(|t| {
                 t.len() <= MAX_TAG_LENGTH && t.chars().all(|c| c.is_alphanumeric() || c == '-')
             })
