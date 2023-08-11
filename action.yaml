@@ -53,7 +53,7 @@ inputs:
     default: ${{ github.token }}
   extra-tags:
     description: |
-      Extra user-supplied tags for the flake (in addition to the topics associated with the flake's GitHub repo). Only alphanumeric characters and hyphens are allowed in tags.
+      Extra user-supplied tags for the flake as a comma-separated string. These tags are added to the topics associated with the flake's GitHub repo. Only alphanumeric characters and hyphens are allowed in tags.
 
       You can add up to five extra tags; tags beyond the first five will be ignored.
     required: false
