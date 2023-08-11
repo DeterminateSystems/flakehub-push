@@ -56,7 +56,7 @@ pub(crate) struct NixfrPushCli {
     #[clap(long, env = "FLAKEHUB_PUSH_JWT_ISSUER_URI", value_parser = StringToNoneParser, default_value = "")]
     pub(crate) jwt_issuer_uri: OptionString,
 
-    // User-supplied tags beyond those associated with the GitHub repository.
+    /// User-supplied tags beyond those associated with the GitHub repository.
     #[clap(
         long,
         short = 't',
