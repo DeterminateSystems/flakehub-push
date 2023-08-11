@@ -58,6 +58,11 @@ inputs:
       You can add up to five extra tags; tags beyond the first five will be ignored.
     required: false
     default: ""
+  spdx-expression:
+    description: A valid SPDX license expression. This will be used in place of what GitHub claims your repository's `spdxIdentifier` is.
+    required: false
+    default: ""
+
   flakehub-push-binary:
     description: Run a version of the `flakehub-push` binary from somewhere already on disk. Conflicts with all other `flakehub-push-*` options.
   flakehub-push-branch:
@@ -97,6 +102,7 @@ runs:
       FLAKEHUB_PUSH_DIRECTORY: ${{ inputs.directory }}
       FLAKEHUB_PUSH_GIT_ROOT: ${{ inputs.git-root }}
       FLAKEHUB_PUSH_EXTRA_TAGS: ${{ inputs.extra-tags }}
+      FLAKEHUB_PUSH_SPDX_EXPRESSION: ${{ inputs.spdx-expression }}
       # Also GITHUB_REPOSITORY, GITHUB_REF_NAME, GITHUB_TOKEN, ACTIONS_ID_TOKEN_REQUEST_TOKEN, ACTIONS_ID_TOKEN_REQUEST_URL
     run: |
       if [ "${RUNNER_OS}" == "Linux" ]; then

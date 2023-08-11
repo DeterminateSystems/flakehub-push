@@ -100,6 +100,7 @@ impl ReleaseMetadata {
         visibility: Visibility,
         github_graphql_data_result: GithubGraphqlDataResult,
         extra_tags: Vec<String>,
+        spdx_expression: Option<spdx::Expression>,
     ) -> color_eyre::Result<ReleaseMetadata> {
         let span = tracing::Span::current();
 
@@ -134,8 +135,9 @@ impl ReleaseMetadata {
             None
         };
 
-        let spdx_identifier = if let Some(spdx_string) = github_graphql_data_result.spdx_identifier
-        {
+        let spdx_identifier = if spdx_expression.is_some() {
+            spdx_expression
+        } else if let Some(spdx_string) = github_graphql_data_result.spdx_identifier {
             let parsed = spdx::Expression::parse(&spdx_string)
                 .wrap_err("Invalid SPDX license identifier reported from the GitHub API, either you are using a non-standard license or GitHub has returned a value that cannot be validated")?;
             span.record("spdx_identifier", tracing::field::display(&parsed));
