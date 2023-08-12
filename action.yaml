@@ -53,7 +53,7 @@ inputs:
     default: ${{ github.token }}
   extra-tags:
     description: |
-      `flakehub-push` automatically uses the GitHub repo's topics as tags. This `extra-tags` parameter enables you to add extra tags beyond that as a comma-separated string. Only alphanumeric characters and hyphens are allowed in tags and the maximum length of tags is 50 characters. You can add up to 20 extra tags and the total number of tags can't exceed 25. If you add more tags than this, the excess tags will be ignored.
+      `flakehub-push` automatically uses the GitHub repo's topics as tags. This `extra-tags` parameter enables you to add extra tags beyond that as a comma-separated string. Only alphanumeric characters and hyphens are allowed in tags and the maximum length of tags is 50 characters. You can specify a maximum of 20 extra tags, and have a maximum of 25 tags, including those that we retrieve from GitHub. Any tags after the 25th will be ignored.
     required: false
     default: ""
   flakehub-push-binary:
