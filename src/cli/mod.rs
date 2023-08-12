@@ -469,7 +469,7 @@ async fn push_new_release(
     tracing::debug!(%release_upload_url, "Got release upload URL");
 
     if release_metadata_post_response_status != StatusCode::OK {
-        if release_metadata_post_response_status == StatusCode::PRECONDITION_FAILED {
+        if release_metadata_post_response_status == StatusCode::CONFLICT {
             tracing::info!(
                 "Release for revision `{revision}` of {upload_name}/{rolling_prefix_or_tag} already exists; flakehub-push will not upload it again",
                 revision = release_metadata.revision
