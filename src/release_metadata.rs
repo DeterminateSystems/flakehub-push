@@ -155,7 +155,7 @@ impl ReleaseMetadata {
             .collect::<HashSet<String>>()
             .into_iter()
             .take(MAX_NUM_TOTAL_TAGS)
-            .map(|s| s.to_lowercase())
+            .map(|s| s.trim().to_lowercase())
             .filter(|t: &String| {
                 !t.is_empty()
                     && t.len() <= MAX_TAG_LENGTH
