@@ -1,7 +1,7 @@
 mod instrumentation;
 
 use color_eyre::eyre::{eyre, WrapErr};
-use reqwest::header::HeaderMap;
+use reqwest::{header::HeaderMap, StatusCode};
 use std::{
     path::{Path, PathBuf},
     process::ExitCode,
@@ -468,13 +468,21 @@ async fn push_new_release(
 
     tracing::debug!(%release_upload_url, "Got release upload URL");
 
-    if release_metadata_post_response_status != 200 {
-        return Err(eyre!(
-            "\
+    if release_metadata_post_response_status != StatusCode::OK {
+        if release_metadata_post_response_status == StatusCode::CONFLICT {
+            tracing::info!(
+                "Release for revision `{revision}` of {upload_name}/{rolling_prefix_or_tag} already exists; flakehub-push will not upload it again",
+                revision = release_metadata.revision
+            );
+            return Ok(());
+        } else {
+            return Err(eyre!(
+                "\
                 Status {release_metadata_post_response_status} from metadata POST\n\
                 {release_upload_url}\
             "
-        ));
+            ));
+        }
     }
 
     let tarball_put_response = flakehub_client
