@@ -474,6 +474,7 @@ async fn push_new_release(
                 "Release for revision `{revision}` of {upload_name}/{rolling_prefix_or_tag} already exists; flakehub-push will not upload it again",
                 revision = release_metadata.revision
             );
+            return Ok(());
         } else {
             return Err(eyre!(
                 "\
