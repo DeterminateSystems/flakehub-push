@@ -72,7 +72,8 @@ pub(crate) struct NixfrPushCli {
     #[clap(
         long,
         env = "FLAKEHUB_PUSH_SPDX_EXPRESSION",
-        value_parser = SpdxToNoneParser
+        value_parser = SpdxToNoneParser,
+        default_value = ""
     )]
     pub(crate) spdx_expression: OptionSpdxExpression,
 
