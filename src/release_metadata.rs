@@ -1,7 +1,10 @@
 use color_eyre::eyre::{eyre, WrapErr};
-use std::path::Path;
+use std::{collections::HashSet, path::Path};
 
-use crate::{graphql::GithubGraphqlDataResult, Visibility};
+use crate::{
+    graphql::{GithubGraphqlDataResult, MAX_NUM_TOTAL_TAGS, MAX_TAG_LENGTH},
+    Visibility,
+};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub(crate) struct ReleaseMetadata {
@@ -16,11 +19,16 @@ pub(crate) struct ReleaseMetadata {
     pub(crate) mirrored: bool,
     pub(crate) project_id: i64,
     pub(crate) owner_id: i64,
+
     #[serde(
         deserialize_with = "option_string_to_spdx",
         serialize_with = "option_spdx_serialize"
     )]
     pub(crate) spdx_identifier: Option<spdx::Expression>,
+
+    // A result of combining the tags specified on the CLI via the the GitHub Actions config
+    // and the tags associated with the GitHub repo (they're called "topics" in GitHub parlance).
+    pub(crate) tags: Vec<String>,
 }
 
 #[derive(Clone)]
@@ -91,6 +99,8 @@ impl ReleaseMetadata {
         mirror: bool,
         visibility: Visibility,
         github_graphql_data_result: GithubGraphqlDataResult,
+        extra_tags: Vec<String>,
+        spdx_expression: Option<spdx::Expression>,
     ) -> color_eyre::Result<ReleaseMetadata> {
         let span = tracing::Span::current();
 
@@ -125,8 +135,9 @@ impl ReleaseMetadata {
             None
         };
 
-        let spdx_identifier = if let Some(spdx_string) = github_graphql_data_result.spdx_identifier
-        {
+        let spdx_identifier = if spdx_expression.is_some() {
+            spdx_expression
+        } else if let Some(spdx_string) = github_graphql_data_result.spdx_identifier {
             let parsed = spdx::Expression::parse(&spdx_string)
                 .wrap_err("Invalid SPDX license identifier reported from the GitHub API, either you are using a non-standard license or GitHub has returned a value that cannot be validated")?;
             span.record("spdx_identifier", tracing::field::display(&parsed));
@@ -136,6 +147,23 @@ impl ReleaseMetadata {
         };
 
         tracing::trace!("Collected ReleaseMetadata information");
+
+        // Here we merge explicitly user-supplied tags and the tags ("topics")
+        // associated with the repo. Duplicates are excluded and all
+        // are converted to lower case.
+        let tags: Vec<String> = extra_tags
+            .into_iter()
+            .chain(github_graphql_data_result.topics.into_iter())
+            .collect::<HashSet<String>>()
+            .into_iter()
+            .take(MAX_NUM_TOTAL_TAGS)
+            .map(|s| s.trim().to_lowercase())
+            .filter(|t: &String| {
+                !t.is_empty()
+                    && t.len() <= MAX_TAG_LENGTH
+                    && t.chars().all(|c| c.is_alphanumeric() || c == '-')
+            })
+            .collect();
 
         Ok(ReleaseMetadata {
             description,
@@ -150,6 +178,7 @@ impl ReleaseMetadata {
             spdx_identifier,
             project_id: github_graphql_data_result.project_id,
             owner_id: github_graphql_data_result.owner_id,
+            tags,
         })
     }
 }

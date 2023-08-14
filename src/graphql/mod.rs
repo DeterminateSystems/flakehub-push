@@ -4,6 +4,9 @@ use color_eyre::eyre::{eyre, WrapErr};
 use graphql_client::GraphQLQuery;
 
 pub(crate) const GITHUB_ENDPOINT: &str = "https://api.github.com/graphql";
+pub(crate) const MAX_TAG_LENGTH: usize = 50;
+pub(crate) const MAX_NUM_TOTAL_TAGS: usize = 25;
+const MAX_NUM_EXTRA_TOPICS: i64 = 20;
 
 #[derive(GraphQLQuery)]
 #[graphql(
@@ -32,6 +35,7 @@ impl GithubGraphqlDataQuery {
                 owner: project_owner.to_string(),
                 name: project_name.to_string(),
                 revision: revision.to_string(),
+                max_num_topics: MAX_NUM_EXTRA_TOPICS,
             };
             let query = GithubGraphqlDataQuery::build_query(variables);
             let reqwest_response = reqwest_client
@@ -113,11 +117,22 @@ impl GithubGraphqlDataQuery {
         let owner_id = owner_id
             .ok_or_else(|| eyre!("Did not receive a `repository.owner.databaseId` inside GithubGraphqlDataQuery response from Github's GraphQL API. Is GitHub's API experiencing issues?"))?;
 
+        let topics: Vec<String> = graphql_repository
+            .repository_topics
+            .edges
+            .unwrap_or(vec![])
+            .iter()
+            .flatten()
+            .filter_map(|edge| edge.node.as_ref())
+            .map(|node| node.topic.name.clone())
+            .collect();
+
         Ok(GithubGraphqlDataResult {
             rev_count,
             spdx_identifier,
             project_id,
             owner_id,
+            topics,
         })
     }
 }
@@ -128,4 +143,5 @@ pub(crate) struct GithubGraphqlDataResult {
     pub(crate) spdx_identifier: Option<String>,
     pub(crate) project_id: i64,
     pub(crate) owner_id: i64,
+    pub(crate) topics: Vec<String>,
 }
