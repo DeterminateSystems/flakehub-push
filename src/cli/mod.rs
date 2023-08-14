@@ -469,7 +469,7 @@ async fn push_new_release(
         "Computed release metadata POST URL"
     );
 
-    let headers = {
+    let flakehub_headers = {
         let mut header_map = HeaderMap::new();
 
         header_map.insert(
@@ -490,7 +490,7 @@ async fn push_new_release(
 
     let release_metadata_post_response = flakehub_client
         .post(release_metadata_post_url)
-        .headers(headers.clone())
+        .headers(flakehub_headers.clone())
         .json(&release_metadata)
         .send()
         .await
@@ -567,7 +567,7 @@ async fn push_new_release(
 
     let publish_response = flakehub_client
         .post(publish_post_url)
-        .headers(headers)
+        .headers(flakehub_headers)
         .send()
         .await
         .wrap_err("Publishing release")?;
