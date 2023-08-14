@@ -56,7 +56,7 @@ pub(crate) struct NixfrPushCli {
     #[clap(long, env = "FLAKEHUB_PUSH_JWT_ISSUER_URI", value_parser = StringToNoneParser, default_value = "")]
     pub(crate) jwt_issuer_uri: OptionString,
 
-    // User-supplied tags beyond those associated with the GitHub repository.
+    /// User-supplied tags beyond those associated with the GitHub repository.
     #[clap(
         long,
         short = 't',
@@ -66,6 +66,14 @@ pub(crate) struct NixfrPushCli {
         value_delimiter = ','
     )]
     pub(crate) extra_tags: Vec<String>,
+
+    /// An SPDX expression that overrides that which is returned from GitHub.
+    #[clap(
+        long,
+        env = "FLAKEHUB_PUSH_SPDX_EXPRESSION",
+        value_parser = SpdxToNoneParser
+    )]
+    pub(crate) spdx_expression: OptionSpdxExpression,
 
     #[clap(flatten)]
     pub instrumentation: instrumentation::Instrumentation,
@@ -123,6 +131,34 @@ impl clap::builder::TypedValueParser for PathBufToNoneParser {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct OptionSpdxExpression(pub Option<spdx::Expression>);
+
+#[derive(Clone)]
+struct SpdxToNoneParser;
+
+impl clap::builder::TypedValueParser for SpdxToNoneParser {
+    type Value = OptionSpdxExpression;
+
+    fn parse_ref(
+        &self,
+        cmd: &clap::Command,
+        arg: Option<&clap::Arg>,
+        value: &std::ffi::OsStr,
+    ) -> Result<Self::Value, clap::Error> {
+        let inner = clap::builder::StringValueParser::new();
+        let val = inner.parse_ref(cmd, arg, value)?;
+
+        if val.is_empty() {
+            Ok(OptionSpdxExpression(None))
+        } else {
+            let expression = spdx::Expression::parse(&val)
+                .map_err(|_| clap::Error::new(clap::error::ErrorKind::ValueValidation))?;
+            Ok(OptionSpdxExpression(Some(expression)))
+        }
+    }
+}
+
 fn build_http_client() -> reqwest::ClientBuilder {
     reqwest::Client::builder().user_agent("flakehub-push")
 }
@@ -148,6 +184,7 @@ impl NixfrPushCli {
             jwt_issuer_uri,
             instrumentation: _,
             extra_tags,
+            spdx_expression,
         } = self;
 
         let github_token = if let Some(github_token) = &github_token.0 {
@@ -281,6 +318,7 @@ impl NixfrPushCli {
             rolling_prefix.0.as_deref(),
             github_graphql_data_result,
             extra_tags,
+            spdx_expression.0,
         )
         .await?;
 
@@ -313,6 +351,7 @@ async fn push_new_release(
     rolling_prefix: Option<&str>,
     github_graphql_data_result: GithubGraphqlDataResult,
     extra_tags: Vec<String>,
+    spdx_expression: Option<spdx::Expression>,
 ) -> color_eyre::Result<()> {
     let span = tracing::Span::current();
     let upload_name = upload_name.unwrap_or(repository);
@@ -405,6 +444,7 @@ async fn push_new_release(
         visibility,
         github_graphql_data_result,
         extra_tags,
+        spdx_expression,
     )
     .await
     .wrap_err("Building release metadata")?;
