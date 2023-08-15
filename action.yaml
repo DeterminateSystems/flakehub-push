@@ -42,7 +42,7 @@ inputs:
 
       When this is enabled, the default versioning scheme is 0.1.[commit count]+rev-[git sha]. To customize the SemVer minor version, set the `rolling-minor` option.
     required: false
-    default: null
+    default: false
   host:
     description: "The flakehub server to use"
     required: false
