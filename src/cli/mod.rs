@@ -454,10 +454,20 @@ async fn push_new_release(
     let flakehub_client = build_http_client().build()?;
 
     let rolling_prefix_with_postfix_or_tag = if let Some(rolling_prefix) = &rolling_prefix {
-        format!(
-            "{rolling_prefix}.{}+rev-{}",
-            release_metadata.commit_count, release_metadata.revision
-        )
+        let dots = rolling_prefix.match_indices('.').count();
+        let padded_prefix = if dots == 0 {
+            // Use the commit count as the minor rather than the
+            // patch, since we can't assume that commits are only
+            // backwards-compatible bug fixes.
+            format!("{rolling_prefix}.{}.0", release_metadata.commit_count)
+        } else if dots == 1 {
+            format!("{rolling_prefix}.{}", release_metadata.commit_count)
+        } else {
+            return Err(eyre!(
+                "Rolling prefix {rolling_prefix} should be <major> or <major>.<minor>."
+            ));
+        };
+        format!("{padded_prefix}+rev-{}", release_metadata.revision)
     } else {
         rolling_prefix_or_tag.to_string() // This will always be the tag since `self.rolling_prefix` was empty.
     };
