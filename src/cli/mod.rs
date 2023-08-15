@@ -154,8 +154,9 @@ impl clap::builder::TypedValueParser for SpdxToNoneParser {
         if val.is_empty() {
             Ok(OptionSpdxExpression(None))
         } else {
-            let expression = spdx::Expression::parse(&val)
-                .map_err(|_| clap::Error::new(clap::error::ErrorKind::ValueValidation))?;
+            let expression = spdx::Expression::parse(&val).map_err(|e| {
+                clap::Error::raw(clap::error::ErrorKind::ValueValidation, format!("{e}"))
+            })?;
             Ok(OptionSpdxExpression(Some(expression)))
         }
     }
