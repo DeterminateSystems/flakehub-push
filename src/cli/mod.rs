@@ -30,7 +30,7 @@ pub(crate) struct NixfrPushCli {
     #[clap(long, env = "FLAKEHUB_PUSH_VISIBLITY")]
     pub(crate) visibility: crate::Visibility,
     // Will also detect `GITHUB_REF_NAME`
-    #[clap(long, env = "FLAKEHUB_PUSH_TAG", value_parser = StringToNoneParser, default_value = "", conflicts_with_all = ["rolling_minor", "rolling"])]
+    #[clap(long, env = "FLAKEHUB_PUSH_TAG", value_parser = StringToNoneParser, default_value = "")]
     pub(crate) tag: OptionString,
     #[clap(long, env = "FLAKEHUB_PUSH_ROLLING_MINOR", value_parser = U64ToNoneParser, default_value = "")]
     pub(crate) rolling_minor: OptionU64,
