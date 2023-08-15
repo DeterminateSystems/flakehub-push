@@ -431,7 +431,7 @@ async fn push_new_release(
 
     let rolling_prefix_or_tag = match (rolling_minor.as_ref(), tag) {
         (Some(minor), _) => format!("0.{minor}"),
-        (None, _) if rolling => format!("{DEFAULT_ROLLING_PREFIX}"),
+        (None, _) if rolling => DEFAULT_ROLLING_PREFIX.to_string(),
         (None, Some(tag)) => tag,
         (None, None) => {
             return Err(eyre!("Could not determine tag or rolling minor version, `--tag`, `GITHUB_REF_NAME`, or `--rolling-minor` must be set"));
