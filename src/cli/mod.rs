@@ -32,8 +32,8 @@ pub(crate) struct NixfrPushCli {
     // Will also detect `GITHUB_REF_NAME`
     #[clap(long, env = "FLAKEHUB_PUSH_TAG", value_parser = StringToNoneParser, default_value = "", conflicts_with_all = ["rolling_minor", "rolling"])]
     pub(crate) tag: OptionString,
-    #[clap(long, env = "FLAKEHUB_PUSH_ROLLING_MINOR", value_parser = StringToNoneParser, default_value = "")]
-    pub(crate) rolling_minor: OptionString,
+    #[clap(long, env = "FLAKEHUB_PUSH_ROLLING_MINOR", value_parser = U64ToNoneParser, default_value = "")]
+    pub(crate) rolling_minor: OptionU64,
     #[clap(long, env = "FLAKEHUB_PUSH_ROLLING", value_parser = EmptyBoolParser, default_value_t = false)]
     pub(crate) rolling: bool,
     // Also detects `GITHUB_TOKEN`
@@ -195,6 +195,35 @@ impl clap::builder::TypedValueParser for EmptyBoolParser {
                 }
             };
             Ok(val)
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct OptionU64(pub Option<u64>);
+
+#[derive(Clone)]
+struct U64ToNoneParser;
+
+impl clap::builder::TypedValueParser for U64ToNoneParser {
+    type Value = OptionU64;
+
+    fn parse_ref(
+        &self,
+        cmd: &clap::Command,
+        arg: Option<&clap::Arg>,
+        value: &std::ffi::OsStr,
+    ) -> Result<Self::Value, clap::Error> {
+        let inner = clap::builder::StringValueParser::new();
+        let val = inner.parse_ref(cmd, arg, value)?;
+
+        if val.is_empty() {
+            Ok(OptionU64(None))
+        } else {
+            let expression = val.parse::<u64>().map_err(|e| {
+                clap::Error::raw(clap::error::ErrorKind::ValueValidation, format!("{e}\n"))
+            })?;
+            Ok(OptionU64(Some(expression)))
         }
     }
 }
@@ -391,7 +420,7 @@ async fn push_new_release(
     visibility: Visibility,
     tag: Option<String>,
     rolling: bool,
-    rolling_minor: Option<String>,
+    rolling_minor: Option<u64>,
     github_graphql_data_result: GithubGraphqlDataResult,
     extra_tags: Vec<String>,
     spdx_expression: Option<spdx::Expression>,
