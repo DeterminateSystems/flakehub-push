@@ -16,6 +16,8 @@ use crate::{
     Visibility,
 };
 
+const DEFAULT_ROLLING_PREFIX: &str = "0.1";
+
 #[derive(Debug, clap::Parser)]
 #[clap(version)]
 pub(crate) struct NixfrPushCli {
@@ -28,10 +30,12 @@ pub(crate) struct NixfrPushCli {
     #[clap(long, env = "FLAKEHUB_PUSH_VISIBLITY")]
     pub(crate) visibility: crate::Visibility,
     // Will also detect `GITHUB_REF_NAME`
-    #[clap(long, env = "FLAKEHUB_PUSH_TAG", value_parser = StringToNoneParser, default_value = "")]
+    #[clap(long, env = "FLAKEHUB_PUSH_TAG", value_parser = StringToNoneParser, default_value = "", conflicts_with_all = ["rolling_minor", "rolling"])]
     pub(crate) tag: OptionString,
-    #[clap(long, env = "FLAKEHUB_PUSH_ROLLING_PREFIX", value_parser = StringToNoneParser, default_value = "")]
-    pub(crate) rolling_prefix: OptionString,
+    #[clap(long, env = "FLAKEHUB_PUSH_ROLLING_MINOR", value_parser = StringToNoneParser, default_value = "")]
+    pub(crate) rolling_minor: OptionString,
+    #[clap(long, env = "FLAKEHUB_PUSH_ROLLING", value_parser = EmptyBoolParser, default_value_t = false)]
+    pub(crate) rolling: bool,
     // Also detects `GITHUB_TOKEN`
     #[clap(long, env = "FLAKEHUB_PUSH_GITHUB_TOKEN", value_parser = StringToNoneParser, default_value = "")]
     pub(crate) github_token: OptionString,
@@ -162,6 +166,39 @@ impl clap::builder::TypedValueParser for SpdxToNoneParser {
     }
 }
 
+#[derive(Clone)]
+struct EmptyBoolParser;
+
+impl clap::builder::TypedValueParser for EmptyBoolParser {
+    type Value = bool;
+
+    fn parse_ref(
+        &self,
+        cmd: &clap::Command,
+        arg: Option<&clap::Arg>,
+        value: &std::ffi::OsStr,
+    ) -> Result<Self::Value, clap::Error> {
+        let inner = clap::builder::StringValueParser::new();
+        let val = inner.parse_ref(cmd, arg, value)?;
+
+        if val.is_empty() {
+            Ok(false)
+        } else {
+            let val = match val.as_ref() {
+                "true" => true,
+                "false" => false,
+                v => {
+                    return Err(clap::Error::raw(
+                        clap::error::ErrorKind::InvalidValue,
+                        format!("`{v}` was not `true` or `false`\n"),
+                    ))
+                }
+            };
+            Ok(val)
+        }
+    }
+}
+
 fn build_http_client() -> reqwest::ClientBuilder {
     reqwest::Client::builder().user_agent("flakehub-push")
 }
@@ -178,7 +215,8 @@ impl NixfrPushCli {
             visibility,
             upload_name,
             tag,
-            rolling_prefix,
+            rolling,
+            rolling_minor,
             github_token,
             directory,
             repository,
@@ -317,8 +355,9 @@ impl NixfrPushCli {
             upload_name.0.as_deref(),
             mirror,
             visibility,
-            tag.as_deref(),
-            rolling_prefix.0.as_deref(),
+            tag,
+            rolling,
+            rolling_minor.0,
             github_graphql_data_result,
             extra_tags,
             spdx_expression.0,
@@ -350,8 +389,9 @@ async fn push_new_release(
     upload_name: Option<&str>,
     mirror: bool,
     visibility: Visibility,
-    tag: Option<&str>,
-    rolling_prefix: Option<&str>,
+    tag: Option<String>,
+    rolling: bool,
+    rolling_minor: Option<String>,
     github_graphql_data_result: GithubGraphqlDataResult,
     extra_tags: Vec<String>,
     spdx_expression: Option<spdx::Expression>,
@@ -360,9 +400,14 @@ async fn push_new_release(
     let upload_name = upload_name.unwrap_or(repository);
     span.record("upload_name", tracing::field::display(upload_name));
 
-    let rolling_prefix_or_tag = rolling_prefix.or(tag).ok_or_else(|| {
-        eyre!("Could not determine tag or rolling prefix, `--tag`, `GITHUB_REF_NAME`, or `--rolling-prefix` must be set")
-    })?;
+    let rolling_prefix_or_tag = match (rolling_minor.as_ref(), tag) {
+        (Some(minor), _) => format!("0.{minor}"),
+        (None, _) if rolling => format!("{DEFAULT_ROLLING_PREFIX}"),
+        (None, Some(tag)) => tag,
+        (None, None) => {
+            return Err(eyre!("Could not determine tag or rolling minor version, `--tag`, `GITHUB_REF_NAME`, or `--rolling-minor` must be set"));
+        }
+    };
 
     tracing::info!("Preparing release of {upload_name}/{rolling_prefix_or_tag}");
 
@@ -454,9 +499,9 @@ async fn push_new_release(
 
     let flakehub_client = build_http_client().build()?;
 
-    let rolling_prefix_with_postfix_or_tag = if let Some(rolling_prefix) = &rolling_prefix {
+    let rolling_minor_with_postfix_or_tag = if rolling_minor.is_some() || rolling {
         format!(
-            "{rolling_prefix}.{}+rev-{}",
+            "{rolling_prefix_or_tag}.{}+rev-{}",
             release_metadata.commit_count, release_metadata.revision
         )
     } else {
@@ -464,7 +509,7 @@ async fn push_new_release(
     };
 
     let release_metadata_post_url = format!(
-        "{host}/upload/{upload_name}/{rolling_prefix_with_postfix_or_tag}/{flake_tarball_len}/{flake_tarball_hash_base64}"
+        "{host}/upload/{upload_name}/{rolling_minor_with_postfix_or_tag}/{flake_tarball_len}/{flake_tarball_hash_base64}"
     );
     tracing::debug!(
         url = release_metadata_post_url,
@@ -591,7 +636,7 @@ async fn push_new_release(
     }
 
     tracing::info!(
-        "Successfully released new version of {upload_name}/{rolling_prefix_with_postfix_or_tag}"
+        "Successfully released new version of {upload_name}/{rolling_minor_with_postfix_or_tag}"
     );
 
     Ok(())

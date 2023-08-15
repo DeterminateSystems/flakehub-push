@@ -32,8 +32,15 @@ inputs:
     description: "example: v0.1.1"
     required: false
     default: null
-  rolling-prefix:
-    description: "For untagged releases, set a rolling prefix to be suffixed with the commit count. ie: v0.1 will be suffixed with .123 producing a release named v0.1.123-revision"
+  rolling-minor:
+    description: "Specify the SemVer minor version of your rolling releases. All releases will follow the versioning scheme '0.[rolling-minor].[commit count]+rev-[git sha]'"
+    required: false
+    default: 1
+  rolling:
+    description: |
+      For untagged releases, use a rolling versioning scheme.
+
+      When this is enabled, the default versioning scheme is 0.1.[commit count]+rev-[git sha]. To customize the SemVer minor version, set the `rolling-minor` option.
     required: false
     default: null
   host:
@@ -89,7 +96,8 @@ runs:
     env:
       FLAKEHUB_PUSH_VISIBLITY: ${{ inputs.visibility }}
       FLAKEHUB_PUSH_TAG: ${{ inputs.tag }}
-      FLAKEHUB_PUSH_ROLLING_PREFIX: ${{ inputs.rolling-prefix }}
+      FLAKEHUB_PUSH_ROLLING_MINOR: ${{ inputs.rolling-minor }}
+      FLAKEHUB_PUSH_ROLLING: ${{ inputs.rolling }}
       FLAKEHUB_PUSH_HOST: ${{ inputs.host }}
       FLAKEHUB_PUSH_LOG_DIRECTIVES: ${{ inputs.log-directives }}
       FLAKEHUB_PUSH_LOGGER: ${{ inputs.logger }}
