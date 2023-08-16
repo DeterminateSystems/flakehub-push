@@ -3,7 +3,7 @@ name = "flakehub-push"
 # 0.0.x versions are used for dev pushes.
 version = "0.1.0"
 edition = "2021"
-repository = "https://github.com/DeterminateSystems/flakehub-push/"
+repository = "https://github.com/DeterminateSystems/flakehub-push"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
