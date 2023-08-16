@@ -430,6 +430,11 @@ async fn push_new_release(
     span.record("upload_name", tracing::field::display(upload_name));
 
     let rolling_prefix_or_tag = match (rolling_minor.as_ref(), tag) {
+        (Some(_), _) if !rolling => {
+            return Err(eyre!(
+                "You must enable `rolling` to upload a release with a specific `rolling-minor`."
+            ));
+        }
         (Some(minor), _) => format!("0.{minor}"),
         (None, _) if rolling => DEFAULT_ROLLING_PREFIX.to_string(),
         (None, Some(tag)) => tag,
