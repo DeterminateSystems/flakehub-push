@@ -1,5 +1,11 @@
-use color_eyre::eyre::{eyre, WrapErr};
 use std::{io::Write, path::Path};
+
+use color_eyre::eyre::{eyre, WrapErr};
+use tokio::io::AsyncWriteExt;
+
+// The UUID embedded in our flake that we'll replace with the flake URL of the flake we're trying to
+// get outputs from.
+const FLAKE_URL_PLACEHOLDER_UUID: &str = "c9026fc0-ced9-48e0-aa3c-fc86c4c86df1";
 
 #[tracing::instrument(
     skip_all,
@@ -74,17 +80,25 @@ pub(crate) async fn get_flake_metadata(directory: &Path) -> color_eyre::Result<s
 
 #[tracing::instrument(skip_all, fields(flake_url,))]
 pub(crate) async fn get_flake_outputs(flake_url: &str) -> color_eyre::Result<serde_json::Value> {
-    let output = tokio::process::Command::new("nix")
-        .arg("eval")
-        .arg("--json")
-        .arg("--no-write-lock-file")
-        .arg("--expr")
-        .arg(format!(
-            "(({}) (builtins.getFlake \"{}\")).contents",
-            include_str!("get-flake-outputs.nix"),
-            // FIXME: use --argstr once Nix supports that.
-            flake_url.escape_default(),
-        ))
+    let tempdir = tempfile::Builder::new()
+        .prefix("flakehub_push_outputs")
+        .tempdir()
+        .wrap_err("Creating tempdir")?;
+
+    let flake_contents = include_str!("mixed-flake.nix").replace(
+        FLAKE_URL_PLACEHOLDER_UUID,
+        &flake_url.escape_default().to_string(),
+    );
+
+    let mut flake = tokio::fs::File::create(tempdir.path().join("flake.nix")).await?;
+    flake.write_all(flake_contents.as_bytes()).await?;
+
+    let mut cmd = tokio::process::Command::new("nix");
+    cmd.arg("eval");
+    cmd.arg("--json");
+    cmd.arg("--no-write-lock-file");
+    cmd.arg(format!("{}#contents", tempdir.path().display()));
+    let output = cmd
         .output()
         .await
         .wrap_err_with(|| eyre!("Failed to get flake outputs from tarball {}", flake_url))?;
