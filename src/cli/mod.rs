@@ -256,7 +256,6 @@ impl NixfrPushCli {
             extra_tags,
             spdx_expression,
         } = self;
-
         let github_token = if let Some(github_token) = &github_token.0 {
             github_token.clone()
         } else {
@@ -302,6 +301,25 @@ impl NixfrPushCli {
         } else {
             return Err(eyre!("Could not determine repository name, pass `--repository` or the `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`"));
         };
+
+        // Ensure that the upload name exists and contains exactly one slash
+        let upload_name = (match upload_name.0 {
+            Some(name) => {
+                let num_slashes = name.matches('/').count();
+
+                if num_slashes == 0 {
+                    Err(eyre!("the upload name must contain a slash"))
+                } else if num_slashes > 1 {
+                    Err(eyre!("the upload name can contain only one slash"))
+                } else if name.contains(' ') {
+                    Err(eyre!("the upload name can't contain whitespace"))
+                } else {
+                    Ok(name)
+                }
+            }
+            // Default to the repository name
+            None => Ok(repository.clone()),
+        })?;
 
         let tag = if let Some(tag) = &tag.0 {
             Some(tag.clone())
@@ -381,7 +399,7 @@ impl NixfrPushCli {
             &directory,
             revision_info,
             &repository,
-            upload_name.0.as_deref(),
+            upload_name,
             mirror,
             visibility,
             tag,
@@ -415,7 +433,7 @@ async fn push_new_release(
     directory: &Path,
     revision_info: RevisionInfo,
     repository: &str,
-    upload_name: Option<&str>,
+    upload_name: String,
     mirror: bool,
     visibility: Visibility,
     tag: Option<String>,
@@ -426,8 +444,7 @@ async fn push_new_release(
     spdx_expression: Option<spdx::Expression>,
 ) -> color_eyre::Result<()> {
     let span = tracing::Span::current();
-    let upload_name = upload_name.unwrap_or(repository);
-    span.record("upload_name", tracing::field::display(upload_name));
+    span.record("upload_name", tracing::field::display(upload_name.clone()));
 
     let rolling_prefix_or_tag = match (rolling_minor.as_ref(), tag) {
         (Some(_), _) if !rolling => {
@@ -521,7 +538,7 @@ async fn push_new_release(
         revision_info,
         flake_metadata,
         flake_outputs,
-        upload_name,
+        upload_name.clone(),
         mirror,
         visibility,
         github_graphql_data_result,

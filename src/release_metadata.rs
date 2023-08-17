@@ -96,7 +96,7 @@ impl ReleaseMetadata {
         revision_info: RevisionInfo,
         flake_metadata: serde_json::Value,
         flake_outputs: serde_json::Value,
-        upload_name: &str,
+        upload_name: String,
         mirror: bool,
         visibility: Visibility,
         github_graphql_data_result: GithubGraphqlDataResult,
