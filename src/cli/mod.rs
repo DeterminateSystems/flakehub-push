@@ -256,6 +256,7 @@ impl NixfrPushCli {
             extra_tags,
             spdx_expression,
         } = self;
+
         let github_token = if let Some(github_token) = &github_token.0 {
             github_token.clone()
         } else {
