@@ -302,7 +302,8 @@ impl NixfrPushCli {
             return Err(eyre!("Could not determine repository name, pass `--repository` or the `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`"));
         };
 
-        // Ensure that the upload name exists and contains exactly one slash and no whitespace
+        // If the upload name is supplied by the user, ensure that it contains exactly
+        // one slash and no whitespace. Default to the repository name.
         let upload_name = (match upload_name.0 {
             Some(name) => {
                 let num_slashes = name.matches('/').count();
@@ -317,7 +318,6 @@ impl NixfrPushCli {
                     Ok(name)
                 }
             }
-            // Default to the repository name
             None => Ok(repository.clone()),
         })?;
 
