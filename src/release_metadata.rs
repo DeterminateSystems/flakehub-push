@@ -176,7 +176,7 @@ impl ReleaseMetadata {
             visibility,
             outputs: flake_outputs,
             source_subdirectory: Some(directory.to_str().map(|d| d.to_string()).ok_or(eyre!(
-                "Directory {:?} doesn't convert to a string",
+                "Directory {:?} is not a valid UTF-8 string",
                 directory
             ))?),
             mirrored: mirror,
