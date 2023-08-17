@@ -304,22 +304,17 @@ impl NixfrPushCli {
 
         // If the upload name is supplied by the user, ensure that it contains exactly
         // one slash and no whitespace. Default to the repository name.
-        let upload_name = (match upload_name.0 {
-            Some(name) => {
-                let num_slashes = name.matches('/').count();
+        let upload_name = if let Some(name) = upload_name.0 {
+            let num_slashes = name.matches('/').count();
 
-                if num_slashes == 0 {
-                    Err(eyre!("the upload name must contain a slash"))
-                } else if num_slashes > 1 {
-                    Err(eyre!("the upload name can contain only one slash"))
-                } else if name.contains(' ') {
-                    Err(eyre!("the upload name can't contain whitespace"))
-                } else {
-                    Ok(name)
-                }
+            if num_slashes == 0 || num_slashes > 1 || !name.is_ascii() || name.contains(char::is_whitespace) {
+                return Err(eyre!("The `upload-name` must be in the format of `owner-name/repo-name` and cannot contain whitespace or other special characters"));
+            } else {
+                name
             }
-            None => Ok(repository.clone()),
-        })?;
+        } else {
+            repository.clone()
+        };
 
         let tag = if let Some(tag) = &tag.0 {
             Some(tag.clone())
