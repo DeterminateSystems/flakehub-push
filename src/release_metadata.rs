@@ -17,6 +17,7 @@ pub(crate) struct ReleaseMetadata {
     pub(crate) revision: String,
     pub(crate) visibility: Visibility,
     pub(crate) mirrored: bool,
+    pub(crate) source_subdirectory: Option<String>,
     pub(crate) project_id: i64,
     pub(crate) owner_id: i64,
 
@@ -174,6 +175,10 @@ impl ReleaseMetadata {
             commit_count: github_graphql_data_result.rev_count,
             visibility,
             outputs: flake_outputs,
+            source_subdirectory: Some(directory.to_str().map(|d| d.to_string()).ok_or(eyre!(
+                "Directory {:?} is not a valid UTF-8 string",
+                directory
+            ))?),
             mirrored: mirror,
             spdx_identifier,
             project_id: github_graphql_data_result.project_id,
