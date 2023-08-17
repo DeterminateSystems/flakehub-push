@@ -308,7 +308,11 @@ impl NixfrPushCli {
         let upload_name = if let Some(name) = upload_name.0 {
             let num_slashes = name.matches('/').count();
 
-            if num_slashes == 0 || num_slashes > 1 || !name.is_ascii() || name.contains(char::is_whitespace) {
+            if num_slashes == 0
+                || num_slashes > 1
+                || !name.is_ascii()
+                || name.contains(char::is_whitespace)
+            {
                 return Err(eyre!("The `upload-name` must be in the format of `owner-name/repo-name` and cannot contain whitespace or other special characters"));
             } else {
                 name
