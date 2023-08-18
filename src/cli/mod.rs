@@ -303,6 +303,24 @@ impl NixfrPushCli {
             return Err(eyre!("Could not determine repository name, pass `--repository` or the `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`"));
         };
 
+        // If the upload name is supplied by the user, ensure that it contains exactly
+        // one slash and no whitespace. Default to the repository name.
+        let upload_name = if let Some(name) = upload_name.0 {
+            let num_slashes = name.matches('/').count();
+
+            if num_slashes == 0
+                || num_slashes > 1
+                || !name.is_ascii()
+                || name.contains(char::is_whitespace)
+            {
+                return Err(eyre!("The `upload-name` must be in the format of `owner-name/repo-name` and cannot contain whitespace or other special characters"));
+            } else {
+                name
+            }
+        } else {
+            repository.clone()
+        };
+
         let tag = if let Some(tag) = &tag.0 {
             Some(tag.clone())
         } else {
@@ -381,7 +399,7 @@ impl NixfrPushCli {
             &directory,
             revision_info,
             &repository,
-            upload_name.0.as_deref(),
+            upload_name,
             mirror,
             visibility,
             tag,
@@ -415,7 +433,7 @@ async fn push_new_release(
     directory: &Path,
     revision_info: RevisionInfo,
     repository: &str,
-    upload_name: Option<&str>,
+    upload_name: String,
     mirror: bool,
     visibility: Visibility,
     tag: Option<String>,
@@ -426,8 +444,7 @@ async fn push_new_release(
     spdx_expression: Option<spdx::Expression>,
 ) -> color_eyre::Result<()> {
     let span = tracing::Span::current();
-    let upload_name = upload_name.unwrap_or(repository);
-    span.record("upload_name", tracing::field::display(upload_name));
+    span.record("upload_name", tracing::field::display(upload_name.clone()));
 
     let rolling_prefix_or_tag = match (rolling_minor.as_ref(), tag) {
         (Some(_), _) if !rolling => {
@@ -521,7 +538,7 @@ async fn push_new_release(
         revision_info,
         flake_metadata,
         flake_outputs,
-        upload_name,
+        upload_name.clone(),
         mirror,
         visibility,
         github_graphql_data_result,
