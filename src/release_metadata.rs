@@ -81,6 +81,8 @@ impl RevisionInfo {
 }
 
 impl ReleaseMetadata {
+    // FIXME
+    #[allow(clippy::too_many_arguments)]
     #[tracing::instrument(skip_all, fields(
         flake_root = %flake_root.display(),
         subdir = %subdir.display(),
