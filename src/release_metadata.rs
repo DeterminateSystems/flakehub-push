@@ -179,10 +179,12 @@ impl ReleaseMetadata {
             commit_count: github_graphql_data_result.rev_count,
             visibility,
             outputs: flake_outputs,
-            source_subdirectory: Some(subdir.to_str().map(|d| d.to_string()).ok_or(eyre!(
-                "Directory {:?} is not a valid UTF-8 string",
+            source_subdirectory: Some(
                 subdir
-            ))?),
+                    .to_str()
+                    .map(|d| d.to_string())
+                    .ok_or(eyre!("Directory {:?} is not a valid UTF-8 string", subdir))?,
+            ),
             mirrored: mirror,
             spdx_identifier,
             project_id: github_graphql_data_result.project_id,
