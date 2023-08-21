@@ -52,6 +52,54 @@ pub(crate) async fn get_flake_tarball(directory: &Path) -> color_eyre::Result<Ve
         directory = %directory.display(),
     )
 )]
+pub(crate) async fn check_flake_evaluates(directory: &Path) -> color_eyre::Result<()> {
+    let output = tokio::process::Command::new("nix")
+        .arg("flake")
+        .arg("show")
+        .arg("--all-systems")
+        .arg("--json")
+        .arg("--no-write-lock-file")
+        .arg(directory)
+        .output()
+        .await
+        .wrap_err_with(|| {
+            eyre!(
+                "Failed to execute `nix flake show --all-systems --json --no-write-lock-file {}`",
+                directory.display()
+            )
+        })?;
+
+    if !output.status.success() {
+        let command = format!(
+            "nix flake show --all-systems --json --no-write-lock-file {}",
+            directory.display(),
+        );
+        let msg = format!(
+            "\
+            Failed to execute command `{command}`{maybe_status} \n\
+            stdout: {stdout}\n\
+            stderr: {stderr}\n\
+            ",
+            stdout = String::from_utf8_lossy(&output.stdout),
+            stderr = String::from_utf8_lossy(&output.stderr),
+            maybe_status = if let Some(status) = output.status.code() {
+                format!(" with status {status}")
+            } else {
+                String::new()
+            }
+        );
+        return Err(eyre!(msg))?;
+    }
+
+    Ok(())
+}
+
+#[tracing::instrument(
+    skip_all,
+    fields(
+        directory = %directory.display(),
+    )
+)]
 pub(crate) async fn get_flake_metadata(directory: &Path) -> color_eyre::Result<serde_json::Value> {
     let output = tokio::process::Command::new("nix")
         .arg("flake")

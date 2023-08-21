@@ -10,7 +10,7 @@ use tokio::io::AsyncWriteExt;
 use uuid::Uuid;
 
 use crate::{
-    flake_info::{get_flake_metadata, get_flake_outputs, get_flake_tarball},
+    flake_info::{check_flake_evaluates, get_flake_metadata, get_flake_outputs, get_flake_tarball},
     graphql::{GithubGraphqlDataQuery, GithubGraphqlDataResult},
     release_metadata::{ReleaseMetadata, RevisionInfo},
     Visibility,
@@ -467,6 +467,9 @@ async fn push_new_release(
         .tempdir()
         .wrap_err("Creating tempdir")?;
 
+    check_flake_evaluates(directory)
+        .await
+        .wrap_err("Checking flake evaluates")?;
     let flake_metadata = get_flake_metadata(directory)
         .await
         .wrap_err("Getting flake metadata")?;
