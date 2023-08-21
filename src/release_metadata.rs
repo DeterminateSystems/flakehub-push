@@ -82,7 +82,8 @@ impl RevisionInfo {
 
 impl ReleaseMetadata {
     #[tracing::instrument(skip_all, fields(
-        directory = %directory.display(),
+        flake_root = %flake_root.display(),
+        subdir = %subdir.display(),
         description = tracing::field::Empty,
         readme_path = tracing::field::Empty,
         revision = tracing::field::Empty,
@@ -92,7 +93,8 @@ impl ReleaseMetadata {
         visibility = ?visibility,
     ))]
     pub(crate) async fn build(
-        directory: &Path,
+        flake_root: &Path,
+        subdir: &Path,
         revision_info: RevisionInfo,
         flake_metadata: serde_json::Value,
         flake_outputs: serde_json::Value,
@@ -107,7 +109,7 @@ impl ReleaseMetadata {
 
         span.record("revision_string", &revision_info.revision);
 
-        assert!(directory.is_relative());
+        assert!(subdir.is_relative());
 
         let revision_count = match revision_info.local_revision_count {
             Some(n) => n as i64,
@@ -131,7 +133,7 @@ impl ReleaseMetadata {
             None
         };
 
-        let readme_path = directory.join("README.md");
+        let readme_path = flake_root.join(subdir).join("README.md");
         let readme = if readme_path.exists() {
             Some(tokio::fs::read_to_string(readme_path).await?)
         } else {
@@ -177,9 +179,9 @@ impl ReleaseMetadata {
             commit_count: github_graphql_data_result.rev_count,
             visibility,
             outputs: flake_outputs,
-            source_subdirectory: Some(directory.to_str().map(|d| d.to_string()).ok_or(eyre!(
+            source_subdirectory: Some(subdir.to_str().map(|d| d.to_string()).ok_or(eyre!(
                 "Directory {:?} is not a valid UTF-8 string",
-                directory
+                subdir
             ))?),
             mirrored: mirror,
             spdx_identifier,
