@@ -39,8 +39,8 @@ pub(crate) struct NixfrPushCli {
     // Also detects `GITHUB_TOKEN`
     #[clap(long, env = "FLAKEHUB_PUSH_GITHUB_TOKEN", value_parser = StringToNoneParser, default_value = "")]
     pub(crate) github_token: OptionString,
-    #[clap(long, env = "FLAKEHUB_PUSH_UPLOAD_NAME", value_parser = StringToNoneParser, default_value = "")]
-    pub(crate) upload_name: OptionString,
+    #[clap(long, env = "FLAKEHUB_PUSH_NAME", value_parser = StringToNoneParser, default_value = "")]
+    pub(crate) name: OptionString,
     /// Will also detect `GITHUB_REPOSITORY`
     #[clap(long, env = "FLAKEHUB_PUSH_REPOSITORY", value_parser = StringToNoneParser, default_value = "")]
     pub(crate) repository: OptionString,
@@ -242,7 +242,7 @@ impl NixfrPushCli {
         let Self {
             host,
             visibility,
-            upload_name,
+            name,
             tag,
             rolling,
             rolling_minor,
@@ -305,7 +305,7 @@ impl NixfrPushCli {
 
         // If the upload name is supplied by the user, ensure that it contains exactly
         // one slash and no whitespace. Default to the repository name.
-        let upload_name = if let Some(name) = upload_name.0 {
+        let upload_name = if let Some(name) = name.0 {
             let num_slashes = name.matches('/').count();
 
             if num_slashes == 0
