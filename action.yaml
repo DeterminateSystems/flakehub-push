@@ -25,11 +25,11 @@ inputs:
     required: false
     default: null
   git-root:
-    description: the git root of your flake
+    description: The root directory of your Git repository.
     required: false
     default: .
   tag:
-    description: "example: v0.1.1"
+    description: The Git tag to use, for non-rolling releases. This must be the character `v` followed by a SemVer version, e.g. `v0.1.1`.
     required: false
     default: null
   rolling-minor:
@@ -44,19 +44,19 @@ inputs:
     required: false
     default: false
   host:
-    description: "The flakehub server to use"
+    description: "The FlakeHub server to use."
     required: false
     default: "https://api.flakehub.com"
   log-directives:
-    description: A list of Tracing directives, comma separated, `-`s replaced with `_` (eg. `nix_installer=trace`, see https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html#directives)
+    description: A comma-separated list of [tracing directives](https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html#directives). `-`s are replaced with `_`s (such as `nix_installer=trace`).
     required: false
     default: "flakehub_push=info"
   logger:
-    description: The logger to use for install (eg. `pretty`, `json`, `full`, `compact`)
+    description: The logger to use. Options are `pretty`, `json`, `full` and `compact`.
     required: false
     default: "full"
   github-token:
-    description: A GitHub token for making authenticated GitHub API requests
+    description: A GitHub token for making authenticated GitHub API requests.
     default: ${{ github.token }}
   extra-tags:
     description: |
@@ -67,7 +67,6 @@ inputs:
     description: A valid SPDX license expression. This will be used in place of what GitHub claims your repository's `spdxIdentifier` is.
     required: false
     default: ""
-
   flakehub-push-binary:
     description: Run a version of the `flakehub-push` binary from somewhere already on disk. Conflicts with all other `flakehub-push-*` options.
   flakehub-push-branch:
