@@ -107,6 +107,8 @@ impl ReleaseMetadata {
 
         span.record("revision_string", &revision_info.revision);
 
+        assert!(directory.is_relative());
+
         let revision_count = match revision_info.local_revision_count {
             Some(n) => n as i64,
             None => {

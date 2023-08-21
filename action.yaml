@@ -21,7 +21,7 @@ inputs:
     required: false
     default: false
   directory:
-    description: the directory of your flake (useful for subflakes)
+    description: The path of your flake relative to the root of the repository. Useful for subflakes.
     required: false
     default: null
   git-root:

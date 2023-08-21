@@ -273,21 +273,30 @@ impl NixfrPushCli {
             std::env::current_dir().map(PathBuf::from).wrap_err("Could not determine current git_root. Pass `--git-root` or set `FLAKEHUB_PUSH_GIT_ROOT`")?
         };
 
-        let directory = if let Some(directory) = &directory.0 {
-            let canonical_git_root = git_root
-                .canonicalize()
-                .wrap_err("Failed to canonicalize `--git-root` argument")?;
-            let canonical_directory = directory
+        let git_root = git_root
+            .canonicalize()
+            .wrap_err("Failed to canonicalize `--git-root` argument")?;
+
+        let subdir = if let Some(directory) = &directory.0 {
+            let absolute_directory = if directory.is_absolute() {
+                directory.clone()
+            } else {
+                git_root.join(directory)
+            };
+            let canonical_directory = absolute_directory
                 .canonicalize()
                 .wrap_err("Failed to canonicalize `--directory` argument")?;
-            if !canonical_directory.starts_with(canonical_git_root) {
-                return Err(eyre!(
-                    "Specified `--directory` was not a directory inside the `--git-root`"
-                ));
-            }
-            directory.clone()
+
+            Path::new(
+                canonical_directory
+                    .strip_prefix(git_root.clone())
+                    .wrap_err(
+                        "Specified `--directory` was not a directory inside the `--git-root`",
+                    )?,
+            )
+            .into()
         } else {
-            git_root.clone()
+            PathBuf::new()
         };
 
         let repository = if let Some(repository) = &repository.0 {
@@ -396,7 +405,8 @@ impl NixfrPushCli {
         push_new_release(
             &host,
             &upload_bearer_token,
-            &directory,
+            &git_root,
+            &subdir,
             revision_info,
             &repository,
             upload_name,
@@ -430,7 +440,8 @@ impl NixfrPushCli {
 async fn push_new_release(
     host: &str,
     upload_bearer_token: &str,
-    directory: &Path,
+    flake_root: &Path,
+    subdir: &Path,
     revision_info: RevisionInfo,
     repository: &str,
     upload_name: String,
@@ -467,10 +478,12 @@ async fn push_new_release(
         .tempdir()
         .wrap_err("Creating tempdir")?;
 
-    check_flake_evaluates(directory)
+    let flake_dir = flake_root.join(subdir);
+
+    check_flake_evaluates(&flake_dir)
         .await
         .wrap_err("Checking flake evaluates")?;
-    let flake_metadata = get_flake_metadata(directory)
+    let flake_metadata = get_flake_metadata(&flake_dir)
         .await
         .wrap_err("Getting flake metadata")?;
     tracing::debug!("Got flake metadata: {:?}", flake_metadata);
@@ -537,7 +550,7 @@ async fn push_new_release(
         .wrap_err("Writing compressed tarball to tempfile")?;
 
     let release_metadata = ReleaseMetadata::build(
-        directory,
+        subdir,
         revision_info,
         flake_metadata,
         flake_outputs,
