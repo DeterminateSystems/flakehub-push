@@ -69,7 +69,7 @@
                             mkLeaf
                               {
                                 forSystems = attrs.leaf.forSystems or null;
-                                doc = if attrs.leaf ? doc then try attrs.leaf.doc "«evaluation error»" else null;
+                                doc = if attrs.leaf ? doc then attrs.leaf.doc else null;
                                 #evalChecks = attrs.leaf.evalChecks or {};
                               }
                           else
