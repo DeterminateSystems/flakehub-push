@@ -2,7 +2,7 @@
   description = "A https://flakehub.com/ pusher.";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixpkgs.url = "https://api.flakehub.com/f/NixOS/nixpkgs/0.1.514192.tar.gz";
     crane = {
       url = "github:ipetkov/crane";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -36,24 +36,48 @@
       });
     in
     {
-      packages = forAllSystems ({ cranePkgs, ... }: rec {
-        flakehub-push = cranePkgs.package;
-        default = flakehub-push;
-      });
+      overlays.default = final: prev: {
+        flakehub-push = inputs.self.packages.${final.stdenv.system}.flakehub-push;
+      };
 
-      devShells = forAllSystems ({ system, pkgs, cranePkgs, ... }: {
+      packages = forAllSystems ({ system, pkgs, lib, ... }:
+        let
+          craneLib = (inputs.crane.mkLib pkgs).overrideToolchain rustToolchain;
+          rustToolchain = pkgs.rust-bin.stable.latest.default.override {
+            targets = [ "x86_64-unknown-linux-musl" ];
+          };
+        in
+        rec {
+          default = flakehub-push;
+
+          flakehub-push = craneLib.buildPackage {
+            pname = "flakehub-push";
+            version = "0.1.0";
+            src = craneLib.path ./.;
+
+            CARGO_BUILD_TARGET = "x86_64-unknown-linux-musl";
+            CARGO_BUILD_RUSTFLAGS = "-C target-feature=+crt-static";
+          };
+        });
+
+      devShells = forAllSystems ({ system, pkgs, ... }: {
         default = pkgs.mkShell {
           name = "dev";
-          buildInputs = [ cranePkgs.rustNightly ]
-            ++ inputs.self.packages.${system}.flakehub-push.buildInputs
-            ++ (with pkgs; [
+          buildInputs = with pkgs; [
             nixpkgs-fmt
+            rustfmt
             cargo-outdated
             cargo-watch
-          ]);
+            rust-analyzer
+            rustc
+            cargo
+          ]
+          ++ inputs.self.packages.${system}.flakehub-push.buildInputs
+          ++ pkgs.lib.optionals pkgs.stdenv.isDarwin (with pkgs.darwin.apple_sdk.frameworks; [ Security ]);
 
-          nativeBuildInputs = with pkgs; [ ]
-            ++ inputs.self.packages.${system}.flakehub-push.nativeBuildInputs;
+          nativeBuildInputs = with pkgs; [
+          ]
+          ++ inputs.self.packages.${system}.flakehub-push.nativeBuildInputs;
         };
       });
 

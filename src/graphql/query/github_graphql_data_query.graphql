@@ -1,0 +1,35 @@
+query GithubGraphqlDataQuery($owner: String!, $name: String!, $revision: String!, $maxNumTopics: Int!) {
+  repository(name: $name, owner: $owner) {
+    __typename
+    databaseId
+    owner {
+      __typename
+      ... on User {
+        databaseId
+      }
+      ... on Organization {
+        databaseId
+      }
+    }
+    licenseInfo {
+      spdxId
+    }
+    object(expression: $revision) {
+      __typename
+      ... on Commit {
+        history {
+          totalCount
+        }
+      }
+    }
+    repositoryTopics(first: $maxNumTopics) {
+      edges {
+        node {
+          topic {
+            name
+          }
+        }
+      }
+    }
+  }
+}

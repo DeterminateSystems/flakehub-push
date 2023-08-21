@@ -4,25 +4,44 @@ A [flakehub](https://flakehub.com/) pusher.
 
 ## Example
 
+The following workflow will push new tags matching the conventional format (eg.
+`v1.0.0`, `v0.1.0-rc4`) to Flakehub.
+
 ```yaml
-name: flakehub
+# .github/workflows/release.yml
+name: Release
 
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - "main"
+    tags:
+      - "v*.*.*"
 
 jobs:
-  production-test:
+  flakehub:
     runs-on: ubuntu-22.04
     permissions:
-      id-token: write # In order to request a JWT for AWS auth
-      contents: read # Specifying id-token wiped this out, so manually specify that this action is allowed to checkout this private repo
+      id-token: write # Authenticate against FlakeHub
+      contents: read
     steps:
+      - uses: DeterminateSystems/nix-installer-action@v4
       - uses: actions/checkout@v3
       - name: Push to flakehub
-        uses: determinatesystems/flakehub
+        uses: determinatesystems/flakehub-push@main
         with:
-          visibility: "hidden" # or "public"
+          visibility: "unlisted" # or "public"
+```
+
+## Development against a local Flakehub server
+
+Assuming the dev environment is running as described in the flakehub repo:
+
+```bash
+export FLAKEHUB_PUSH_GITHUB_TOKEN="<secret>"
+cargo run -- \
+  --visibility public \
+  --tag v0.1.0 \
+  --repository DeterminateSystems/nix-installer \
+  --git-root ../nix-installer \
+  --jwt-issuer-uri http://localhost:8081/jwt/token \
+  --host http://localhost:8080
 ```

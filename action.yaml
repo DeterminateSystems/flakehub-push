@@ -6,36 +6,47 @@ description: "Publish your flake."
 
 inputs:
   visibility:
-    description: "`public` or `hidden`"
+    description: "`public` or `unlisted`"
     required: true
   upload-name:
-    description: the name of your published flake
+    description: The name of your published flake. In the format of OrgName/RepoName. OrgName must match your organization's GitHub root name or the publish will fail.
     required: true
     default: null
-  repo:
-    description: the name of your repo, strongly recommended to leave this unchanged. In the format of OrgName/RepoName. OrgName must match your organization's GitHub root name or the publish will fail.
+  repository:
+    description: The actual GitHub repository containing your flake. In the format of OrgName/RepoName.
     required: true
-    default: null
+    default: ${{ github.repository }}
+  mirror:
+    description: If the repository is mirrored via DeterminateSystems' mirror functionality. This is only usable by DeterminateSystems.
+    required: false
+    default: false
   directory:
     description: the directory of your flake (useful for subflakes)
     required: false
-    default: .
+    default: null
   git-root:
     description: the git root of your flake
     required: false
-    default: null
+    default: .
   tag:
     description: "example: v0.1.1"
     required: false
     default: null
-  rolling-prefix:
-    description: "For untagged releases, set a rolling prefix to be suffixed with the commit count. ie: v0.1 will be suffixed with .123 producing a release named v0.1.123-revision"
+  rolling-minor:
+    description: "Specify the SemVer minor version of your rolling releases. All releases will follow the versioning scheme '0.[rolling-minor].[commit count]+rev-[git sha]'"
     required: false
     default: null
+  rolling:
+    description: |
+      For untagged releases, use a rolling versioning scheme.
+
+      When this is enabled, the default versioning scheme is 0.1.[commit count]+rev-[git sha]. To customize the SemVer minor version, set the `rolling-minor` option.
+    required: false
+    default: false
   host:
     description: "The flakehub server to use"
     required: false
-    default: "https://flakehub.fly.dev"
+    default: "https://api.flakehub.com"
   log-directives:
     description: A list of Tracing directives, comma separated, `-`s replaced with `_` (eg. `nix_installer=trace`, see https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html#directives)
     required: false
@@ -47,6 +58,16 @@ inputs:
   github-token:
     description: A GitHub token for making authenticated GitHub API requests
     default: ${{ github.token }}
+  extra-tags:
+    description: |
+      `flakehub-push` automatically uses the GitHub repo's topics as tags. This `extra-tags` parameter enables you to add extra tags beyond that as a comma-separated string. Only alphanumeric characters and hyphens are allowed in tags and the maximum length of tags is 50 characters. You can specify a maximum of 20 extra tags, and have a maximum of 25 tags, including those that we retrieve from GitHub. Any tags after the 25th will be ignored.
+    required: false
+    default: ""
+  spdx-expression:
+    description: A valid SPDX license expression. This will be used in place of what GitHub claims your repository's `spdxIdentifier` is.
+    required: false
+    default: ""
+
   flakehub-push-binary:
     description: Run a version of the `flakehub-push` binary from somewhere already on disk. Conflicts with all other `flakehub-push-*` options.
   flakehub-push-branch:
@@ -75,15 +96,19 @@ runs:
     env:
       FLAKEHUB_PUSH_VISIBLITY: ${{ inputs.visibility }}
       FLAKEHUB_PUSH_TAG: ${{ inputs.tag }}
-      FLAKEHUB_PUSH_ROLLING_PREFIX: ${{ inputs.rolling-prefix }}
+      FLAKEHUB_PUSH_ROLLING_MINOR: ${{ inputs.rolling-minor }}
+      FLAKEHUB_PUSH_ROLLING: ${{ inputs.rolling }}
       FLAKEHUB_PUSH_HOST: ${{ inputs.host }}
       FLAKEHUB_PUSH_LOG_DIRECTIVES: ${{ inputs.log-directives }}
       FLAKEHUB_PUSH_LOGGER: ${{ inputs.logger }}
       FLAKEHUB_PUSH_GITHUB_TOKEN: ${{ inputs.github-token }}
       FLAKEHUB_PUSH_UPLOAD_NAME: ${{ inputs.upload-name }}
-      FLAKEHUB_PUSH_REPO: ${{ inputs.repo }}
+      FLAKEHUB_PUSH_MIRROR: ${{ inputs.mirror }}
+      FLAKEHUB_PUSH_REPOSITORY: ${{ inputs.repository }}
       FLAKEHUB_PUSH_DIRECTORY: ${{ inputs.directory }}
       FLAKEHUB_PUSH_GIT_ROOT: ${{ inputs.git-root }}
+      FLAKEHUB_PUSH_EXTRA_TAGS: ${{ inputs.extra-tags }}
+      FLAKEHUB_PUSH_SPDX_EXPRESSION: ${{ inputs.spdx-expression }}
       # Also GITHUB_REPOSITORY, GITHUB_REF_NAME, GITHUB_TOKEN, ACTIONS_ID_TOKEN_REQUEST_TOKEN, ACTIONS_ID_TOKEN_REQUEST_URL
     run: |
       if [ "${RUNNER_OS}" == "Linux" ]; then
