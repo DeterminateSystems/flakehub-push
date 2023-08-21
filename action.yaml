@@ -8,9 +8,13 @@ inputs:
   visibility:
     description: "`public` or `unlisted`"
     required: true
-  upload-name:
+  name:
     description: The name of your published flake. In the format of OrgName/RepoName. OrgName must match your organization's GitHub root name or the publish will fail.
-    required: true
+    required: false
+    default: null
+  upload-name:
+    description: "Alias for `name`."
+    required: false
     default: null
   repository:
     description: The actual GitHub repository containing your flake. In the format of OrgName/RepoName.
@@ -102,7 +106,8 @@ runs:
       FLAKEHUB_PUSH_LOG_DIRECTIVES: ${{ inputs.log-directives }}
       FLAKEHUB_PUSH_LOGGER: ${{ inputs.logger }}
       FLAKEHUB_PUSH_GITHUB_TOKEN: ${{ inputs.github-token }}
-      FLAKEHUB_PUSH_UPLOAD_NAME: ${{ inputs.upload-name }}
+      COMPAT_UPLOAD_NAME: ${{ inputs.upload-name }}
+      FLAKEHUB_PUSH_NAME: ${{ inputs.name }}
       FLAKEHUB_PUSH_MIRROR: ${{ inputs.mirror }}
       FLAKEHUB_PUSH_REPOSITORY: ${{ inputs.repository }}
       FLAKEHUB_PUSH_DIRECTORY: ${{ inputs.directory }}
@@ -115,6 +120,12 @@ runs:
         export ARCHITECTURE_OS="Linux"
       else
         echo "${RUNNER_OS} not supported"
+        exit 1
+      fi
+
+      export FLAKEHUB_PUSH_UPLOAD_NAME="${FLAKEHUB_PUSH_NAME:-$COMPAT_UPLOAD_NAME}"
+      if [[ -z "$FLAKEHUB_PUSH_UPLOAD_NAME" ]]; then
+        echo 'Missing required input `name`.'
         exit 1
       fi
 
