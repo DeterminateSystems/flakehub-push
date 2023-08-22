@@ -2,7 +2,7 @@ name: FlakeHub Push
 branding:
   icon: "box"
   color: "purple"
-description: "Publish your flake to FlakeHub."
+description: "Publish your Nix flake to FlakeHub."
 
 inputs:
   visibility:
