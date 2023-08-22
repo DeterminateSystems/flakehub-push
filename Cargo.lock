@@ -2362,9 +2362,8 @@ dependencies = [
 
 [[package]]
 name = "tar"
-version = "0.4.38"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b55807c0344e1e6c04d7c965f5289c39a8d94ae23ed5c0b57aabac549f871c6"
+version = "0.4.40"
+source = "git+https://github.com/DeterminateSystems/tar-rs.git?branch=force-mtime#b25211be672398a005b39061ee35d28a2a3d7e8a"
 dependencies = [
  "filetime",
  "libc",
@@ -3002,9 +3001,9 @@ dependencies = [
 
 [[package]]
 name = "xattr"
-version = "0.2.3"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d1526bbe5aaeb5eb06885f4d987bcdfa5e23187055de9b83fe00156a821fabc"
+checksum = "ea263437ca03c1522846a4ddafbca2542d0ad5ed9b784909d4b27b76f62bc34a"
 dependencies = [
  "libc",
 ]
