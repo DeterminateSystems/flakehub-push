@@ -5,6 +5,13 @@ Write up a [YAML configuration](#configuration), push it to your repo, and you'r
 
 ## Example
 
+### Guided wizard
+
+The action requires very little configuration.
+Consider using our publishing wizard to put it together in only a couple minutes: https://flakehub.com/new
+
+### Manual configuration
+
 This workflow pushes new tags matching the conventional format (eg.
 `v1.0.0`, `v0.1.0-rc4`) to Flakehub.
 
