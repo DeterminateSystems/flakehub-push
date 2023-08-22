@@ -1,10 +1,11 @@
 # `flakehub-push`
 
-A [flakehub](https://flakehub.com/) pusher.
+A GitHub Action for pushing [Nix flakes][flakes] to [FlakeHub].
+Write up a [YAML configuration](#configuration), push it to your repo, and you're ready to go.
 
 ## Example
 
-The following workflow will push new tags matching the conventional format (eg.
+This workflow pushes new tags matching the conventional format (eg.
 `v1.0.0`, `v0.1.0-rc4`) to Flakehub.
 
 ```yaml
@@ -20,7 +21,7 @@ jobs:
   flakehub:
     runs-on: ubuntu-22.04
     permissions:
-      id-token: write # Authenticate against FlakeHub
+      id-token: write # Necessary for authenticating against FlakeHub
       contents: read
     steps:
       - uses: DeterminateSystems/nix-installer-action@v4
@@ -28,7 +29,8 @@ jobs:
       - name: Push to flakehub
         uses: determinatesystems/flakehub-push@main
         with:
-          visibility: "unlisted" # or "public"
+          visibility: "public" # or "unlisted" if you don't want it to show up in
+                               # search results and general listings on flakehub.com
 ```
 
 ## Configuration
@@ -71,3 +73,6 @@ cargo run -- \
   --jwt-issuer-uri http://localhost:8081/jwt/token \
   --host http://localhost:8080
 ```
+
+[flakehub]: https://flakehub.com
+[flakes]: https://zero-to-nix.com/concepts/flakes
