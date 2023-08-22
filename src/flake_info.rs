@@ -15,6 +15,7 @@ const FLAKE_URL_PLACEHOLDER_UUID: &str = "c9026fc0-ced9-48e0-aa3c-fc86c4c86df1";
 )]
 pub(crate) async fn get_flake_tarball(directory: &Path) -> color_eyre::Result<Vec<u8>> {
     let mut tarball_builder = tar::Builder::new(vec![]);
+    tarball_builder.follow_symlinks(false);
 
     tracing::trace!("Creating tarball");
     // `tar` works according to the current directory (yay)
