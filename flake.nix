@@ -37,7 +37,6 @@
         flakehub-push = inputs.self.packages.${final.stdenv.system}.flakehub-push;
       };
 
-
       packages = forAllSystems ({ system, pkgs, lib, ... }:
         let
           craneLib = (inputs.crane.mkLib pkgs).overrideToolchain rustToolchain;
