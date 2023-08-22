@@ -1,8 +1,8 @@
-name: Publish your flake.
+name: FlakeHub Push
 branding:
   icon: "box"
   color: "purple"
-description: "Publish your flake."
+description: "Publish your flake to FlakeHub."
 
 inputs:
   visibility:
