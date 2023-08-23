@@ -467,8 +467,9 @@ async fn push_new_release(
         (Some(minor), _) => format!("0.{minor}"),
         (None, _) if rolling => DEFAULT_ROLLING_PREFIX.to_string(),
         (None, Some(tag)) => {
+            let version_only = tag.strip_prefix('v').unwrap_or(&tag);
             // Ensure the version respects semver
-            semver::Version::from_str(&tag).wrap_err_with(|| eyre!("Failed to parse version `{tag}` as semver, see https://semver.org/ for specifications"))?;
+            semver::Version::from_str(version_only).wrap_err_with(|| eyre!("Failed to parse version `{tag}` as semver, see https://semver.org/ for specifications"))?;
             tag
         }
         (None, None) => {
