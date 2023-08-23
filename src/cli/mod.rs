@@ -5,6 +5,7 @@ use reqwest::{header::HeaderMap, StatusCode};
 use std::{
     path::{Path, PathBuf},
     process::ExitCode,
+    str::FromStr,
 };
 use tokio::io::AsyncWriteExt;
 use uuid::Uuid;
@@ -465,7 +466,11 @@ async fn push_new_release(
         }
         (Some(minor), _) => format!("0.{minor}"),
         (None, _) if rolling => DEFAULT_ROLLING_PREFIX.to_string(),
-        (None, Some(tag)) => tag,
+        (None, Some(tag)) => {
+            // Ensure the version respects semver
+            semver::Version::from_str(&tag).wrap_err_with(|| eyre!("Failed to parse version `{tag}` as semver, see https://semver.org/ for specifications"))?;
+            tag
+        }
         (None, None) => {
             return Err(eyre!("Could not determine tag or rolling minor version, `--tag`, `GITHUB_REF_NAME`, or `--rolling-minor` must be set"));
         }
