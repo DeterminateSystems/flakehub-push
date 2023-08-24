@@ -62,7 +62,18 @@ pub(crate) struct NixfrPushCli {
     #[clap(long, env = "FLAKEHUB_PUSH_JWT_ISSUER_URI", value_parser = StringToNoneParser, default_value = "")]
     pub(crate) jwt_issuer_uri: OptionString,
 
-    /// User-supplied tags beyond those associated with the GitHub repository.
+    /// User-supplied labels beyond those associated with the GitHub repository.
+    #[clap(
+        long,
+        short = 'l',
+        env = "FLAKEHUB_PUSH_EXTRA_LABELS",
+        use_value_delimiter = true,
+        default_value = "",
+        value_delimiter = ','
+    )]
+    pub(crate) extra_labels: Vec<String>,
+
+    /// DEPRECATED: Please use `extra-labels` instead.
     #[clap(
         long,
         short = 't',
@@ -254,9 +265,12 @@ impl NixfrPushCli {
             mirror,
             jwt_issuer_uri,
             instrumentation: _,
-            extra_tags,
+            mut extra_labels,
             spdx_expression,
+            extra_tags,
         } = self;
+
+        extra_labels.extend(extra_tags);
 
         let github_token = if let Some(github_token) = &github_token.0 {
             github_token.clone()
@@ -417,7 +431,7 @@ impl NixfrPushCli {
             rolling,
             rolling_minor.0,
             github_graphql_data_result,
-            extra_tags,
+            extra_labels,
             spdx_expression.0,
         )
         .await?;
@@ -452,7 +466,7 @@ async fn push_new_release(
     rolling: bool,
     rolling_minor: Option<u64>,
     github_graphql_data_result: GithubGraphqlDataResult,
-    extra_tags: Vec<String>,
+    extra_labels: Vec<String>,
     spdx_expression: Option<spdx::Expression>,
 ) -> color_eyre::Result<()> {
     let span = tracing::Span::current();
@@ -565,7 +579,7 @@ async fn push_new_release(
         mirror,
         visibility,
         github_graphql_data_result,
-        extra_tags,
+        extra_labels,
         spdx_expression,
     )
     .await
