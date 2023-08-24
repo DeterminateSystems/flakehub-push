@@ -1,6 +1,5 @@
-use atty::Stream;
 use color_eyre::eyre::WrapErr;
-use std::error::Error;
+use std::{error::Error, io::IsTerminal};
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{
     filter::Directive, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter,
@@ -86,7 +85,7 @@ impl<'a> Instrumentation {
         S: tracing::Subscriber + for<'span> tracing_subscriber::registry::LookupSpan<'span>,
     {
         tracing_subscriber::fmt::Layer::new()
-            .with_ansi(atty::is(Stream::Stderr))
+            .with_ansi(std::io::stderr().is_terminal())
             .with_writer(std::io::stderr)
     }
 
@@ -95,7 +94,7 @@ impl<'a> Instrumentation {
         S: tracing::Subscriber + for<'span> tracing_subscriber::registry::LookupSpan<'span>,
     {
         tracing_subscriber::fmt::Layer::new()
-            .with_ansi(atty::is(Stream::Stderr))
+            .with_ansi(std::io::stderr().is_terminal())
             .with_writer(std::io::stderr)
             .pretty()
     }
@@ -105,7 +104,7 @@ impl<'a> Instrumentation {
         S: tracing::Subscriber + for<'span> tracing_subscriber::registry::LookupSpan<'span>,
     {
         tracing_subscriber::fmt::Layer::new()
-            .with_ansi(atty::is(Stream::Stderr))
+            .with_ansi(std::io::stderr().is_terminal())
             .with_writer(std::io::stderr)
             .json()
     }
@@ -115,7 +114,7 @@ impl<'a> Instrumentation {
         S: tracing::Subscriber + for<'span> tracing_subscriber::registry::LookupSpan<'span>,
     {
         tracing_subscriber::fmt::Layer::new()
-            .with_ansi(atty::is(Stream::Stderr))
+            .with_ansi(std::io::stderr().is_terminal())
             .with_writer(std::io::stderr)
             .compact()
             .without_time()
