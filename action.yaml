@@ -1,8 +1,8 @@
-name: FlakeHub Push
+name: Publish Nix flakes to FlakeHub
 branding:
   icon: "box"
   color: "purple"
-description: "Publish your Nix flake to FlakeHub."
+description: "Find, install, and publish Nix Flakes with FlakeHub."
 
 inputs:
   visibility:
