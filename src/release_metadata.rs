@@ -140,13 +140,15 @@ impl ReleaseMetadata {
         let readme_dir = flake_root.join(subdir);
 
         let readme = if let Some(Ok(path)) =
-            tokio::fs::read_dir(readme_dir).await?.find(|entry| match entry {
-                Ok(entry) => {
-                    entry.file_name().to_string_lossy().to_ascii_lowercase()
-                        == README_FILENAME_LOWERCASE
-                }
-                Err(_) => false,
-            }) {
+            tokio::fs::read_dir(readme_dir)
+                .await?
+                .find(|entry| match entry {
+                    Ok(entry) => {
+                        entry.file_name().to_string_lossy().to_ascii_lowercase()
+                            == README_FILENAME_LOWERCASE
+                    }
+                    Err(_) => false,
+                }) {
             Some(tokio::fs::read_to_string(path.path()).await?)
         } else {
             None
