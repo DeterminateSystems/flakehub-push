@@ -139,15 +139,19 @@ impl ReleaseMetadata {
 
         let readme_dir = flake_root.join(subdir);
 
-        let readme = if let Some(Ok(path)) = std::fs::read_dir(readme_dir)?.find(|entry| match entry {
-            Ok(entry) => entry.file_name().to_string_lossy().to_ascii_lowercase() == README_FILENAME_LOWERCASE,
-            Err(_) => false,
-        }) {
+        let readme = if let Some(Ok(path)) =
+            std::fs::read_dir(readme_dir)?.find(|entry| match entry {
+                Ok(entry) => {
+                    entry.file_name().to_string_lossy().to_ascii_lowercase()
+                        == README_FILENAME_LOWERCASE
+                }
+                Err(_) => false,
+            }) {
             Some(tokio::fs::read_to_string(path.path()).await?)
         } else {
             None
         };
-        
+
         let spdx_identifier = if spdx_expression.is_some() {
             spdx_expression
         } else if let Some(spdx_string) = github_graphql_data_result.spdx_identifier {
