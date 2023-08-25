@@ -68,7 +68,6 @@ pub(crate) struct NixfrPushCli {
         short = 'l',
         env = "FLAKEHUB_PUSH_EXTRA_LABELS",
         use_value_delimiter = true,
-        default_value = "",
         value_delimiter = ','
     )]
     pub(crate) extra_labels: Vec<String>,
@@ -79,7 +78,6 @@ pub(crate) struct NixfrPushCli {
         short = 't',
         env = "FLAKEHUB_PUSH_EXTRA_TAGS",
         use_value_delimiter = true,
-        default_value = "",
         value_delimiter = ','
     )]
     pub(crate) extra_tags: Vec<String>,
@@ -270,7 +268,27 @@ impl NixfrPushCli {
             extra_tags,
         } = self;
 
-        extra_labels.extend(extra_tags);
+        let is_github_actions = std::env::var("GITHUB_ACTION").ok().is_some();
+        if !extra_tags.is_empty() {
+            let message = "`extra-tags` is deprecated and will be removed in the future. Please use `extra-labels` instead.";
+            tracing::warn!("{message}");
+
+            if is_github_actions {
+                println!("::warning::{message}");
+            }
+
+            if extra_labels.is_empty() {
+                extra_labels = extra_tags;
+            } else {
+                let message =
+                    "Both `extra-tags` and `extra-labels` were set; `extra-tags` will be ignored.";
+                tracing::warn!("{message}");
+
+                if is_github_actions {
+                    println!("::warning::{message}");
+                }
+            }
+        }
 
         let github_token = if let Some(github_token) = &github_token.0 {
             github_token.clone()
