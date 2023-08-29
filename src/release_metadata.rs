@@ -1,5 +1,5 @@
 use color_eyre::eyre::{eyre, WrapErr};
-use std::{collections::HashSet, path::Path};
+use std::{collections::HashSet, path::{Path, PathBuf}};
 
 use crate::{
     graphql::{GithubGraphqlDataResult, MAX_NUM_TOTAL_TAGS, MAX_TAG_LENGTH},
@@ -138,22 +138,7 @@ impl ReleaseMetadata {
         };
 
         let readme_dir = flake_root.join(subdir);
-
-        let readme = if let Some(Ok(path)) =
-            tokio::fs::read_dir(readme_dir)
-                .await?
-                .find(|entry| match entry {
-                    Ok(entry) => {
-                        // to_string_lossy() replaces unknown sequences with U+FFFD REPLACEMENT CHARACTER, which doesn't occur in "readme.md", so this shouldn't result in any false positives.
-                        entry.file_name().to_string_lossy().to_ascii_lowercase()
-                            == README_FILENAME_LOWERCASE
-                    }
-                    Err(_) => false,
-                }) {
-            Some(tokio::fs::read_to_string(path.path()).await?)
-        } else {
-            None
-        };
+        let readme = get_readme(readme_dir).await?;
 
         let spdx_identifier = if spdx_expression.is_some() {
             spdx_expression
@@ -236,5 +221,23 @@ where
         serializer.serialize_str(&spdx_string)
     } else {
         serializer.serialize_none()
+    }
+}
+
+async fn get_readme(readme_dir: PathBuf) -> color_eyre::Result<Option<String>> {
+    let mut readme_path: Option<String> = None;
+    let mut read_dir = tokio::fs::read_dir(readme_dir)
+        .await?;
+
+    while let Ok(Some(entry)) = read_dir.next_entry().await {
+        if entry.file_name().to_string_lossy().to_ascii_lowercase() == README_FILENAME_LOWERCASE {
+            readme_path = Some(entry.file_name().to_string_lossy().to_string());
+        }
+    }
+
+    if let Some(path) = readme_path {
+        Ok(Some(tokio::fs::read_to_string(path).await?))
+    } else {
+        Ok(None)
     }
 }
