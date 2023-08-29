@@ -234,13 +234,9 @@ async fn get_readme(readme_dir: PathBuf) -> color_eyre::Result<Option<String>> {
 
     while let Some(entry) = read_dir.next_entry().await? {
         if entry.file_name().to_ascii_lowercase() == README_FILENAME_LOWERCASE {
-            readme_path = Some(entry.file_name());
+            return Some(entry.file_name());
         }
     }
 
-    if let Some(path) = readme_path {
-        Ok(Some(tokio::fs::read_to_string(path).await?))
-    } else {
-        Ok(None)
-    }
+    Ok(None)
 }
