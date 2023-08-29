@@ -144,6 +144,7 @@ impl ReleaseMetadata {
                 .await?
                 .find(|entry| match entry {
                     Ok(entry) => {
+                        // to_string_lossy() replaces unknown sequences with U+FFFD REPLACEMENT CHARACTER, which doesn't occur in "readme.md", so this shouldn't result in any false positives.
                         entry.file_name().to_string_lossy().to_ascii_lowercase()
                             == README_FILENAME_LOWERCASE
                     }
