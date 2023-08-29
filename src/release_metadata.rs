@@ -231,7 +231,7 @@ async fn get_readme(readme_dir: PathBuf) -> color_eyre::Result<Option<String>> {
     let mut readme_path: Option<String> = None;
     let mut read_dir = tokio::fs::read_dir(readme_dir).await?;
 
-    while let Ok(Some(entry)) = read_dir.next_entry().await {
+    while let Some(entry) = read_dir.next_entry().await? {
         if entry.file_name().to_string_lossy().to_ascii_lowercase() == README_FILENAME_LOWERCASE {
             readme_path = Some(entry.file_name().to_string_lossy().to_string());
         }
