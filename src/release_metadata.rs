@@ -1,7 +1,6 @@
 use color_eyre::eyre::{eyre, WrapErr};
 use std::{
     collections::HashSet,
-    ffi::OsString,
     path::{Path, PathBuf},
 };
 
@@ -229,12 +228,11 @@ where
 }
 
 async fn get_readme(readme_dir: PathBuf) -> color_eyre::Result<Option<String>> {
-    let mut readme_path: Option<OsString> = None;
     let mut read_dir = tokio::fs::read_dir(readme_dir).await?;
 
     while let Some(entry) = read_dir.next_entry().await? {
         if entry.file_name().to_ascii_lowercase() == README_FILENAME_LOWERCASE {
-            return Some(entry.file_name());
+            return Ok(Some(tokio::fs::read_to_string(entry.file_name()).await?));
         }
     }
 
