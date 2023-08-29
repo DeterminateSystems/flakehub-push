@@ -557,7 +557,18 @@ async fn push_new_release(
     span.record("source", tracing::field::display(source.clone().display()));
     tracing::debug!("Found source");
 
-    let flake_tarball = get_flake_tarball(&source)
+    let last_modified = if let Some(last_modified) = flake_metadata.get("lastModified") {
+        last_modified.as_u64().ok_or_else(|| {
+            eyre!("`nix flake metadata --json` does not have a integer `lastModified` field")
+        })?
+    } else {
+        return Err(eyre!(
+            "`nix flake metadata` did not return a `lastModified` attribute"
+        ));
+    };
+    tracing::debug!("lastModified = {}", last_modified);
+
+    let flake_tarball = get_flake_tarball(&source, last_modified)
         .await
         .wrap_err("Making release tarball")?;
 
