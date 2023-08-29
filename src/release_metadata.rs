@@ -1,7 +1,8 @@
 use color_eyre::eyre::{eyre, WrapErr};
 use std::{
     collections::HashSet,
-    path::{Path, PathBuf}, ffi::OsString,
+    ffi::OsString,
+    path::{Path, PathBuf},
 };
 
 use crate::{
