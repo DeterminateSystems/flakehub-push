@@ -2,7 +2,7 @@ use color_eyre::eyre::{eyre, WrapErr};
 use std::{collections::HashSet, path::Path};
 
 use crate::{
-    graphql::{GithubGraphqlDataResult, MAX_NUM_TOTAL_TAGS, MAX_TAG_LENGTH},
+    graphql::{GithubGraphqlDataResult, MAX_LABEL_LENGTH, MAX_NUM_TOTAL_LABELS},
     Visibility,
 };
 
@@ -27,9 +27,9 @@ pub(crate) struct ReleaseMetadata {
     )]
     pub(crate) spdx_identifier: Option<spdx::Expression>,
 
-    // A result of combining the tags specified on the CLI via the the GitHub Actions config
-    // and the tags associated with the GitHub repo (they're called "topics" in GitHub parlance).
-    pub(crate) tags: Vec<String>,
+    // A result of combining the labels specified on the CLI via the the GitHub Actions config
+    // and the labels associated with the GitHub repo (they're called "topics" in GitHub parlance).
+    pub(crate) labels: Vec<String>,
 }
 
 #[derive(Clone)]
@@ -104,7 +104,7 @@ impl ReleaseMetadata {
         mirror: bool,
         visibility: Visibility,
         github_graphql_data_result: GithubGraphqlDataResult,
-        extra_tags: Vec<String>,
+        extra_labels: Vec<String>,
         spdx_expression: Option<spdx::Expression>,
     ) -> color_eyre::Result<ReleaseMetadata> {
         let span = tracing::Span::current();
@@ -155,19 +155,19 @@ impl ReleaseMetadata {
 
         tracing::trace!("Collected ReleaseMetadata information");
 
-        // Here we merge explicitly user-supplied tags and the tags ("topics")
+        // Here we merge explicitly user-supplied labels and the labels ("topics")
         // associated with the repo. Duplicates are excluded and all
         // are converted to lower case.
-        let tags: Vec<String> = extra_tags
+        let labels: Vec<String> = extra_labels
             .into_iter()
             .chain(github_graphql_data_result.topics.into_iter())
             .collect::<HashSet<String>>()
             .into_iter()
-            .take(MAX_NUM_TOTAL_TAGS)
+            .take(MAX_NUM_TOTAL_LABELS)
             .map(|s| s.trim().to_lowercase())
             .filter(|t: &String| {
                 !t.is_empty()
-                    && t.len() <= MAX_TAG_LENGTH
+                    && t.len() <= MAX_LABEL_LENGTH
                     && t.chars().all(|c| c.is_alphanumeric() || c == '-')
             })
             .collect();
@@ -191,7 +191,7 @@ impl ReleaseMetadata {
             spdx_identifier,
             project_id: github_graphql_data_result.project_id,
             owner_id: github_graphql_data_result.owner_id,
-            tags,
+            labels,
         })
     }
 }

@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, io::IsTerminal};
 
 use clap::Parser;
 mod cli;
@@ -13,7 +13,7 @@ async fn main() -> color_eyre::Result<std::process::ExitCode> {
         .add_issue_metadata("version", env!("CARGO_PKG_VERSION"))
         .add_issue_metadata("os", std::env::consts::OS)
         .add_issue_metadata("arch", std::env::consts::ARCH)
-        .theme(if !atty::is(atty::Stream::Stderr) {
+        .theme(if !std::io::stderr().is_terminal() {
             color_eyre::config::Theme::new()
         } else {
             color_eyre::config::Theme::dark()

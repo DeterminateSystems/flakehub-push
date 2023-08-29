@@ -1,8 +1,8 @@
-name: Publish your flake.
+name: Publish Nix flakes to FlakeHub
 branding:
   icon: "box"
   color: "purple"
-description: "Publish your flake."
+description: "Find, install, and publish Nix Flakes with FlakeHub."
 
 inputs:
   visibility:
@@ -59,8 +59,12 @@ inputs:
     description: A GitHub token for making authenticated GitHub API requests.
     default: ${{ github.token }}
   extra-tags:
+    description: "DEPRECATED: Please use `extra-labels` instead."
+    required: false
+    default: ""
+  extra-labels:
     description: |
-      `flakehub-push` automatically uses the GitHub repo's topics as tags. This `extra-tags` parameter enables you to add extra tags beyond that as a comma-separated string. Only alphanumeric characters and hyphens are allowed in tags and the maximum length of tags is 50 characters. You can specify a maximum of 20 extra tags, and have a maximum of 25 tags, including those that we retrieve from GitHub. Any tags after the 25th will be ignored.
+      `flakehub-push` automatically uses the GitHub repo's topics as labels. This `extra-labels` parameter enables you to add extra labels beyond that as a comma-separated string. Only alphanumeric characters and hyphens are allowed in labels and the maximum length of labels is 50 characters. You can specify a maximum of 20 extra labels, and have a maximum of 25 labels, including those that we retrieve from GitHub. Any labels after the 25th will be ignored.
     required: false
     default: ""
   spdx-expression:
@@ -106,6 +110,7 @@ runs:
       FLAKEHUB_PUSH_REPOSITORY: ${{ inputs.repository }}
       FLAKEHUB_PUSH_DIRECTORY: ${{ inputs.directory }}
       FLAKEHUB_PUSH_GIT_ROOT: ${{ inputs.git-root }}
+      FLAKEHUB_PUSH_EXTRA_LABELS: ${{ inputs.extra-labels }}
       FLAKEHUB_PUSH_EXTRA_TAGS: ${{ inputs.extra-tags }}
       FLAKEHUB_PUSH_SPDX_EXPRESSION: ${{ inputs.spdx-expression }}
       # Also GITHUB_REPOSITORY, GITHUB_REF_NAME, GITHUB_TOKEN, ACTIONS_ID_TOKEN_REQUEST_TOKEN, ACTIONS_ID_TOKEN_REQUEST_URL

@@ -4,8 +4,8 @@ use color_eyre::eyre::{eyre, WrapErr};
 use graphql_client::GraphQLQuery;
 
 pub(crate) const GITHUB_ENDPOINT: &str = "https://api.github.com/graphql";
-pub(crate) const MAX_TAG_LENGTH: usize = 50;
-pub(crate) const MAX_NUM_TOTAL_TAGS: usize = 25;
+pub(crate) const MAX_LABEL_LENGTH: usize = 50;
+pub(crate) const MAX_NUM_TOTAL_LABELS: usize = 25;
 const MAX_NUM_EXTRA_TOPICS: i64 = 20;
 
 #[derive(GraphQLQuery)]

@@ -5,6 +5,7 @@ use reqwest::{header::HeaderMap, StatusCode};
 use std::{
     path::{Path, PathBuf},
     process::ExitCode,
+    str::FromStr,
 };
 use tokio::io::AsyncWriteExt;
 use uuid::Uuid;
@@ -61,13 +62,22 @@ pub(crate) struct NixfrPushCli {
     #[clap(long, env = "FLAKEHUB_PUSH_JWT_ISSUER_URI", value_parser = StringToNoneParser, default_value = "")]
     pub(crate) jwt_issuer_uri: OptionString,
 
-    /// User-supplied tags beyond those associated with the GitHub repository.
+    /// User-supplied labels beyond those associated with the GitHub repository.
+    #[clap(
+        long,
+        short = 'l',
+        env = "FLAKEHUB_PUSH_EXTRA_LABELS",
+        use_value_delimiter = true,
+        value_delimiter = ','
+    )]
+    pub(crate) extra_labels: Vec<String>,
+
+    /// DEPRECATED: Please use `extra-labels` instead.
     #[clap(
         long,
         short = 't',
         env = "FLAKEHUB_PUSH_EXTRA_TAGS",
         use_value_delimiter = true,
-        default_value = "",
         value_delimiter = ','
     )]
     pub(crate) extra_tags: Vec<String>,
@@ -253,9 +263,32 @@ impl NixfrPushCli {
             mirror,
             jwt_issuer_uri,
             instrumentation: _,
-            extra_tags,
+            mut extra_labels,
             spdx_expression,
+            extra_tags,
         } = self;
+
+        let is_github_actions = std::env::var("GITHUB_ACTION").ok().is_some();
+        if !extra_tags.is_empty() {
+            let message = "`extra-tags` is deprecated and will be removed in the future. Please use `extra-labels` instead.";
+            tracing::warn!("{message}");
+
+            if is_github_actions {
+                println!("::warning::{message}");
+            }
+
+            if extra_labels.is_empty() {
+                extra_labels = extra_tags;
+            } else {
+                let message =
+                    "Both `extra-tags` and `extra-labels` were set; `extra-tags` will be ignored.";
+                tracing::warn!("{message}");
+
+                if is_github_actions {
+                    println!("::warning::{message}");
+                }
+            }
+        }
 
         let github_token = if let Some(github_token) = &github_token.0 {
             github_token.clone()
@@ -416,7 +449,7 @@ impl NixfrPushCli {
             rolling,
             rolling_minor.0,
             github_graphql_data_result,
-            extra_tags,
+            extra_labels,
             spdx_expression.0,
         )
         .await?;
@@ -451,7 +484,7 @@ async fn push_new_release(
     rolling: bool,
     rolling_minor: Option<u64>,
     github_graphql_data_result: GithubGraphqlDataResult,
-    extra_tags: Vec<String>,
+    extra_labels: Vec<String>,
     spdx_expression: Option<spdx::Expression>,
 ) -> color_eyre::Result<()> {
     let span = tracing::Span::current();
@@ -465,7 +498,12 @@ async fn push_new_release(
         }
         (Some(minor), _) => format!("0.{minor}"),
         (None, _) if rolling => DEFAULT_ROLLING_PREFIX.to_string(),
-        (None, Some(tag)) => tag,
+        (None, Some(tag)) => {
+            let version_only = tag.strip_prefix('v').unwrap_or(&tag);
+            // Ensure the version respects semver
+            semver::Version::from_str(version_only).wrap_err_with(|| eyre!("Failed to parse version `{tag}` as semver, see https://semver.org/ for specifications"))?;
+            tag
+        }
         (None, None) => {
             return Err(eyre!("Could not determine tag or rolling minor version, `--tag`, `GITHUB_REF_NAME`, or `--rolling-minor` must be set"));
         }
@@ -570,7 +608,7 @@ async fn push_new_release(
         mirror,
         visibility,
         github_graphql_data_result,
-        extra_tags,
+        extra_labels,
         spdx_expression,
     )
     .await
