@@ -1,5 +1,8 @@
 use color_eyre::eyre::{eyre, WrapErr};
-use std::{collections::HashSet, path::{Path, PathBuf}};
+use std::{
+    collections::HashSet,
+    path::{Path, PathBuf},
+};
 
 use crate::{
     graphql::{GithubGraphqlDataResult, MAX_NUM_TOTAL_TAGS, MAX_TAG_LENGTH},
@@ -226,8 +229,7 @@ where
 
 async fn get_readme(readme_dir: PathBuf) -> color_eyre::Result<Option<String>> {
     let mut readme_path: Option<String> = None;
-    let mut read_dir = tokio::fs::read_dir(readme_dir)
-        .await?;
+    let mut read_dir = tokio::fs::read_dir(readme_dir).await?;
 
     while let Ok(Some(entry)) = read_dir.next_entry().await {
         if entry.file_name().to_string_lossy().to_ascii_lowercase() == README_FILENAME_LOWERCASE {
