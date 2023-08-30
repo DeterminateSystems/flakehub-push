@@ -263,10 +263,13 @@ impl NixfrPushCli {
             mirror,
             jwt_issuer_uri,
             instrumentation: _,
-            mut extra_labels,
+            extra_labels,
             spdx_expression,
             extra_tags,
         } = self;
+
+        let mut extra_labels: Vec<_> = extra_labels.into_iter().filter(|v| !v.is_empty()).collect();
+        let extra_tags: Vec<_> = extra_tags.into_iter().filter(|v| !v.is_empty()).collect();
 
         let is_github_actions = std::env::var("GITHUB_ACTION").ok().is_some();
         if !extra_tags.is_empty() {
