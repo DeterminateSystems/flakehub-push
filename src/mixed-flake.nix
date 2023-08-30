@@ -17,8 +17,6 @@
 
               mkChildren = children: { inherit children; };
 
-              mkLeaf = leaf: { inherit leaf; };
-
             in
 
             rec {
@@ -26,7 +24,7 @@
               allSchemas = (flake.outputs.schemas or defaultSchemas) // schemaOverrides;
 
               # FIXME: make this configurable
-              defaultSchemas = (builtins.getFlake "https://api.flakehub.com/f/pinned/DeterminateSystems/flake-schemas/0.0.6+rev-8b320d78bfbc47515f3366b43e1a29c69519f36a/0189d657-3901-716b-9cde-7ec5aacc7cf8/source.tar.gz?narHash=sha256-3H1AXsE4SRqT1tZDb2gxdSwf3JInOgS1F8nq2QsXmHg=").schemas;
+              defaultSchemas = (builtins.getFlake "github:DeterminateSystems/flake-schemas/25fcca8e8baa402de593a3854fcc50581f4e912a").schemas;
 
               # Ignore legacyPackages for now, since it's very big and throws uncatchable errors.
               schemaOverrides.legacyPackages = {
@@ -65,15 +63,13 @@
                           if attrs ? children
                           then
                             mkChildren (builtins.mapAttrs (childName: child: doFilter child) attrs.children)
-                          else if attrs ? leaf then
-                            mkLeaf
-                              {
-                                forSystems = attrs.leaf.forSystems or null;
-                                doc = if attrs.leaf ? doc then attrs.leaf.doc else null;
-                                #evalChecks = attrs.leaf.evalChecks or {};
-                              }
                           else
-                            throw "Schema returned invalid tree node."
+                            {
+                              forSystems = attrs.forSystems or null;
+                              shortDescription = attrs.shortDescription or null;
+                              what = attrs.what or null;
+                              #evalChecks = attrs.evalChecks or {};
+                            }
                         else
                           { };
                     in
