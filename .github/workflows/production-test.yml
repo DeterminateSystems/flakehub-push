@@ -16,11 +16,11 @@ jobs:
       || (github.event.action != 'labeled' && contains(github.event.pull_request.labels.*.name, 'production test'))
 
   production-test:
-    needs: build
+    runs-on: UbuntuLatest32Cores128G
+    timeout-minutes: 5
     if: |
         (github.event.action == 'labeled' && github.event.label.name == 'production test')
         || (github.event.action != 'labeled' && contains(github.event.pull_request.labels.*.name, 'production test'))
-    runs-on: ubuntu-22.04
     permissions:
       id-token: write # In order to request a JWT for AWS auth
       contents: read # Specifying id-token wiped this out, so manually specify that this action is allowed to checkout this private repo
