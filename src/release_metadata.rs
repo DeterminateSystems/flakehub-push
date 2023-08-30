@@ -1,10 +1,15 @@
 use color_eyre::eyre::{eyre, WrapErr};
-use std::{collections::HashSet, path::Path};
+use std::{
+    collections::HashSet,
+    path::{Path, PathBuf},
+};
 
 use crate::{
     graphql::{GithubGraphqlDataResult, MAX_LABEL_LENGTH, MAX_NUM_TOTAL_LABELS},
     Visibility,
 };
+
+const README_FILENAME_LOWERCASE: &str = "readme.md";
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub(crate) struct ReleaseMetadata {
@@ -135,12 +140,8 @@ impl ReleaseMetadata {
             None
         };
 
-        let readme_path = flake_root.join(subdir).join("README.md");
-        let readme = if readme_path.exists() {
-            Some(tokio::fs::read_to_string(readme_path).await?)
-        } else {
-            None
-        };
+        let readme_dir = flake_root.join(subdir);
+        let readme = get_readme(readme_dir).await?;
 
         let spdx_identifier = if spdx_expression.is_some() {
             spdx_expression
@@ -224,4 +225,16 @@ where
     } else {
         serializer.serialize_none()
     }
+}
+
+async fn get_readme(readme_dir: PathBuf) -> color_eyre::Result<Option<String>> {
+    let mut read_dir = tokio::fs::read_dir(readme_dir).await?;
+
+    while let Some(entry) = read_dir.next_entry().await? {
+        if entry.file_name().to_ascii_lowercase() == README_FILENAME_LOWERCASE {
+            return Ok(Some(tokio::fs::read_to_string(entry.file_name()).await?));
+        }
+    }
+
+    Ok(None)
 }
