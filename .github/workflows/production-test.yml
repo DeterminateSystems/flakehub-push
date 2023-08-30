@@ -16,6 +16,7 @@ jobs:
       || (github.event.action != 'labeled' && contains(github.event.pull_request.labels.*.name, 'production test'))
 
   production-test:
+    needs: build
     runs-on: UbuntuLatest32Cores128G
     timeout-minutes: 5
     if: |
