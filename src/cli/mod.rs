@@ -21,7 +21,7 @@ const DEFAULT_ROLLING_PREFIX: &str = "0.1";
 
 #[derive(Debug, clap::Parser)]
 #[clap(version)]
-pub(crate) struct NixfrPushCli {
+pub(crate) struct FlakeHubPushCli {
     #[clap(
         long,
         env = "FLAKEHUB_PUSH_HOST",
@@ -250,7 +250,7 @@ fn build_http_client() -> reqwest::ClientBuilder {
     reqwest::Client::builder().user_agent("flakehub-push")
 }
 
-impl NixfrPushCli {
+impl FlakeHubPushCli {
     #[tracing::instrument(
         name = "flakehub_push"
         skip_all,

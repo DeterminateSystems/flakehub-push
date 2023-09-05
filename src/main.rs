@@ -20,7 +20,7 @@ async fn main() -> color_eyre::Result<std::process::ExitCode> {
         })
         .install()?;
 
-    let cli = cli::NixfrPushCli::parse();
+    let cli = cli::FlakeHubPushCli::parse();
     cli.instrumentation.setup()?;
     cli.execute().await
 }
