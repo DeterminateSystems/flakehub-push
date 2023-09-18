@@ -89,7 +89,7 @@ impl ReleaseMetadata {
     // FIXME
     #[allow(clippy::too_many_arguments)]
     #[tracing::instrument(skip_all, fields(
-        flake_root = %flake_root.display(),
+        flake_store_path = %flake_store_path.display(),
         subdir = %subdir.display(),
         description = tracing::field::Empty,
         readme_path = tracing::field::Empty,
@@ -100,7 +100,7 @@ impl ReleaseMetadata {
         visibility = ?visibility,
     ))]
     pub(crate) async fn build(
-        flake_root: &Path,
+        flake_store_path: &Path,
         subdir: &Path,
         revision_info: RevisionInfo,
         flake_metadata: serde_json::Value,
@@ -140,7 +140,7 @@ impl ReleaseMetadata {
             None
         };
 
-        let readme_dir = flake_root.join(subdir);
+        let readme_dir = flake_store_path.join(subdir);
         let readme = get_readme(readme_dir).await?;
 
         let spdx_identifier = if spdx_expression.is_some() {
@@ -232,7 +232,7 @@ async fn get_readme(readme_dir: PathBuf) -> color_eyre::Result<Option<String>> {
 
     while let Some(entry) = read_dir.next_entry().await? {
         if entry.file_name().to_ascii_lowercase() == README_FILENAME_LOWERCASE {
-            return Ok(Some(tokio::fs::read_to_string(entry.file_name()).await?));
+            return Ok(Some(tokio::fs::read_to_string(entry.path()).await?));
         }
     }
 
