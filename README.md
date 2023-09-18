@@ -55,6 +55,7 @@ Parameter | Description | Type | Required? | Default
 `git-root` | The root directory of your Git repository. | relative path | | `.`
 `extra-labels` | `flakehub-push` automatically uses the GitHub repo's topics as labels. This `extra-labels` parameter enables you to add extra labels beyond that as a comma-separated string. Only alphanumeric characters and hyphens are allowed in labels and the maximum length of labels is 50 characters. You can specify a maximum of 20 extra labels, and have a maximum of 25 labels, including those that we retrieve from GitHub. Any labels after the 25th will be ignored. | string | | `""`
 `spdx-expression` | A valid SPDX license expression. This will be used in place of what GitHub claims your repository's `spdxIdentifier` is. | string | | `""`
+`error-on-conflict` | Whether to error if a release for the same version has already been uploaded. | Boolean | | `false`
 `github-token` | The GitHub token for making authenticated GitHub API requests. | `${{ github.token }}`
 `host` | The FlakeHub server to use | URL | | `https://api.flakehub.com`
 `logger` | The logger to use. Options are `pretty`, `json`, `full` and `compact`. | enum | | `full`

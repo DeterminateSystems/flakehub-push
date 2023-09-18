@@ -21,7 +21,7 @@ const DEFAULT_ROLLING_PREFIX: &str = "0.1";
 
 #[derive(Debug, clap::Parser)]
 #[clap(version)]
-pub(crate) struct NixfrPushCli {
+pub(crate) struct FlakeHubPushCli {
     #[clap(
         long,
         env = "FLAKEHUB_PUSH_HOST",
@@ -90,6 +90,14 @@ pub(crate) struct NixfrPushCli {
         default_value = ""
     )]
     pub(crate) spdx_expression: OptionSpdxExpression,
+
+    #[clap(
+        long,
+        env = "FLAKEHUB_PUSH_ERROR_ON_CONFLICT",
+        value_parser = EmptyBoolParser,
+        default_value_t = false
+    )]
+    pub(crate) error_on_conflict: bool,
 
     #[clap(flatten)]
     pub instrumentation: instrumentation::Instrumentation,
@@ -242,7 +250,7 @@ fn build_http_client() -> reqwest::ClientBuilder {
     reqwest::Client::builder().user_agent("flakehub-push")
 }
 
-impl NixfrPushCli {
+impl FlakeHubPushCli {
     #[tracing::instrument(
         name = "flakehub_push"
         skip_all,
@@ -266,6 +274,7 @@ impl NixfrPushCli {
             extra_labels,
             spdx_expression,
             extra_tags,
+            error_on_conflict,
         } = self;
 
         let mut extra_labels: Vec<_> = extra_labels.into_iter().filter(|v| !v.is_empty()).collect();
@@ -454,6 +463,7 @@ impl NixfrPushCli {
             github_graphql_data_result,
             extra_labels,
             spdx_expression.0,
+            error_on_conflict,
         )
         .await?;
 
@@ -489,6 +499,7 @@ async fn push_new_release(
     github_graphql_data_result: GithubGraphqlDataResult,
     extra_labels: Vec<String>,
     spdx_expression: Option<spdx::Expression>,
+    error_if_release_conflicts: bool,
 ) -> color_eyre::Result<()> {
     let span = tracing::Span::current();
     span.record("upload_name", tracing::field::display(upload_name.clone()));
@@ -675,7 +686,13 @@ async fn push_new_release(
                 "Release for revision `{revision}` of {upload_name}/{rolling_prefix_or_tag} already exists; flakehub-push will not upload it again",
                 revision = release_metadata.revision
             );
-            return Ok(());
+            if error_if_release_conflicts {
+                return Err(color_eyre::eyre::eyre!(
+                    "{upload_name}/{rolling_prefix_or_tag} already exists"
+                ));
+            } else {
+                return Ok(());
+            }
         } else {
             return Err(eyre!(
                 "\
