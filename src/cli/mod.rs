@@ -613,7 +613,7 @@ async fn push_new_release(
         .wrap_err("Writing compressed tarball to tempfile")?;
 
     let release_metadata = ReleaseMetadata::build(
-        flake_root,
+        &source,
         subdir,
         revision_info,
         flake_metadata,
