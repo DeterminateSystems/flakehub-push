@@ -1,8 +1,5 @@
 use color_eyre::eyre::{eyre, WrapErr};
-use std::{
-    collections::HashSet,
-    path::{Path, PathBuf},
-};
+use std::{collections::HashSet, path::Path};
 
 use crate::{
     graphql::{GithubGraphqlDataResult, MAX_LABEL_LENGTH, MAX_NUM_TOTAL_LABELS},
@@ -140,8 +137,7 @@ impl ReleaseMetadata {
             None
         };
 
-        let readme_dir = flake_store_path.join(subdir);
-        let readme = get_readme(readme_dir).await?;
+        let readme = get_readme(flake_store_path).await?;
 
         let spdx_identifier = if spdx_expression.is_some() {
             spdx_expression
@@ -227,7 +223,7 @@ where
     }
 }
 
-async fn get_readme(readme_dir: PathBuf) -> color_eyre::Result<Option<String>> {
+async fn get_readme(readme_dir: &Path) -> color_eyre::Result<Option<String>> {
     let mut read_dir = tokio::fs::read_dir(readme_dir).await?;
 
     while let Some(entry) = read_dir.next_entry().await? {
