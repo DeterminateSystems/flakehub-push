@@ -727,6 +727,10 @@ async fn push_new_release(
                 reqwest::header::HeaderName::from_static("x-amz-checksum-sha256"),
                 reqwest::header::HeaderValue::from_str(&flake_tarball_hash_base64).unwrap(),
             );
+            header_map.insert(
+                reqwest::header::CONTENT_TYPE,
+                reqwest::header::HeaderValue::from_str("application/gzip").unwrap(),
+            );
             header_map
         })
         .body(flake_tarball)
