@@ -33,6 +33,7 @@ pub(crate) enum Visibility {
     #[serde(rename = "unlisted")]
     Hidden,
     Unlisted,
+    Private,
 }
 
 impl Display for Visibility {
@@ -40,6 +41,7 @@ impl Display for Visibility {
         match self {
             Visibility::Public => f.write_str("public"),
             Visibility::Hidden | Visibility::Unlisted => f.write_str("unlisted"),
+            Visibility::Private => f.write_str("private"),
         }
     }
 }

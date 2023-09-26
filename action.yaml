@@ -6,7 +6,7 @@ description: "Find, install, and publish Nix Flakes with FlakeHub."
 
 inputs:
   visibility:
-    description: "`public` or `unlisted`"
+    description: "`public`, `unlisted`, or `private`. Private flakes are in private beta, contact support@flakehub.com to sign up."
     required: true
   name:
     description: The name of your published flake. In the format of OrgName/RepoName. OrgName must match your organization's GitHub root name or the publish will fail.
