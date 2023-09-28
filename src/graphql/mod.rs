@@ -25,6 +25,7 @@ impl GithubGraphqlDataQuery {
     ))]
     pub(crate) async fn get(
         reqwest_client: &reqwest::Client,
+        bearer_token: &str,
         project_owner: &str,
         project_name: &str,
         revision: &str,
@@ -40,6 +41,7 @@ impl GithubGraphqlDataQuery {
             let query = GithubGraphqlDataQuery::build_query(variables);
             let reqwest_response = reqwest_client
                 .post(crate::graphql::GITHUB_ENDPOINT)
+                .bearer_auth(bearer_token)
                 .json(&query)
                 .send()
                 .await
