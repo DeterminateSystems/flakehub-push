@@ -44,7 +44,7 @@ jobs:
 
 Parameter | Description | Type | Required? | Default
 :---------|:------------|:-----|:----------|:-------
-`visibility` | `public` or `unlisted` | enum | ✅ |
+`visibility` | `public`, `unlisted`, or `private`. Private flakes are in private beta, contact support@flakehub.com to sign up. | enum | ✅ |
 `repository` | The GitHub repository containing your flake in the format of `{org}/{repo}`. | string | ✅ | `${{ github.repository }}`
 `name` | The name of your published flake in the format of `{org}/{name}`. The `{org}` must match your organization's GitHub root name or the publish will fail. Specify this only if you want to publish under a different name from the `{org}/{repo}`. | string | |
 `mirror` | Whether the repository is mirrored via DeterminateSystems' mirror functionality. This is only usable by DeterminateSystems. | Boolean | | `false`
