@@ -393,20 +393,12 @@ impl FlakeHubPushCli {
             Err(eyre!("Could not determine the owner/project, pass `--repository` or `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`. The passed value has too many slashes (/) to be a valid repository"))?;
         }
 
-        let github_api_client = build_http_client()
-            .default_headers(
-                std::iter::once((
-                    reqwest::header::AUTHORIZATION,
-                    reqwest::header::HeaderValue::from_str(&format!("Bearer {}", github_token))
-                        .unwrap(),
-                ))
-                .collect(),
-            )
-            .build()?;
+        let github_api_client = build_http_client().build()?;
 
         let revision_info = RevisionInfo::from_git_root(&git_root)?;
         let github_graphql_data_result = GithubGraphqlDataQuery::get(
             &github_api_client,
+            &github_token,
             &project_owner,
             &project_name,
             &revision_info.revision,
@@ -651,11 +643,6 @@ async fn push_new_release(
         let mut header_map = HeaderMap::new();
 
         header_map.insert(
-            reqwest::header::AUTHORIZATION,
-            reqwest::header::HeaderValue::from_str(&format!("bearer {}", upload_bearer_token))
-                .unwrap(),
-        );
-        header_map.insert(
             reqwest::header::CONTENT_TYPE,
             reqwest::header::HeaderValue::from_str("application/json").unwrap(),
         );
@@ -668,6 +655,7 @@ async fn push_new_release(
 
     let release_metadata_post_response = flakehub_client
         .post(release_metadata_post_url)
+        .bearer_auth(upload_bearer_token)
         .headers(flakehub_headers.clone())
         .json(&release_metadata)
         .send()
@@ -755,6 +743,7 @@ async fn push_new_release(
 
     let publish_response = flakehub_client
         .post(publish_post_url)
+        .bearer_auth(upload_bearer_token)
         .headers(flakehub_headers)
         .send()
         .await
@@ -802,23 +791,12 @@ jobs:
     # ...\n\
         ")?;
     let actions_id_token_request_url = std::env::var("ACTIONS_ID_TOKEN_REQUEST_URL").wrap_err("`ACTIONS_ID_TOKEN_REQUEST_URL` required if `ACTIONS_ID_TOKEN_REQUEST_TOKEN` is also present")?;
-    let actions_id_token_client = build_http_client()
-        .default_headers(
-            std::iter::once((
-                reqwest::header::AUTHORIZATION,
-                reqwest::header::HeaderValue::from_str(&format!(
-                    "Bearer {}",
-                    actions_id_token_request_token
-                ))
-                .unwrap(),
-            ))
-            .collect(),
-        )
-        .build()?;
+    let actions_id_token_client = build_http_client().build()?;
     let response = actions_id_token_client
         .get(format!(
             "{actions_id_token_request_url}&audience=api://AzureADTokenExchange"
         ))
+        .bearer_auth(actions_id_token_request_token)
         .send()
         .await
         .wrap_err("Getting Actions ID bearer token")?;
