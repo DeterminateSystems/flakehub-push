@@ -794,7 +794,7 @@ jobs:
     let actions_id_token_client = build_http_client().build()?;
     let response = actions_id_token_client
         .get(format!(
-            "{actions_id_token_request_url}&audience=api://AzureADTokenExchange"
+            "{actions_id_token_request_url}&audience=api.flakehub.com"
         ))
         .bearer_auth(actions_id_token_request_token)
         .send()
