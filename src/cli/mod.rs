@@ -414,6 +414,7 @@ impl FlakeHubPushCli {
                 let client = build_http_client().build()?;
                 let mut claims = github_actions_oidc_claims::Claims::make_dummy();
                 // FIXME: we should probably fill in more of these claims.
+                claims.aud = "flakehub-localhost".to_string();
                 claims.iss = "flakehub-push-dev".to_string();
                 claims.repository = repository.clone();
                 claims.repository_owner = project_owner.to_string();
