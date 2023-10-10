@@ -2,9 +2,9 @@
   description = "A https://flakehub.com/ pusher.";
 
   inputs = {
-    nixpkgs.url = "https://api.flakehub.com/f/NixOS/nixpkgs/0.1.514192.tar.gz";
+    nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1.514192.tar.gz";
     crane = {
-      url = "github:ipetkov/crane";
+      url = "https://flakehub.com/f/ipetkov/crane/0.14.1.tar.gz";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     rust-overlay = {
