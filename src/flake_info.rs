@@ -147,7 +147,7 @@ pub(crate) async fn get_flake_outputs(
             &flake_url.escape_default().to_string(),
         )
         .replace(
-            "@INCLUDE_OUTPUT_PATHS@",
+            "INCLUDE_OUTPUT_PATHS",
             if include_output_paths {
                 "true"
             } else {

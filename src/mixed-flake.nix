@@ -2,7 +2,7 @@
   inputs.flake.url = "c9026fc0-ced9-48e0-aa3c-fc86c4c86df1";
   outputs = inputs:
     {
-      includeOutputPaths = @INCLUDE_OUTPUT_PATHS@;
+      includeOutputPaths = INCLUDE_OUTPUT_PATHS;
 
       contents =
         let
@@ -81,19 +81,23 @@
                                   outputs =
                                     if attrs ? derivation
                                     then
-                                      builtins.listToAttrs (
-                                        builtins.map (outputName:
-                                          {
-                                            name = outputName;
-                                            value = attrs.derivation.${outputName}.outPath;
-                                          }
-                                        ) attrs.derivation.outputs
-                                      )
+                                      builtins.listToAttrs
+                                        (
+                                          builtins.map
+                                            (outputName:
+                                              {
+                                                name = outputName;
+                                                value = attrs.derivation.${outputName}.outPath;
+                                              }
+                                            )
+                                            attrs.derivation.outputs
+                                        )
                                     else
                                       null;
                                 }
                               else
-                                { })
+                                { }
+                            )
                         else
                           { };
                     in
