@@ -564,6 +564,45 @@ async fn push_new_release(
     span.record("source", tracing::field::display(source.clone().display()));
     tracing::debug!("Found source");
 
+    if flake_dir.join("flake.lock").exists() {
+        let output = tokio::process::Command::new("nix")
+            .arg("flake")
+            .arg("metadata")
+            .arg("--json")
+            .arg("--no-update-lock-file")
+            .arg(&flake_dir)
+            .output()
+            .await
+            .wrap_err_with(|| {
+                eyre!(
+                    "Failed to execute `nix flake metadata --json --no-update-lock-file {}`",
+                    flake_dir.display()
+                )
+            })?;
+
+        if !output.status.success() {
+            let command = format!(
+                "nix flake metadata --json --no-update-lock-file {}",
+                flake_dir.display(),
+            );
+            let msg = format!(
+                "\
+                Failed to execute command `{command}`{maybe_status} \n\
+                stdout: {stdout}\n\
+                stderr: {stderr}\n\
+                ",
+                stdout = String::from_utf8_lossy(&output.stdout),
+                stderr = String::from_utf8_lossy(&output.stderr),
+                maybe_status = if let Some(status) = output.status.code() {
+                    format!(" with status {status}")
+                } else {
+                    String::new()
+                }
+            );
+            return Err(eyre!(msg))?;
+        }
+    }
+
     let last_modified = if let Some(last_modified) = flake_metadata.get("lastModified") {
         last_modified.as_u64().ok_or_else(|| {
             eyre!("`nix flake metadata --json` does not have a integer `lastModified` field")
