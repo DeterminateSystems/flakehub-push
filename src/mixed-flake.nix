@@ -2,6 +2,8 @@
   inputs.flake.url = "c9026fc0-ced9-48e0-aa3c-fc86c4c86df1";
   outputs = inputs:
     {
+      includeOutputPaths = @INCLUDE_OUTPUT_PATHS@;
+
       contents =
         let
           getFlakeOutputs = flake:
@@ -68,25 +70,30 @@
                               forSystems = attrs.forSystems or null;
                               shortDescription = attrs.shortDescription or null;
                               what = attrs.what or null;
-                              derivation =
-                                if attrs ? derivation
-                                then builtins.unsafeDiscardStringContext attrs.derivation.drvPath
-                                else null;
-                              outputs =
-                                if attrs ? derivation
-                                then
-                                  builtins.listToAttrs (
-                                    builtins.map (outputName:
-                                      {
-                                        name = outputName;
-                                        value = attrs.derivation.${outputName}.outPath;
-                                      }
-                                    ) attrs.derivation.outputs
-                                  )
-                                else
-                                  null;
                               #evalChecks = attrs.evalChecks or {};
-                            }
+                            } // (
+                              if inputs.self.includeOutputPaths then
+                                {
+                                  derivation =
+                                    if attrs ? derivation
+                                    then builtins.unsafeDiscardStringContext attrs.derivation.drvPath
+                                    else null;
+                                  outputs =
+                                    if attrs ? derivation
+                                    then
+                                      builtins.listToAttrs (
+                                        builtins.map (outputName:
+                                          {
+                                            name = outputName;
+                                            value = attrs.derivation.${outputName}.outPath;
+                                          }
+                                        ) attrs.derivation.outputs
+                                      )
+                                    else
+                                      null;
+                                }
+                              else
+                                { })
                         else
                           { };
                     in

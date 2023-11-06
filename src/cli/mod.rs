@@ -101,6 +101,9 @@ pub(crate) struct FlakeHubPushCli {
 
     #[clap(flatten)]
     pub instrumentation: instrumentation::Instrumentation,
+
+    #[clap(long, env = "FLAKEHUB_PUSH_INCLUDE_OUTPUT_PATHS", value_parser = EmptyBoolParser, default_value_t = false)]
+    pub(crate) include_output_paths: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -275,6 +278,7 @@ impl FlakeHubPushCli {
             spdx_expression,
             extra_tags,
             error_on_conflict,
+            include_output_paths,
         } = self;
 
         let mut extra_labels: Vec<_> = extra_labels.into_iter().filter(|v| !v.is_empty()).collect();
@@ -457,6 +461,7 @@ impl FlakeHubPushCli {
             extra_labels,
             spdx_expression.0,
             error_on_conflict,
+            include_output_paths,
         )
         .await?;
 
@@ -493,6 +498,7 @@ async fn push_new_release(
     extra_labels: Vec<String>,
     spdx_expression: Option<spdx::Expression>,
     error_if_release_conflicts: bool,
+    include_output_paths: bool,
 ) -> color_eyre::Result<()> {
     let span = tracing::Span::current();
     span.record("upload_name", tracing::field::display(upload_name.clone()));
@@ -552,7 +558,7 @@ async fn push_new_release(
         .pointer("/resolved/dir")
         .and_then(serde_json::Value::as_str);
 
-    let flake_outputs = get_flake_outputs(flake_locked_url).await?;
+    let flake_outputs = get_flake_outputs(flake_locked_url, include_output_paths).await?;
     tracing::debug!("Got flake outputs: {:?}", flake_outputs);
 
     let source = match flake_metadata_value_resolved_dir {

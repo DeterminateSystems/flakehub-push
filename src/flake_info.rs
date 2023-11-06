@@ -132,16 +132,28 @@ pub(crate) async fn get_flake_metadata(directory: &Path) -> color_eyre::Result<s
 }
 
 #[tracing::instrument(skip_all, fields(flake_url,))]
-pub(crate) async fn get_flake_outputs(flake_url: &str) -> color_eyre::Result<serde_json::Value> {
+pub(crate) async fn get_flake_outputs(
+    flake_url: &str,
+    include_output_paths: bool,
+) -> color_eyre::Result<serde_json::Value> {
     let tempdir = tempfile::Builder::new()
         .prefix("flakehub_push_outputs")
         .tempdir()
         .wrap_err("Creating tempdir")?;
 
-    let flake_contents = include_str!("mixed-flake.nix").replace(
-        FLAKE_URL_PLACEHOLDER_UUID,
-        &flake_url.escape_default().to_string(),
-    );
+    let flake_contents = include_str!("mixed-flake.nix")
+        .replace(
+            FLAKE_URL_PLACEHOLDER_UUID,
+            &flake_url.escape_default().to_string(),
+        )
+        .replace(
+            "@INCLUDE_OUTPUT_PATHS@",
+            if include_output_paths {
+                "true"
+            } else {
+                "false"
+            },
+        );
 
     let mut flake = tokio::fs::File::create(tempdir.path().join("flake.nix")).await?;
     flake.write_all(flake_contents.as_bytes()).await?;
