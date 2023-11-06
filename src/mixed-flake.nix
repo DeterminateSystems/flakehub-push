@@ -68,6 +68,23 @@
                               forSystems = attrs.forSystems or null;
                               shortDescription = attrs.shortDescription or null;
                               what = attrs.what or null;
+                              derivation =
+                                if attrs ? derivation
+                                then builtins.unsafeDiscardStringContext attrs.derivation.drvPath
+                                else null;
+                              outputs =
+                                if attrs ? derivation
+                                then
+                                  builtins.listToAttrs (
+                                    builtins.map (outputName:
+                                      {
+                                        name = outputName;
+                                        value = attrs.derivation.${outputName}.outPath;
+                                      }
+                                    ) attrs.derivation.outputs
+                                  )
+                                else
+                                  null;
                               #evalChecks = attrs.evalChecks or {};
                             }
                         else
