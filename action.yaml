@@ -75,6 +75,9 @@ inputs:
     description: Whether to error if a release for the same version has already been uploaded.
     required: false
     default: false
+  include-output-paths:
+    description: Whether to register the output paths of each flake output with FlakeHub.
+    required: false
 
   flakehub-push-binary:
     description: Run a version of the `flakehub-push` binary from somewhere already on disk. Conflicts with all other `flakehub-push-*` options.
@@ -93,9 +96,6 @@ inputs:
     required: false
   flakehub-push-url:
     description: A URL pointing to a `flakehub-push` binary. Overrides all other `flakehub-push-*` options.
-    required: false
-  include-output-paths:
-    description: Whether to register the output paths of each flake output with FlakeHub.
     required: false
 
 # https://docs.github.com/en/actions/creating-actions/metadata-syntax-for-github-actions#runs-for-docker-container-actions
