@@ -51,13 +51,13 @@ Parameter | Description | Type | Required? | Default
 `directory` | The path of your flake relative to the root of the repository. Useful for subflakes. | relative path | |
 `tag` | The Git tag to use for non-rolling releases. This must be the character `v` followed by a SemVer version, such as `v0.1.1`. | string | |
 `rolling` | For untagged releases, use a rolling versioning scheme. When this is enabled, the default versioning scheme is 0.1.[commit count]+rev-[git sha]. To customize the SemVer minor version, set the `rolling-minor` option. | Boolean | | `false`
-`rolling-minor` | Specify the SemVer minor version of your rolling releases. All releases will follow the versioning scheme '0.[rolling-minor].[commit count]+rev-[git sha]' | string | |
+`rolling-minor` | Specify the SemVer minor version of your rolling releases. All releases will follow the versioning scheme `0.[rolling-minor].[commit count]+rev-[git sha]`. | string | |
 `git-root` | The root directory of your Git repository. | relative path | | `.`
 `extra-labels` | `flakehub-push` automatically uses the GitHub repo's topics as labels. This `extra-labels` parameter enables you to add extra labels beyond that as a comma-separated string. Only alphanumeric characters and hyphens are allowed in labels and the maximum length of labels is 50 characters. You can specify a maximum of 20 extra labels, and have a maximum of 25 labels, including those that we retrieve from GitHub. Any labels after the 25th will be ignored. | string | | `""`
 `spdx-expression` | A valid SPDX license expression. This will be used in place of what GitHub claims your repository's `spdxIdentifier` is. | string | | `""`
 `error-on-conflict` | Whether to error if a release for the same version has already been uploaded. | Boolean | | `false`
-`github-token` | The GitHub token for making authenticated GitHub API requests. | `${{ github.token }}`
-`host` | The FlakeHub server to use | URL | | `https://api.flakehub.com`
+`github-token` | The GitHub token for making authenticated GitHub API requests. | string | | `${{ github.token }}`
+`host` | The FlakeHub server to use. | URL | | `https://api.flakehub.com`
 `logger` | The logger to use. Options are `pretty`, `json`, `full` and `compact`. | enum | | `full`
 `log-directives` | A comma-separated list of [tracing directives](https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html#directives). `-`s are replaced with `_`s (such as `nix_installer=trace`). | string | | `flakehub_push=info`
 `flakehub-push-binary` | Run a version of the `flakehub-push` binary from somewhere already on disk. Conflicts with all other `flakehub-push-*` options. | string | |
