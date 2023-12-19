@@ -54,6 +54,10 @@
 
             CARGO_BUILD_TARGET = "x86_64-unknown-linux-musl";
             CARGO_BUILD_RUSTFLAGS = "-C target-feature=+crt-static";
+
+            buildInputs = lib.optionals (pkgs.stdenv.isDarwin) (with pkgs; [
+              darwin.apple_sdk.frameworks.SystemConfiguration
+            ]);
           };
         });
 
