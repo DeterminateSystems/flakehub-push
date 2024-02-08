@@ -30,6 +30,7 @@ github-actions-oidc-claims = "0.3.0"
 spdx = "0.10.2"
 uuid = { version = "1.4.0", features = ["serde", "v7", "rand", "std"] }
 semver = { version = "1.0.18", features = ["serde"] }
+thiserror = "1.0.56"
 
 [profile.release]
 strip = true  # Automatically strip symbols from the binary.

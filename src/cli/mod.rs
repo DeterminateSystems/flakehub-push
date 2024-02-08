@@ -11,10 +11,7 @@ use tokio::io::AsyncWriteExt;
 use uuid::Uuid;
 
 use crate::{
-    flake_info::{check_flake_evaluates, get_flake_metadata, get_flake_outputs, get_flake_tarball},
-    graphql::{GithubGraphqlDataQuery, GithubGraphqlDataResult},
-    release_metadata::{ReleaseMetadata, RevisionInfo},
-    Visibility,
+    error::Error, flake_info::{check_flake_evaluates, get_flake_metadata, get_flake_outputs, get_flake_tarball}, graphql::{GithubGraphqlDataQuery, GithubGraphqlDataResult}, release_metadata::{ReleaseMetadata, RevisionInfo}, Visibility
 };
 
 const DEFAULT_ROLLING_PREFIX: &str = "0.1";
@@ -714,26 +711,33 @@ async fn push_new_release(
         "Got release metadata POST response"
     );
 
-    if release_metadata_post_response_status != StatusCode::OK {
-        if release_metadata_post_response_status == StatusCode::CONFLICT {
+    match release_metadata_post_response_status {
+        StatusCode::OK => (),
+        StatusCode::CONFLICT => {
             tracing::info!(
                 "Release for revision `{revision}` of {upload_name}/{rolling_prefix_or_tag} already exists; flakehub-push will not upload it again",
                 revision = release_metadata.revision
             );
             if error_if_release_conflicts {
-                return Err(color_eyre::eyre::eyre!(
-                    "{upload_name}/{rolling_prefix_or_tag} already exists"
-                ));
+                return Err(Error::Conflict { upload_name, rolling_prefix_or_tag })?;
             } else {
                 return Ok(());
             }
-        } else {
+        },
+        StatusCode::UNAUTHORIZED => {
+            let body = &release_metadata_post_response.bytes().await?;
+            let message = serde_json::from_slice::<String>(body)?;
+            return Err(Error::Unauthorized(message.into()))?;
+        },
+        _ => {
+            let body = &release_metadata_post_response.bytes().await?;
+            let message = serde_json::from_slice::<String>(body)?;
             return Err(eyre!(
                 "\
                 Status {release_metadata_post_response_status} from metadata POST\n\
                 {}\
             ",
-                String::from_utf8_lossy(&release_metadata_post_response.bytes().await.unwrap())
+                message
             ));
         }
     }
