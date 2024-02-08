@@ -11,7 +11,11 @@ use tokio::io::AsyncWriteExt;
 use uuid::Uuid;
 
 use crate::{
-    error::Error, flake_info::{check_flake_evaluates, get_flake_metadata, get_flake_outputs, get_flake_tarball}, graphql::{GithubGraphqlDataQuery, GithubGraphqlDataResult}, release_metadata::{ReleaseMetadata, RevisionInfo}, Visibility
+    error::Error,
+    flake_info::{check_flake_evaluates, get_flake_metadata, get_flake_outputs, get_flake_tarball},
+    graphql::{GithubGraphqlDataQuery, GithubGraphqlDataResult},
+    release_metadata::{ReleaseMetadata, RevisionInfo},
+    Visibility,
 };
 
 const DEFAULT_ROLLING_PREFIX: &str = "0.1";
@@ -719,16 +723,19 @@ async fn push_new_release(
                 revision = release_metadata.revision
             );
             if error_if_release_conflicts {
-                return Err(Error::Conflict { upload_name, rolling_prefix_or_tag })?;
+                return Err(Error::Conflict {
+                    upload_name,
+                    rolling_prefix_or_tag,
+                })?;
             } else {
                 return Ok(());
             }
-        },
+        }
         StatusCode::UNAUTHORIZED => {
             let body = &release_metadata_post_response.bytes().await?;
             let message = serde_json::from_slice::<String>(body)?;
-            return Err(Error::Unauthorized(message.into()))?;
-        },
+            return Err(Error::Unauthorized(message))?;
+        }
         _ => {
             let body = &release_metadata_post_response.bytes().await?;
             let message = serde_json::from_slice::<String>(body)?;

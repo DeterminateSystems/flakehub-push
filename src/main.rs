@@ -3,10 +3,10 @@ use std::{fmt::Display, io::IsTerminal};
 use clap::Parser;
 use error::Error;
 mod cli;
+mod error;
 mod flake_info;
 mod graphql;
 mod release_metadata;
-mod error;
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<std::process::ExitCode> {
@@ -20,16 +20,14 @@ async fn main() -> color_eyre::Result<std::process::ExitCode> {
         } else {
             color_eyre::config::Theme::dark()
         })
-        .issue_filter(|kind| {
-            match kind {
-                color_eyre::ErrorKind::NonRecoverable(_) => true,
-                color_eyre::ErrorKind::Recoverable(error) => {
-                    if let Some(known_error) = error.downcast_ref::<Error>() {
-                        known_error.should_suggest_issue()
-                    } else {
-                        true
-                    }
-                },
+        .issue_filter(|kind| match kind {
+            color_eyre::ErrorKind::NonRecoverable(_) => true,
+            color_eyre::ErrorKind::Recoverable(error) => {
+                if let Some(known_error) = error.downcast_ref::<Error>() {
+                    known_error.should_suggest_issue()
+                } else {
+                    true
+                }
             }
         })
         .install()?;

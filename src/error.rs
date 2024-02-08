@@ -1,4 +1,3 @@
-
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum Error {
     #[error("Unauthorized: {0}")]

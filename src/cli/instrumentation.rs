@@ -136,7 +136,7 @@ impl<'a> Instrumentation {
                         _ => return Err(e).wrap_err_with(|| "parsing RUST_LOG directives"),
                     }
                 }
-                EnvFilter::try_new(&format!(
+                EnvFilter::try_new(format!(
                     "{}={}",
                     env!("CARGO_PKG_NAME").replace('-', "_"),
                     self.log_level()
