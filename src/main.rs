@@ -1,7 +1,9 @@
 use std::{fmt::Display, io::IsTerminal};
 
 use clap::Parser;
+use error::Error;
 mod cli;
+mod error;
 mod flake_info;
 mod graphql;
 mod release_metadata;
@@ -17,6 +19,16 @@ async fn main() -> color_eyre::Result<std::process::ExitCode> {
             color_eyre::config::Theme::new()
         } else {
             color_eyre::config::Theme::dark()
+        })
+        .issue_filter(|kind| match kind {
+            color_eyre::ErrorKind::NonRecoverable(_) => true,
+            color_eyre::ErrorKind::Recoverable(error) => {
+                if let Some(known_error) = error.downcast_ref::<Error>() {
+                    known_error.should_suggest_issue()
+                } else {
+                    true
+                }
+            }
         })
         .install()?;
 
