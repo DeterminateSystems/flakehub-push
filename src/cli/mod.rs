@@ -501,6 +501,14 @@ async fn push_new_release(
     error_if_release_conflicts: bool,
     include_output_paths: bool,
 ) -> color_eyre::Result<()> {
+    // FIXME(ANA): I am testing if this works and will remove this
+    if std::env::var("GITHUB_ACTIONS").is_ok() {
+        // Output a Github Actions annotation
+        println!("::error title=Unauthorized::Boogaloo");
+    }
+    return Ok(());
+    // Finished testing
+
     let span = tracing::Span::current();
     span.record("upload_name", tracing::field::display(upload_name.clone()));
 
@@ -734,6 +742,12 @@ async fn push_new_release(
         StatusCode::UNAUTHORIZED => {
             let body = &release_metadata_post_response.bytes().await?;
             let message = serde_json::from_slice::<String>(body)?;
+
+            if std::env::var("GITHUB_ACTIONS").is_ok() {
+                // Output a Github Actions annotation
+                println!("::error title=Unauthorized::{message}");
+            }
+
             return Err(Error::Unauthorized(message))?;
         }
         _ => {
