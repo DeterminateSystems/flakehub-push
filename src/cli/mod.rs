@@ -723,7 +723,6 @@ async fn push_new_release(
                 revision = release_metadata.revision
             );
             if error_if_release_conflicts {
-                
                 if std::env::var("GITHUB_ACTIONS").is_ok() {
                     // Output a Github Actions annotation
                     println!("::error title=Conflict::{upload_name}/{rolling_prefix_or_tag} already exists");
