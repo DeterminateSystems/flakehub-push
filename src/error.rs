@@ -18,7 +18,7 @@ impl Error {
     }
 
     /// Output a Github Actions annotation command if desired.
-    // Note: These may only be one line!
+    // Note: These may only be one line! Any further lines will not be printed!
     pub(crate) fn maybe_github_actions_annotation(&self) {
         if std::env::var("GITHUB_ACTIONS").is_ok() {
             match self {

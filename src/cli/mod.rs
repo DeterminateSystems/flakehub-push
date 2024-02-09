@@ -260,8 +260,6 @@ impl FlakeHubPushCli {
         skip_all,
     )]
     pub(crate) async fn execute(self) -> color_eyre::Result<std::process::ExitCode> {
-        return Err(Error::Unauthorized("Bean salad\nLook a newline".into()))?;
-
         tracing::trace!(?self, "Executing");
         let Self {
             host,
