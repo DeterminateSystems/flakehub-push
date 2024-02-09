@@ -1,5 +1,6 @@
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum Error {
+    /// Unauthorized, with a single line message detailing the nature of the problem.
     #[error("Unauthorized: {0}")]
     Unauthorized(String),
     #[error("{upload_name}/{rolling_prefix_or_tag} already exists")]
@@ -15,13 +16,16 @@ impl Error {
             Self::Unauthorized(_) | Self::Conflict { .. } => false,
         }
     }
+
+    /// Output a Github Actions annotation command if desired.
+    // Note: These may only be one line!
     pub(crate) fn maybe_github_actions_annotation(&self) {
         if std::env::var("GITHUB_ACTIONS").is_ok() {
             match self {
                 Error::Unauthorized(message) => {
-                    println!("::error title=Unauthorized::<<EOF\n{message}\nEOF")
+                    println!("::error title=Unauthorized::{message}")
                 }
-                Error::Conflict { .. } => println!("::error title=Conflict::<<EOF\n{self}\nEOF"),
+                Error::Conflict { .. } => println!("::error title=Conflict::{self}"),
             }
         }
     }
