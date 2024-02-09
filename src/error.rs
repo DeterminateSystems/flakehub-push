@@ -15,4 +15,12 @@ impl Error {
             Self::Unauthorized(_) | Self::Conflict { .. } => false,
         }
     }
+    pub(crate) fn maybe_github_actions_annotation(&self) {
+        if std::env::var("GITHUB_ACTIONS").is_ok() {
+            match self {
+                Error::Unauthorized(message) => println!("::error title=Unauthorized::<<EOF\n{message}\nEOF"),
+                Error::Conflict { .. } => println!("::error title=Conflict::<<EOF\n{self}\nEOF"),
+            }
+        }
+    }
 }
