@@ -35,7 +35,7 @@ async fn main() -> color_eyre::Result<std::process::ExitCode> {
 
     let cli = cli::FlakeHubPushCli::parse();
     cli.instrumentation.setup()?;
-    
+
     match cli.execute().await {
         Ok(exit) => Ok(exit),
         Err(error) => {
