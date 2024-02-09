@@ -1,5 +1,3 @@
-#![allow(unreachable_code, unused_variables)]
-
 use std::{fmt::Display, io::IsTerminal};
 
 use clap::Parser;
