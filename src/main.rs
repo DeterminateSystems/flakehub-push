@@ -34,7 +34,16 @@ async fn main() -> color_eyre::Result<std::process::ExitCode> {
 
     let cli = cli::FlakeHubPushCli::parse();
     cli.instrumentation.setup()?;
-    cli.execute().await
+
+    match cli.execute().await {
+        Ok(exit) => Ok(exit),
+        Err(error) => {
+            if let Some(known_error) = error.downcast_ref::<Error>() {
+                known_error.maybe_github_actions_annotation()
+            }
+            Err(error)
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, clap::ValueEnum, serde::Serialize, serde::Deserialize)]

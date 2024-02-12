@@ -734,6 +734,7 @@ async fn push_new_release(
         StatusCode::UNAUTHORIZED => {
             let body = &release_metadata_post_response.bytes().await?;
             let message = serde_json::from_slice::<String>(body)?;
+
             return Err(Error::Unauthorized(message))?;
         }
         _ => {
