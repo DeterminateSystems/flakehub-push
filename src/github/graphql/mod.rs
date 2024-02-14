@@ -10,8 +10,8 @@ const MAX_NUM_EXTRA_TOPICS: i64 = 20;
 
 #[derive(GraphQLQuery)]
 #[graphql(
-    schema_path = "src/graphql/github_schema.graphql",
-    query_path = "src/graphql/query/github_graphql_data_query.graphql",
+    schema_path = "src/github/graphql/github_schema.graphql",
+    query_path = "src/github/graphql/query/github_graphql_data_query.graphql",
     response_derives = "Debug",
     variables_derives = "Debug"
 )]
@@ -40,7 +40,7 @@ impl GithubGraphqlDataQuery {
             };
             let query = GithubGraphqlDataQuery::build_query(variables);
             let reqwest_response = reqwest_client
-                .post(crate::graphql::GITHUB_ENDPOINT)
+                .post(GITHUB_ENDPOINT)
                 .bearer_auth(bearer_token)
                 .json(&query)
                 .send()
@@ -49,7 +49,7 @@ impl GithubGraphqlDataQuery {
 
             let response_status = reqwest_response.status();
             let response: graphql_client::Response<
-                <crate::graphql::GithubGraphqlDataQuery as GraphQLQuery>::ResponseData,
+                <crate::github::graphql::GithubGraphqlDataQuery as GraphQLQuery>::ResponseData,
             > = reqwest_response
                 .json()
                 .await
