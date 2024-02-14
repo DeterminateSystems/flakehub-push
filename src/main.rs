@@ -5,7 +5,8 @@ use error::Error;
 mod cli;
 mod error;
 mod flake_info;
-mod graphql;
+mod github;
+mod push;
 mod release_metadata;
 
 #[tokio::main]
@@ -65,4 +66,8 @@ impl Display for Visibility {
             Visibility::Private => f.write_str("private"),
         }
     }
+}
+
+pub(crate) fn build_http_client() -> reqwest::ClientBuilder {
+    reqwest::Client::builder().user_agent("flakehub-push")
 }

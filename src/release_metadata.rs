@@ -2,7 +2,7 @@ use color_eyre::eyre::{eyre, WrapErr};
 use std::{collections::HashSet, path::Path};
 
 use crate::{
-    graphql::{GithubGraphqlDataResult, MAX_LABEL_LENGTH, MAX_NUM_TOTAL_LABELS},
+    github::graphql::{GithubGraphqlDataResult, MAX_LABEL_LENGTH, MAX_NUM_TOTAL_LABELS},
     Visibility,
 };
 
