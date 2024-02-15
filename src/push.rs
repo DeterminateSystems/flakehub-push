@@ -11,7 +11,8 @@ use crate::{
     build_http_client,
     error::Error,
     flake_info::{check_flake_evaluates, get_flake_metadata, get_flake_outputs, get_flake_tarball},
-    release_metadata::ReleaseMetadata,
+    github::graphql::GithubGraphqlDataResult,
+    release_metadata::{ReleaseMetadata, RevisionInfo},
     Visibility,
 };
 
@@ -20,25 +21,12 @@ const DEFAULT_ROLLING_PREFIX: &str = "0.1";
 #[tracing::instrument(
     skip_all,
     fields(
-        host,
-        flake_root,
-        subdir,
-        revision,
-        revision_count,
-        repository,
-        upload_name,
-        mirror,
-        %visibility,
-        tag,
-        rolling,
-        rolling_minor,
-        labels = labels.join(","),
-        mirror,
-        spdx_expression,
-        error_if_release_conflicts,
-        include_output_paths,
-        project_id,
-        owner_id,
+        repository = %repository,
+        upload_name = tracing::field::Empty,
+        mirror = %mirror,
+        tag = tracing::field::Empty,
+        source = tracing::field::Empty,
+        mirrored = tracing::field::Empty,
     )
 )]
 #[allow(clippy::too_many_arguments)]
@@ -47,20 +35,19 @@ pub(crate) async fn push_new_release(
     upload_bearer_token: &str,
     flake_root: &Path,
     subdir: &Path,
-    revision: String,
-    revision_count: i64,
+    revision_info: RevisionInfo,
+    repository: &str,
     upload_name: String,
     mirror: bool,
     visibility: Visibility,
     tag: Option<String>,
     rolling: bool,
     rolling_minor: Option<u64>,
-    labels: Vec<String>,
+    github_graphql_data_result: GithubGraphqlDataResult,
+    extra_labels: Vec<String>,
     spdx_expression: Option<spdx::Expression>,
     error_if_release_conflicts: bool,
     include_output_paths: bool,
-    project_id: i64,
-    owner_id: i64,
 ) -> color_eyre::Result<()> {
     let span = tracing::Span::current();
     span.record("upload_name", tracing::field::display(upload_name.clone()));
@@ -215,17 +202,15 @@ pub(crate) async fn push_new_release(
     let release_metadata = ReleaseMetadata::build(
         &source,
         subdir,
-        revision,
-        revision_count,
+        revision_info,
         flake_metadata,
         flake_outputs,
         upload_name.clone(),
         mirror,
         visibility,
-        labels,
+        github_graphql_data_result,
+        extra_labels,
         spdx_expression,
-        project_id,
-        owner_id,
     )
     .await
     .wrap_err("Building release metadata")?;
