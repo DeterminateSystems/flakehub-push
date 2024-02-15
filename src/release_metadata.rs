@@ -154,8 +154,8 @@ impl ReleaseMetadata {
             ),
             mirrored: mirror,
             spdx_identifier,
-            project_id: project_id,
-            owner_id: owner_id,
+            project_id,
+            owner_id,
             labels,
         })
     }
