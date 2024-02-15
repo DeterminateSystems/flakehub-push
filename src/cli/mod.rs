@@ -300,7 +300,8 @@ impl FlakeHubPushCli {
         let span = tracing::Span::current();
         tracing::trace!("Executing");
 
-        let is_github_actions = std::env::var("GITHUB_ACTION").ok().is_some();
+        let is_github_actions =
+            self.github_token.0.is_some() || std::env::var("GITHUB_ACTION").ok().is_some();
         if is_github_actions {
             tracing::debug!("Running inside Github Actions, enriching from environment");
             self.populate_missing_from_github()
