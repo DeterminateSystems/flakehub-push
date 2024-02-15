@@ -1,7 +1,10 @@
 use color_eyre::eyre::{eyre, WrapErr};
-use std::path::Path;
+use std::{collections::HashSet, path::Path};
 
-use crate::Visibility;
+use crate::{
+    github::graphql::{GithubGraphqlDataResult, MAX_LABEL_LENGTH, MAX_NUM_TOTAL_LABELS},
+    Visibility,
+};
 
 const README_FILENAME_LOWERCASE: &str = "readme.md";
 
@@ -87,63 +90,92 @@ impl ReleaseMetadata {
         subdir = %subdir.display(),
         description = tracing::field::Empty,
         readme_path = tracing::field::Empty,
-        %revision,
-        %commit_count,
+        revision = tracing::field::Empty,
+        revision_count = tracing::field::Empty,
+        commit_count = tracing::field::Empty,
         spdx_identifier = tracing::field::Empty,
         visibility = ?visibility,
-        %project_id,
-        %owner_id
     ))]
     pub(crate) async fn build(
         flake_store_path: &Path,
         subdir: &Path,
-        revision: String,
-        commit_count: i64,
+        revision_info: RevisionInfo,
         flake_metadata: serde_json::Value,
         flake_outputs: serde_json::Value,
         upload_name: String,
         mirror: bool,
         visibility: Visibility,
-        labels: Vec<String>,
-        spdx_identifier: Option<spdx::Expression>,
-        project_id: i64,
-        owner_id: i64,
+        github_graphql_data_result: GithubGraphqlDataResult,
+        extra_labels: Vec<String>,
+        spdx_expression: Option<spdx::Expression>,
     ) -> color_eyre::Result<ReleaseMetadata> {
         let span = tracing::Span::current();
 
-        if let Some(spdx_identifier) = &spdx_identifier {
-            span.record("spdx_identifier", tracing::field::display(spdx_identifier));
-        }
+        span.record("revision_string", &revision_info.revision);
 
         assert!(subdir.is_relative());
 
+        let revision_count = match revision_info.local_revision_count {
+            Some(n) => n as i64,
+            None => {
+                tracing::debug!(
+                    "Getting revision count locally failed, using data from github instead"
+                );
+                github_graphql_data_result.rev_count
+            }
+        };
+        span.record("revision_count", revision_count);
+
         let description = if let Some(description) = flake_metadata.get("description") {
-            let description_value = description
+            Some(description
                 .as_str()
                 .ok_or_else(|| {
                     eyre!("`nix flake metadata --json` does not have a string `description` field")
                 })?
-                .to_string();
-            span.record("description", tracing::field::display(&description_value));
-            Some(description_value)
+                .to_string())
         } else {
             None
         };
 
-        let readme_path = get_readme(flake_store_path).await?;
-        if let Some(readme_path) = &readme_path {
-            span.record("readme_path", tracing::field::display(readme_path));
-        }
+        let readme = get_readme(flake_store_path).await?;
+
+        let spdx_identifier = if spdx_expression.is_some() {
+            spdx_expression
+        } else if let Some(spdx_string) = github_graphql_data_result.spdx_identifier {
+            let parsed = spdx::Expression::parse(&spdx_string)
+                .wrap_err("Invalid SPDX license identifier reported from the GitHub API, either you are using a non-standard license or GitHub has returned a value that cannot be validated")?;
+            span.record("spdx_identifier", tracing::field::display(&parsed));
+            Some(parsed)
+        } else {
+            None
+        };
 
         tracing::trace!("Collected ReleaseMetadata information");
+
+        // Here we merge explicitly user-supplied labels and the labels ("topics")
+        // associated with the repo. Duplicates are excluded and all
+        // are converted to lower case.
+        let labels: Vec<String> = extra_labels
+            .into_iter()
+            .chain(github_graphql_data_result.topics.into_iter())
+            .collect::<HashSet<String>>()
+            .into_iter()
+            .take(MAX_NUM_TOTAL_LABELS)
+            .map(|s| s.trim().to_lowercase())
+            .filter(|t: &String| {
+                !t.is_empty()
+                    && t.len() <= MAX_LABEL_LENGTH
+                    && t.chars().all(|c| c.is_alphanumeric() || c == '-')
+            })
+            .collect();
 
         Ok(ReleaseMetadata {
             description,
             repo: upload_name.to_string(),
             raw_flake_metadata: flake_metadata.clone(),
-            readme: readme_path,
-            revision,
-            commit_count,
+            readme,
+            revision: revision_info.revision,
+            commit_count: github_graphql_data_result.rev_count,
             visibility,
             outputs: flake_outputs,
             source_subdirectory: Some(
@@ -154,8 +186,8 @@ impl ReleaseMetadata {
             ),
             mirrored: mirror,
             spdx_identifier,
-            project_id,
-            owner_id,
+            project_id: github_graphql_data_result.project_id,
+            owner_id: github_graphql_data_result.owner_id,
             labels,
         })
     }
