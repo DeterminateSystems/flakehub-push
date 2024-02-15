@@ -1,7 +1,8 @@
 use color_eyre::eyre::{eyre, WrapErr};
 use reqwest::{header::HeaderMap, StatusCode};
 use std::{
-    collections::HashSet, path::{Path, PathBuf}, str::FromStr
+    path::{Path, PathBuf},
+    str::FromStr,
 };
 use tokio::io::AsyncWriteExt;
 use uuid::Uuid;
@@ -10,8 +11,7 @@ use crate::{
     build_http_client,
     error::Error,
     flake_info::{check_flake_evaluates, get_flake_metadata, get_flake_outputs, get_flake_tarball},
-    github::graphql::{GithubGraphqlDataResult, MAX_LABEL_LENGTH, MAX_NUM_TOTAL_LABELS},
-    release_metadata::{ReleaseMetadata, RevisionInfo},
+    release_metadata::ReleaseMetadata,
     Visibility,
 };
 
@@ -20,12 +20,25 @@ const DEFAULT_ROLLING_PREFIX: &str = "0.1";
 #[tracing::instrument(
     skip_all,
     fields(
-        repository = %repository,
-        upload_name = tracing::field::Empty,
-        mirror = %mirror,
-        tag = tracing::field::Empty,
-        source = tracing::field::Empty,
-        mirrored = tracing::field::Empty,
+        host,
+        flake_root,
+        subdir,
+        revision,
+        revision_count,
+        repository,
+        upload_name,
+        mirror,
+        %visibility,
+        tag,
+        rolling,
+        rolling_minor,
+        labels = labels.join(","),
+        mirror,
+        spdx_expression,
+        error_if_release_conflicts,
+        include_output_paths,
+        project_id,
+        owner_id,
     )
 )]
 #[allow(clippy::too_many_arguments)]
@@ -34,19 +47,20 @@ pub(crate) async fn push_new_release(
     upload_bearer_token: &str,
     flake_root: &Path,
     subdir: &Path,
-    revision_info: RevisionInfo,
-    repository: &str,
+    revision: String,
+    revision_count: i64,
     upload_name: String,
     mirror: bool,
     visibility: Visibility,
     tag: Option<String>,
     rolling: bool,
     rolling_minor: Option<u64>,
-    github_graphql_data_result: GithubGraphqlDataResult,
-    extra_labels: Vec<String>,
+    labels: Vec<String>,
     spdx_expression: Option<spdx::Expression>,
     error_if_release_conflicts: bool,
     include_output_paths: bool,
+    project_id: i64,
+    owner_id: i64,
 ) -> color_eyre::Result<()> {
     let span = tracing::Span::current();
     span.record("upload_name", tracing::field::display(upload_name.clone()));
@@ -198,59 +212,20 @@ pub(crate) async fn push_new_release(
         .await
         .wrap_err("Writing compressed tarball to tempfile")?;
 
-
-    let revision_count = match revision_info.local_revision_count {
-        Some(n) => n as i64,
-        None => {
-            tracing::debug!(
-                "Getting revision count locally failed, using data from github instead"
-            );
-            github_graphql_data_result.rev_count
-        }
-    };
-
-    let spdx_identifier = if spdx_expression.is_some() {
-        spdx_expression
-    } else if let Some(spdx_string) = github_graphql_data_result.spdx_identifier {
-        let parsed = spdx::Expression::parse(&spdx_string)
-            .wrap_err("Invalid SPDX license identifier reported from the GitHub API, either you are using a non-standard license or GitHub has returned a value that cannot be validated")?;
-        span.record("spdx_identifier", tracing::field::display(&parsed));
-        Some(parsed)
-    } else {
-        None
-    };
-
-    // Here we merge explicitly user-supplied labels and the labels ("topics")
-    // associated with the repo. Duplicates are excluded and all
-    // are converted to lower case.
-    let labels: Vec<String> = extra_labels
-        .into_iter()
-        .chain(github_graphql_data_result.topics.into_iter())
-        .collect::<HashSet<String>>()
-        .into_iter()
-        .take(MAX_NUM_TOTAL_LABELS)
-        .map(|s| s.trim().to_lowercase())
-        .filter(|t: &String| {
-            !t.is_empty()
-                && t.len() <= MAX_LABEL_LENGTH
-                && t.chars().all(|c| c.is_alphanumeric() || c == '-')
-        })
-        .collect();
-
     let release_metadata = ReleaseMetadata::build(
         &source,
         subdir,
-        revision_info,
+        revision,
+        revision_count,
         flake_metadata,
         flake_outputs,
         upload_name.clone(),
         mirror,
         visibility,
-        revision_count,
         labels,
-        spdx_identifier,
-        github_graphql_data_result.project_id,
-        github_graphql_data_result.owner_id,
+        spdx_expression,
+        project_id,
+        owner_id,
     )
     .await
     .wrap_err("Building release metadata")?;
