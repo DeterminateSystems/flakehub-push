@@ -390,6 +390,8 @@ impl FlakeHubPushCli {
         let github_api_client = build_http_client().build()?;
 
         let revision_info = RevisionInfo::from_git_root(&git_root)?;
+
+        
         let github_graphql_data_result = GithubGraphqlDataQuery::get(
             &github_api_client,
             &github_token,
