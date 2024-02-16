@@ -2,13 +2,17 @@ mod instrumentation;
 
 use color_eyre::eyre::{eyre, WrapErr};
 use std::{
+    collections::HashSet,
     path::{Path, PathBuf},
     process::ExitCode,
 };
 
 use crate::{
     build_http_client,
-    github::{get_actions_id_bearer_token, graphql::GithubGraphqlDataQuery},
+    github::{
+        get_actions_id_bearer_token,
+        graphql::{GithubGraphqlDataQuery, MAX_LABEL_LENGTH, MAX_NUM_TOTAL_LABELS},
+    },
     push::push_new_release,
     release_metadata::RevisionInfo,
 };
@@ -247,9 +251,27 @@ impl FlakeHubPushCli {
     #[tracing::instrument(
         name = "flakehub_push"
         skip_all,
+        fields(
+            host = self.host,
+            visibility = ?self.visibility,
+            name = self.name.0,
+            tag = tracing::field::Empty,
+            rolling_minor = tracing::field::Empty,
+            rolling = self.rolling,
+            directory = tracing::field::Empty,
+            repository = tracing::field::Empty,
+            git_root = tracing::field::Empty,
+            mirror = self.mirror,
+            jwt_issuer_uri = tracing::field::Empty,
+            extra_labels = self.extra_labels.join(","),
+            spdx_identifier = tracing::field::Empty,
+            error_on_conflict = self.error_on_conflict,
+            include_output_paths = self.include_output_paths,
+        )
     )]
     pub(crate) async fn execute(self) -> color_eyre::Result<std::process::ExitCode> {
-        tracing::trace!(?self, "Executing");
+        let span = tracing::Span::current();
+        tracing::trace!("Executing");
         let Self {
             host,
             visibility,
@@ -390,6 +412,7 @@ impl FlakeHubPushCli {
         let github_api_client = build_http_client().build()?;
 
         let revision_info = RevisionInfo::from_git_root(&git_root)?;
+
         let github_graphql_data_result = GithubGraphqlDataQuery::get(
             &github_api_client,
             &github_token,
@@ -434,24 +457,63 @@ impl FlakeHubPushCli {
             }
         };
 
+        let commit_count = match revision_info.local_revision_count {
+            Some(n) => n as i64,
+            None => {
+                tracing::debug!(
+                    "Getting revision count locally failed, using data from github instead"
+                );
+                github_graphql_data_result.rev_count
+            }
+        };
+
+        let spdx_identifier = if spdx_expression.0.is_some() {
+            spdx_expression.0
+        } else if let Some(spdx_string) = &github_graphql_data_result.spdx_identifier {
+            let parsed = spdx::Expression::parse(spdx_string)
+                .wrap_err("Invalid SPDX license identifier reported from the GitHub API, either you are using a non-standard license or GitHub has returned a value that cannot be validated")?;
+            span.record("spdx_identifier", tracing::field::display(&parsed));
+            Some(parsed)
+        } else {
+            None
+        };
+
+        // Here we merge explicitly user-supplied labels and the labels ("topics")
+        // associated with the repo. Duplicates are excluded and all
+        // are converted to lower case.
+        let labels: Vec<String> = extra_labels
+            .into_iter()
+            .chain(github_graphql_data_result.topics.into_iter())
+            .collect::<HashSet<String>>()
+            .into_iter()
+            .take(MAX_NUM_TOTAL_LABELS)
+            .map(|s| s.trim().to_lowercase())
+            .filter(|t: &String| {
+                !t.is_empty()
+                    && t.len() <= MAX_LABEL_LENGTH
+                    && t.chars().all(|c| c.is_alphanumeric() || c == '-')
+            })
+            .collect();
+
         push_new_release(
             &host,
             &upload_bearer_token,
             &git_root,
             &subdir,
-            revision_info,
-            &repository,
+            revision_info.revision,
+            commit_count,
             upload_name,
             mirror,
             visibility,
             tag,
             rolling,
             rolling_minor.0,
-            github_graphql_data_result,
-            extra_labels,
-            spdx_expression.0,
+            labels,
+            spdx_identifier,
             error_on_conflict,
             include_output_paths,
+            github_graphql_data_result.project_id,
+            github_graphql_data_result.owner_id,
         )
         .await?;
 
