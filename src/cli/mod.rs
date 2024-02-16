@@ -471,9 +471,13 @@ impl FlakeHubPushCli {
             } else {
                 // Provide the user notice if the SPDX expression passed differs from the one detected on GitHub -- It's probably something they care about.
                 if github_graphql_data_result.spdx_identifier
-                    != spdx_expression.map(|v| v.to_string())
+                    != spdx_expression.as_ref().map(|v| v.to_string())
                 {
-                    tracing::debug!("Inferred SPDX identifier from GitHub API was `{}` while `{}` was passed via argument", github_graphql_data_result.spdx_identifier.unwrap_or_else(|| "None".to_string()), spdx_expression.unwrap_or_else(|| "None".to_string()))
+                    tracing::debug!(
+                        "Inferred SPDX identifier from GitHub API was `{}` while `{}` was passed via argument",
+                        github_graphql_data_result.spdx_identifier.unwrap_or_else(|| "None".to_string()),
+                        spdx_expression.as_ref().map(|v| v.to_string()).unwrap_or_else(|| "None".to_string())
+                    )
                 }
                 spdx_expression
             };
