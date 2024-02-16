@@ -303,7 +303,7 @@ impl FlakeHubPushCli {
         let is_github_actions =
             self.github_token.0.is_some() || std::env::var("GITHUB_ACTION").ok().is_some();
         if is_github_actions {
-            tracing::debug!("Running inside Github Actions, enriching from environment");
+            tracing::debug!("Running inside Github Actions, will enrich with GitHub API data and push with authorized Github bearer token");
             self.populate_missing_from_github()
         }
 
@@ -473,10 +473,10 @@ impl FlakeHubPushCli {
                 if github_graphql_data_result.spdx_identifier
                     != spdx_expression.as_ref().map(|v| v.to_string())
                 {
-                    tracing::debug!(
-                        "Inferred SPDX identifier from GitHub API was `{}` while `{}` was passed via argument",
+                    tracing::warn!(
+                        "SPDX identifier `{}` was passed via argument, but GitHub's API suggests it may be `{}`",
+                        spdx_expression.as_ref().map(|v| v.to_string()).unwrap_or_else(|| "None".to_string()),
                         github_graphql_data_result.spdx_identifier.unwrap_or_else(|| "None".to_string()),
-                        spdx_expression.as_ref().map(|v| v.to_string()).unwrap_or_else(|| "None".to_string())
                     )
                 }
                 spdx_expression

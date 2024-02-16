@@ -84,7 +84,7 @@ impl ReleaseMetadata {
         flake_store_path = %flake_store_path.display(),
         subdir = %subdir.display(),
         description = tracing::field::Empty,
-        readme_path = tracing::field::Empty,
+        readme = tracing::field::Empty,
         %revision,
         %commit_count,
         spdx_identifier = tracing::field::Empty,
@@ -124,9 +124,12 @@ impl ReleaseMetadata {
             None
         };
 
-        let readme_path = get_readme(flake_store_path).await?;
-        if let Some(readme_path) = &readme_path {
-            span.record("readme_path", tracing::field::display(readme_path));
+        let readme = get_readme(flake_store_path).await?;
+        if readme.is_some() {
+            span.record(
+                "readme",
+                tracing::field::display(flake_store_path.join("README.md").display()),
+            );
         }
 
         tracing::trace!("Collected ReleaseMetadata information");
@@ -135,7 +138,7 @@ impl ReleaseMetadata {
             description,
             repo: upload_name.to_string(),
             raw_flake_metadata: flake_metadata.clone(),
-            readme: readme_path,
+            readme,
             revision,
             commit_count,
             visibility,
