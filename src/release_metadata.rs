@@ -7,7 +7,7 @@ const README_FILENAME_LOWERCASE: &str = "readme.md";
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub(crate) struct ReleaseMetadata {
-    pub(crate) commit_count: i64,
+    pub(crate) commit_count: usize,
     pub(crate) description: Option<String>,
     pub(crate) outputs: serde_json::Value,
     pub(crate) raw_flake_metadata: serde_json::Value,
@@ -17,8 +17,6 @@ pub(crate) struct ReleaseMetadata {
     pub(crate) visibility: Visibility,
     pub(crate) mirrored: bool,
     pub(crate) source_subdirectory: Option<String>,
-    pub(crate) project_id: i64,
-    pub(crate) owner_id: i64,
 
     #[serde(
         deserialize_with = "option_string_to_spdx",
@@ -33,7 +31,7 @@ pub(crate) struct ReleaseMetadata {
 
 #[derive(Clone)]
 pub(crate) struct RevisionInfo {
-    pub(crate) local_revision_count: Option<usize>,
+    pub(crate) commit_count: Option<usize>,
     pub(crate) revision: String,
 }
 
@@ -65,7 +63,7 @@ impl RevisionInfo {
             }
         };
 
-        let local_revision_count = gix_repository
+        let commit_count = gix_repository
             .rev_walk([revision])
             .all()
             .map(|rev_iter| rev_iter.count())
@@ -73,7 +71,7 @@ impl RevisionInfo {
         let revision = revision.to_hex().to_string();
 
         Ok(Self {
-            local_revision_count,
+            commit_count,
             revision,
         })
     }
@@ -91,14 +89,12 @@ impl ReleaseMetadata {
         %commit_count,
         spdx_identifier = tracing::field::Empty,
         visibility = ?visibility,
-        %project_id,
-        %owner_id
     ))]
     pub(crate) async fn build(
         flake_store_path: &Path,
         subdir: &Path,
         revision: String,
-        commit_count: i64,
+        commit_count: usize,
         flake_metadata: serde_json::Value,
         flake_outputs: serde_json::Value,
         upload_name: String,
@@ -106,8 +102,6 @@ impl ReleaseMetadata {
         visibility: Visibility,
         labels: Vec<String>,
         spdx_identifier: Option<spdx::Expression>,
-        project_id: i64,
-        owner_id: i64,
     ) -> color_eyre::Result<ReleaseMetadata> {
         let span = tracing::Span::current();
 
@@ -154,8 +148,6 @@ impl ReleaseMetadata {
             ),
             mirrored: mirror,
             spdx_identifier,
-            project_id,
-            owner_id,
             labels,
         })
     }
