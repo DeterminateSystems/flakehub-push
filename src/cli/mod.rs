@@ -291,7 +291,7 @@ impl FlakeHubPushCli {
             mirror = self.mirror,
             jwt_issuer_uri = tracing::field::Empty,
             extra_labels = self.extra_labels.join(","),
-            spdx_identifier = tracing::field::Empty,
+            spdx_expression = tracing::field::Empty,
             error_on_conflict = self.error_on_conflict,
             include_output_paths = self.include_output_paths,
         )
@@ -418,10 +418,10 @@ impl FlakeHubPushCli {
             Err(eyre!("Could not determine the owner/project, pass `--repository` or `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`. The passed value has too many slashes (/) to be a valid repository"))?;
         }
 
-        #[allow(unused_assignments)]
-        // Since we return an error outside github actions right now, throws an unused warning.
-        let mut spdx_identifier = spdx_expression.0;
+        let mut spdx_expression = spdx_expression.0;
 
+        #[allow(unused_assignments)]
+        // Since we return an error outside github actions right now, `commit_count` throws an unused warning since we don't actually use it.
         let RevisionInfo {
             mut commit_count,
             revision,
@@ -446,17 +446,39 @@ impl FlakeHubPushCli {
             )
             .await?;
 
-            commit_count = commit_count.or(Some(github_graphql_data_result.rev_count as usize));
-            spdx_identifier = if let Some(spdx_string) = &github_graphql_data_result.spdx_identifier
-            {
-                let parsed = spdx::Expression::parse(spdx_string)
-                    .wrap_err("Invalid SPDX license identifier reported from the GitHub API, either you are using a non-standard license or GitHub has returned a value that cannot be validated")?;
-                span.record("spdx_identifier", tracing::field::display(&parsed));
-                Some(parsed)
+            // On GitHub Actions, typically shallow clones are used which would report 1 for the commit count. Override it with the result from the API.
+            // Since users can't set this as a command line flag, that's fine.
+            tracing::trace!(
+                "Updating `commit_count` from {} to {} via GitHub API",
+                commit_count
+                    .map(|v| v.to_string())
+                    .unwrap_or_else(|| "<none>".into()),
+                github_graphql_data_result.rev_count as usize
+            );
+            commit_count = Some(github_graphql_data_result.rev_count as usize);
+
+            // If the user didn't pass `--spdx-expression` from command line, enrich it with Github's data.
+            spdx_expression = if spdx_expression.is_none() {
+                if let Some(spdx_string) = &github_graphql_data_result.spdx_identifier {
+                    tracing::debug!("Recieved SPDX identifier `{}` from GitHub API", spdx_string);
+                    let parsed = spdx::Expression::parse(spdx_string)
+                        .wrap_err("Invalid SPDX license identifier reported from the GitHub API, either you are using a non-standard license or GitHub has returned a value that cannot be validated")?;
+                    span.record("spdx_expression", tracing::field::display(&parsed));
+                    Some(parsed)
+                } else {
+                    None
+                }
             } else {
-                None
+                // Provide the user notice if the SPDX expression passed differs from the one detected on GitHub -- It's probably something they care about.
+                if github_graphql_data_result.spdx_identifier
+                    != spdx_expression.map(|v| v.to_string())
+                {
+                    tracing::debug!("Inferred SPDX identifier from GitHub API was `{}` while `{}` was passed via argument", github_graphql_data_result.spdx_identifier.unwrap_or_else(|| "None".to_string()), spdx_expression.unwrap_or_else(|| "None".to_string()))
+                }
+                spdx_expression
             };
 
+            // Extend the labels provided by the user with those from GitHub.
             labels = labels
                 .into_iter()
                 .chain(github_graphql_data_result.topics.into_iter())
@@ -517,7 +539,7 @@ impl FlakeHubPushCli {
             .collect();
 
         let Some(commit_count) = commit_count else {
-            return Err(eyre!("Did not get `commit_count`"))
+            return Err(eyre!("Did not get `commit_count`"));
         };
 
         push_new_release(
@@ -534,7 +556,7 @@ impl FlakeHubPushCli {
             rolling,
             rolling_minor.0,
             labels,
-            spdx_identifier,
+            spdx_expression,
             error_on_conflict,
             include_output_paths,
         )
