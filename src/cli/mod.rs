@@ -457,15 +457,7 @@ impl FlakeHubPushCli {
             }
         };
 
-        let commit_count = match revision_info.local_revision_count {
-            Some(n) => n as i64,
-            None => {
-                tracing::debug!(
-                    "Getting revision count locally failed, using data from github instead"
-                );
-                github_graphql_data_result.rev_count
-            }
-        };
+        let commit_count = github_graphql_data_result.rev_count;
 
         let spdx_identifier = if spdx_expression.0.is_some() {
             spdx_expression.0
