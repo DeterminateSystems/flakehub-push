@@ -261,6 +261,7 @@ impl FlakeHubPushCli {
             directory = tracing::field::Empty,
             repository = tracing::field::Empty,
             git_root = tracing::field::Empty,
+            commit_count = tracing::field::Empty,
             mirror = self.mirror,
             jwt_issuer_uri = tracing::field::Empty,
             extra_labels = self.extra_labels.join(","),
@@ -458,6 +459,7 @@ impl FlakeHubPushCli {
         };
 
         let commit_count = github_graphql_data_result.rev_count;
+        span.record("commit_count", commit_count);
 
         let spdx_identifier = if spdx_expression.0.is_some() {
             spdx_expression.0
