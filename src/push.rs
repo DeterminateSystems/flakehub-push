@@ -20,7 +20,7 @@ const DEFAULT_ROLLING_PREFIX: &str = "0.1";
 #[tracing::instrument(
     skip_all,
     fields(
-        host,
+        %host,
         flake_root,
         subdir,
         revision,
@@ -43,7 +43,7 @@ const DEFAULT_ROLLING_PREFIX: &str = "0.1";
 )]
 #[allow(clippy::too_many_arguments)]
 pub(crate) async fn push_new_release(
-    host: &str,
+    host: &url::Url,
     upload_bearer_token: &str,
     flake_root: &Path,
     subdir: &Path,

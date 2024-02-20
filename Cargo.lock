@@ -524,6 +524,7 @@ dependencies = [
  "tracing",
  "tracing-error",
  "tracing-subscriber",
+ "url",
  "uuid",
 ]
 
@@ -2709,6 +2710,7 @@ dependencies = [
  "form_urlencoded",
  "idna",
  "percent-encoding",
+ "serde",
 ]
 
 [[package]]
