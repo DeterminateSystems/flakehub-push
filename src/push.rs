@@ -353,8 +353,8 @@ pub(crate) async fn push_new_release(
     }
 
     // Make the release we just uploaded visible.
-    let publish_post_url = format!("{host}/publish/{}", release_metadata_post_result.uuid);
-    tracing::debug!(url = publish_post_url, "Computed publish POST URL");
+    let publish_post_url = host.join(&format!("publish/{}", release_metadata_post_result.uuid))?;
+    tracing::debug!(url = %publish_post_url, "Computed publish POST URL");
 
     let publish_response = flakehub_client
         .post(publish_post_url)
