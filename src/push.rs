@@ -237,11 +237,9 @@ pub(crate) async fn push_new_release(
         rolling_prefix_or_tag.to_string() // This will always be the tag since `self.rolling_prefix` was empty.
     };
 
-    let release_metadata_post_url = format!(
-        "{host}/upload/{upload_name}/{rolling_minor_with_postfix_or_tag}/{flake_tarball_len}/{flake_tarball_hash_base64}"
-    );
+    let release_metadata_post_url = host.join(&format!("upload/{upload_name}/{rolling_minor_with_postfix_or_tag}/{flake_tarball_len}/{flake_tarball_hash_base64}"))?;
     tracing::debug!(
-        url = release_metadata_post_url,
+        url = %release_metadata_post_url,
         "Computed release metadata POST URL"
     );
 
