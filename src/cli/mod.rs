@@ -490,7 +490,7 @@ impl FlakeHubPushCli {
                 .collect::<HashSet<String>>();
 
             match jwt_issuer_uri.0 {
-                None => get_actions_id_bearer_token()
+                None => get_actions_id_bearer_token(&host)
                     .await
                     .wrap_err("Getting upload bearer token from GitHub")?,
 

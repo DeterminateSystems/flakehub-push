@@ -5,7 +5,7 @@ use color_eyre::eyre::{eyre, WrapErr};
 use crate::build_http_client;
 
 #[tracing::instrument(skip_all)]
-pub(crate) async fn get_actions_id_bearer_token() -> color_eyre::Result<String> {
+pub(crate) async fn get_actions_id_bearer_token(audience: &str) -> color_eyre::Result<String> {
     let actions_id_token_request_token = std::env::var("ACTIONS_ID_TOKEN_REQUEST_TOKEN")
         // We do want to preserve the whitespace here  
         .wrap_err("\
@@ -26,7 +26,7 @@ jobs:
     let actions_id_token_client = build_http_client().build()?;
     let response = actions_id_token_client
         .get(format!(
-            "{actions_id_token_request_url}&audience=api.flakehub.com"
+            "{actions_id_token_request_url}&audience={audience}"
         ))
         .bearer_auth(actions_id_token_request_token)
         .send()
