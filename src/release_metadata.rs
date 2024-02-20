@@ -1,5 +1,5 @@
 use color_eyre::eyre::{eyre, WrapErr};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::Visibility;
 
@@ -124,13 +124,13 @@ impl ReleaseMetadata {
             None
         };
 
-        let readme = get_readme(flake_store_path).await?;
-        if readme.is_some() {
-            span.record(
-                "readme",
-                tracing::field::display(flake_store_path.join("README.md").display()),
-            );
-        }
+        let readme_path = get_readme(flake_store_path).await?;
+        let readme = if let Some(readme_path) = readme_path {
+            span.record("readme", tracing::field::display(readme_path.display()));
+            Some(tokio::fs::read_to_string(&readme_path).await?)
+        } else {
+            None
+        };
 
         tracing::trace!("Collected ReleaseMetadata information");
 
@@ -186,12 +186,13 @@ where
     }
 }
 
-async fn get_readme(readme_dir: &Path) -> color_eyre::Result<Option<String>> {
+#[tracing::instrument(skip_all, fields(readme_dir))]
+async fn get_readme(readme_dir: &Path) -> color_eyre::Result<Option<PathBuf>> {
     let mut read_dir = tokio::fs::read_dir(readme_dir).await?;
 
     while let Some(entry) = read_dir.next_entry().await? {
         if entry.file_name().to_ascii_lowercase() == README_FILENAME_LOWERCASE {
-            return Ok(Some(tokio::fs::read_to_string(entry.path()).await?));
+            return Ok(Some(entry.path()));
         }
     }
 

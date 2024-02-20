@@ -248,6 +248,7 @@ impl clap::builder::TypedValueParser for U64ToNoneParser {
 }
 
 impl FlakeHubPushCli {
+    #[tracing::instrument(skip_all)]
     pub(crate) fn populate_missing_from_github(&mut self) {
         if self.git_root.0.is_none() {
             let env_key = "GITHUB_WORKSPACE";
