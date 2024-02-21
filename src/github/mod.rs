@@ -7,7 +7,7 @@ use crate::build_http_client;
 #[tracing::instrument(skip_all, fields(audience = tracing::field::Empty))]
 pub(crate) async fn get_actions_id_bearer_token(host: &url::Url) -> color_eyre::Result<String> {
     let span = tracing::Span::current();
-    let audience = host.host_str().ok_or_else(|| eyre!("`host` must contain a valid host (eg `https://api.flakehub.com` contains `api.flakehub.com`)"))?;
+    let audience = host.host_str().ok_or_else(|| eyre!("`--host` must contain a valid host (eg `https://api.flakehub.com` contains `api.flakehub.com`)"))?;
     span.record("audience", audience);
 
     let actions_id_token_request_token = std::env::var("ACTIONS_ID_TOKEN_REQUEST_TOKEN")
