@@ -2,13 +2,17 @@ mod instrumentation;
 
 use color_eyre::eyre::{eyre, WrapErr};
 use std::{
+    collections::HashSet,
     path::{Path, PathBuf},
     process::ExitCode,
 };
 
 use crate::{
     build_http_client,
-    github::{get_actions_id_bearer_token, graphql::GithubGraphqlDataQuery},
+    github::{
+        get_actions_id_bearer_token,
+        graphql::{GithubGraphqlDataQuery, MAX_LABEL_LENGTH, MAX_NUM_TOTAL_LABELS},
+    },
     push::push_new_release,
     release_metadata::RevisionInfo,
 };
@@ -21,7 +25,7 @@ pub(crate) struct FlakeHubPushCli {
         env = "FLAKEHUB_PUSH_HOST",
         default_value = "https://api.flakehub.com"
     )]
-    pub(crate) host: String,
+    pub(crate) host: url::Url,
     #[clap(long, env = "FLAKEHUB_PUSH_VISIBLITY")]
     pub(crate) visibility: crate::Visibility,
     // Will also detect `GITHUB_REF_NAME`
@@ -56,7 +60,7 @@ pub(crate) struct FlakeHubPushCli {
     #[clap(long, env = "FLAKEHUB_PUSH_JWT_ISSUER_URI", value_parser = StringToNoneParser, default_value = "")]
     pub(crate) jwt_issuer_uri: OptionString,
 
-    /// User-supplied labels beyond those associated with the GitHub repository.
+    /// User-supplied labels, merged with any associated with GitHub repository (if possible)
     #[clap(
         long,
         short = 'l',
@@ -76,7 +80,7 @@ pub(crate) struct FlakeHubPushCli {
     )]
     pub(crate) extra_tags: Vec<String>,
 
-    /// An SPDX expression that overrides that which is returned from GitHub.
+    /// An SPDX identifier from https://spdx.org/licenses/, inferred from GitHub (if possible)
     #[clap(
         long,
         env = "FLAKEHUB_PUSH_SPDX_EXPRESSION",
@@ -244,12 +248,66 @@ impl clap::builder::TypedValueParser for U64ToNoneParser {
 }
 
 impl FlakeHubPushCli {
+    #[tracing::instrument(skip_all)]
+    pub(crate) fn populate_missing_from_github(&mut self) {
+        if self.git_root.0.is_none() {
+            let env_key = "GITHUB_WORKSPACE";
+            if let Ok(env_val) = std::env::var(env_key) {
+                tracing::debug!(git_root = %env_val, "Set via `${env_key}`");
+                self.git_root.0 = Some(PathBuf::from(env_val));
+            }
+        }
+
+        if self.repository.0.is_none() {
+            let env_key = "GITHUB_REPOSITORY";
+            if let Ok(env_val) = std::env::var(env_key) {
+                tracing::debug!(repository = %env_val, "Set via `${env_key}`");
+                self.repository.0 = Some(env_val);
+            }
+        }
+
+        if self.tag.0.is_none() {
+            let env_key = "GITHUB_REF_NAME";
+            if let Ok(env_val) = std::env::var(env_key) {
+                tracing::debug!(repository = %env_val, "Set via `${env_key}`");
+                self.tag.0 = Some(env_val);
+            }
+        }
+    }
+
     #[tracing::instrument(
         name = "flakehub_push"
         skip_all,
+        fields(
+            host = %self.host,
+            visibility = ?self.visibility,
+            name = self.name.0,
+            tag = tracing::field::Empty,
+            rolling_minor = tracing::field::Empty,
+            rolling = self.rolling,
+            directory = tracing::field::Empty,
+            repository = tracing::field::Empty,
+            git_root = tracing::field::Empty,
+            commit_count = tracing::field::Empty,
+            mirror = self.mirror,
+            jwt_issuer_uri = tracing::field::Empty,
+            extra_labels = self.extra_labels.join(","),
+            spdx_expression = tracing::field::Empty,
+            error_on_conflict = self.error_on_conflict,
+            include_output_paths = self.include_output_paths,
+        )
     )]
-    pub(crate) async fn execute(self) -> color_eyre::Result<std::process::ExitCode> {
-        tracing::trace!(?self, "Executing");
+    pub(crate) async fn execute(mut self) -> color_eyre::Result<std::process::ExitCode> {
+        let span = tracing::Span::current();
+        tracing::trace!("Executing");
+
+        let is_github_actions =
+            self.github_token.0.is_some() || std::env::var("GITHUB_ACTION").ok().is_some();
+        if is_github_actions {
+            tracing::debug!("Running inside Github Actions, will enrich with GitHub API data and push with authorized Github bearer token");
+            self.populate_missing_from_github()
+        }
+
         let Self {
             host,
             visibility,
@@ -271,10 +329,9 @@ impl FlakeHubPushCli {
             include_output_paths,
         } = self;
 
-        let mut extra_labels: Vec<_> = extra_labels.into_iter().filter(|v| !v.is_empty()).collect();
-        let extra_tags: Vec<_> = extra_tags.into_iter().filter(|v| !v.is_empty()).collect();
+        let mut labels: HashSet<_> = extra_labels.into_iter().filter(|v| !v.is_empty()).collect();
+        let extra_tags: HashSet<_> = extra_tags.into_iter().filter(|v| !v.is_empty()).collect();
 
-        let is_github_actions = std::env::var("GITHUB_ACTION").ok().is_some();
         if !extra_tags.is_empty() {
             let message = "`extra-tags` is deprecated and will be removed in the future. Please use `extra-labels` instead.";
             tracing::warn!("{message}");
@@ -283,8 +340,8 @@ impl FlakeHubPushCli {
                 println!("::warning::{message}");
             }
 
-            if extra_labels.is_empty() {
-                extra_labels = extra_tags;
+            if labels.is_empty() {
+                labels = extra_tags;
             } else {
                 let message =
                     "Both `extra-tags` and `extra-labels` were set; `extra-tags` will be ignored.";
@@ -296,20 +353,10 @@ impl FlakeHubPushCli {
             }
         }
 
-        let github_token = if let Some(github_token) = &github_token.0 {
-            github_token.clone()
-        } else {
-            std::env::var("GITHUB_TOKEN")
-                .wrap_err("Could not determine Github token, pass `--github-token`, or set either `FLAKEHUB_PUSH_GITHUB_TOKEN` or `GITHUB_TOKEN`")?
-        };
-
-        let git_root = if let Some(git_root) = &git_root.0 {
+        let git_root = if let Some(git_root) = git_root.0 {
             git_root.clone()
-        } else if let Ok(github_workspace) = std::env::var("GITHUB_WORKSPACE") {
-            tracing::trace!(%github_workspace, "Got `GITHUB_WORKSPACE`");
-            PathBuf::from(github_workspace)
         } else {
-            std::env::current_dir().map(PathBuf::from).wrap_err("Could not determine current git_root. Pass `--git-root` or set `FLAKEHUB_PUSH_GIT_ROOT`")?
+            std::env::current_dir().map(PathBuf::from).wrap_err("Could not determine current `git_root`. Pass `--git-root` or set `FLAKEHUB_PUSH_GIT_ROOT`, or run `flakehub-push` with the git root as the current working directory")?
         };
 
         let git_root = git_root
@@ -338,17 +385,8 @@ impl FlakeHubPushCli {
             PathBuf::new()
         };
 
-        let repository = if let Some(repository) = &repository.0 {
-            tracing::trace!(%repository, "Got `--repository` argument");
-            repository.clone()
-        } else if let Ok(github_repository) = std::env::var("GITHUB_REPOSITORY") {
-            tracing::trace!(
-                %github_repository,
-                "Got `GITHUB_REPOSITORY` environment"
-            );
-            github_repository
-        } else {
-            return Err(eyre!("Could not determine repository name, pass `--repository` or the `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`"));
+        let Some(repository) = repository.0 else {
+            return Err(eyre!("Could not determine repository name, pass `--repository` formatted like `determinatesystems/flakehub-push`"));
         };
 
         // If the upload name is supplied by the user, ensure that it contains exactly
@@ -361,7 +399,7 @@ impl FlakeHubPushCli {
                 || !name.is_ascii()
                 || name.contains(char::is_whitespace)
             {
-                return Err(eyre!("The `upload-name` must be in the format of `owner-name/repo-name` and cannot contain whitespace or other special characters"));
+                return Err(eyre!("The argument `--name` must be in the format of `owner-name/repo-name` and cannot contain whitespace or other special characters"));
             } else {
                 name
             }
@@ -369,69 +407,144 @@ impl FlakeHubPushCli {
             repository.clone()
         };
 
-        let tag = if let Some(tag) = &tag.0 {
-            Some(tag.clone())
-        } else {
-            std::env::var("GITHUB_REF_NAME").ok()
-        };
-
         let mut repository_split = repository.split('/');
         let project_owner = repository_split
             .next()
-            .ok_or_else(|| eyre!("Could not determine owner, pass `--repository` or the `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`"))?
+            .ok_or_else(|| eyre!("Could not determine owner, pass `--repository` formatted like `determinatesystems/flakehub-push`"))?
             .to_string();
         let project_name = repository_split.next()
-            .ok_or_else(|| eyre!("Could not determine project, pass `--repository` or `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`"))?
+            .ok_or_else(|| eyre!("Could not determine project, pass `--repository` formatted like `determinatesystems/flakehub-push`"))?
             .to_string();
         if repository_split.next().is_some() {
-            Err(eyre!("Could not determine the owner/project, pass `--repository` or `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`. The passed value has too many slashes (/) to be a valid repository"))?;
+            Err(eyre!("Could not determine the owner/project, pass `--repository` formatted like `determinatesystems/flakehub-push`. The passed value has too many slashes (/) to be a valid repository"))?;
         }
 
-        let github_api_client = build_http_client().build()?;
+        let mut spdx_expression = spdx_expression.0;
 
-        let revision_info = RevisionInfo::from_git_root(&git_root)?;
-        let github_graphql_data_result = GithubGraphqlDataQuery::get(
-            &github_api_client,
-            &github_token,
-            &project_owner,
-            &project_name,
-            &revision_info.revision,
-        )
-        .await?;
+        #[allow(unused_assignments)]
+        // Since we return an error outside github actions right now, `commit_count` throws an unused warning since we don't actually use it.
+        let RevisionInfo {
+            mut commit_count,
+            revision,
+        } = RevisionInfo::from_git_root(&git_root)?;
 
-        let upload_bearer_token = match jwt_issuer_uri.0 {
-            None => get_actions_id_bearer_token()
-                .await
-                .wrap_err("Getting upload bearer token from GitHub")?,
+        let upload_bearer_token = if is_github_actions {
+            let github_token = if let Some(github_token) = &github_token.0 {
+                github_token.clone()
+            } else {
+                std::env::var("GITHUB_TOKEN")
+                    .wrap_err("Could not determine Github token, pass `--github-token`")?
+            };
+            let github_api_client = build_http_client().build()?;
 
-            Some(jwt_issuer_uri) => {
-                let client = build_http_client().build()?;
-                let mut claims = github_actions_oidc_claims::Claims::make_dummy();
-                // FIXME: we should probably fill in more of these claims.
-                claims.aud = "flakehub-localhost".to_string();
-                claims.iss = "flakehub-push-dev".to_string();
-                claims.repository = repository.clone();
-                claims.repository_owner = project_owner.to_string();
-                claims.repository_id = github_graphql_data_result.project_id.to_string();
-                claims.repository_owner_id = github_graphql_data_result.owner_id.to_string();
+            // Take the opportunity to be able to populate/encrich data from the GitHub API since we need it for project/owner_id anywys
+            let github_graphql_data_result = GithubGraphqlDataQuery::get(
+                &github_api_client,
+                &github_token,
+                &project_owner,
+                &project_name,
+                &revision,
+            )
+            .await?;
 
-                let response = client
-                    .post(jwt_issuer_uri)
-                    .header("Content-Type", "application/json")
-                    .json(&claims)
-                    .send()
-                    .await
-                    .wrap_err("Sending request to JWT issuer")?;
-                #[derive(serde::Deserialize)]
-                struct Response {
-                    token: String,
+            // On GitHub Actions, typically shallow clones are used which would report 1 for the commit count. Override it with the result from the API.
+            // Since users can't set this as a command line flag, that's fine.
+            tracing::trace!(
+                "Updating `commit_count` from {} to {} via GitHub API",
+                commit_count
+                    .map(|v| v.to_string())
+                    .unwrap_or_else(|| "<none>".into()),
+                github_graphql_data_result.rev_count as usize
+            );
+            commit_count = Some(github_graphql_data_result.rev_count as usize);
+
+            // If the user didn't pass `--spdx-expression` from command line, enrich it with Github's data.
+            spdx_expression = if spdx_expression.is_none() {
+                if let Some(spdx_string) = &github_graphql_data_result.spdx_identifier {
+                    tracing::debug!("Recieved SPDX identifier `{}` from GitHub API", spdx_string);
+                    let parsed = spdx::Expression::parse(spdx_string)
+                        .wrap_err("Invalid SPDX license identifier reported from the GitHub API, either you are using a non-standard license or GitHub has returned a value that cannot be validated")?;
+                    span.record("spdx_expression", tracing::field::display(&parsed));
+                    Some(parsed)
+                } else {
+                    None
                 }
-                let response_deserialized: Response = response
-                    .json()
+            } else {
+                // Provide the user notice if the SPDX expression passed differs from the one detected on GitHub -- It's probably something they care about.
+                if github_graphql_data_result.spdx_identifier
+                    != spdx_expression.as_ref().map(|v| v.to_string())
+                {
+                    tracing::warn!(
+                        "SPDX identifier `{}` was passed via argument, but GitHub's API suggests it may be `{}`",
+                        spdx_expression.as_ref().map(|v| v.to_string()).unwrap_or_else(|| "None".to_string()),
+                        github_graphql_data_result.spdx_identifier.unwrap_or_else(|| "None".to_string()),
+                    )
+                }
+                spdx_expression
+            };
+
+            // Extend the labels provided by the user with those from GitHub.
+            labels = labels
+                .into_iter()
+                .chain(github_graphql_data_result.topics.into_iter())
+                .collect::<HashSet<String>>();
+
+            match jwt_issuer_uri.0 {
+                None => get_actions_id_bearer_token(&host)
                     .await
-                    .wrap_err("Getting token from JWT issuer's response")?;
-                response_deserialized.token
+                    .wrap_err("Getting upload bearer token from GitHub")?,
+
+                Some(jwt_issuer_uri) => {
+                    let client = build_http_client().build()?;
+                    let mut claims = github_actions_oidc_claims::Claims::make_dummy();
+                    // FIXME: we should probably fill in more of these claims.
+                    claims.aud = "flakehub-localhost".to_string();
+                    claims.iss = "flakehub-push-dev".to_string();
+                    claims.repository = repository.clone();
+                    claims.repository_owner = project_owner.to_string();
+                    claims.repository_id = github_graphql_data_result.project_id.to_string();
+                    claims.repository_owner_id = github_graphql_data_result.owner_id.to_string();
+
+                    let response = client
+                        .post(jwt_issuer_uri)
+                        .header("Content-Type", "application/json")
+                        .json(&claims)
+                        .send()
+                        .await
+                        .wrap_err("Sending request to JWT issuer")?;
+                    #[derive(serde::Deserialize)]
+                    struct Response {
+                        token: String,
+                    }
+                    let response_deserialized: Response = response
+                        .json()
+                        .await
+                        .wrap_err("Getting token from JWT issuer's response")?;
+                    response_deserialized.token
+                }
             }
+        } else {
+            return Err(eyre!(
+                "`flakehub-push` currently only runs inside Github Actions"
+            ));
+        };
+
+        // Here we merge explicitly user-supplied labels and the labels ("topics")
+        // associated with the repo. Duplicates are excluded and all
+        // are converted to lower case.
+        let labels: Vec<String> = labels
+            .into_iter()
+            .take(MAX_NUM_TOTAL_LABELS)
+            .map(|s| s.trim().to_lowercase())
+            .filter(|t: &String| {
+                !t.is_empty()
+                    && t.len() <= MAX_LABEL_LENGTH
+                    && t.chars().all(|c| c.is_alphanumeric() || c == '-')
+            })
+            .collect();
+
+        let Some(commit_count) = commit_count else {
+            return Err(eyre!("Could not determine commit count, this is normally determined via the `--git-root` argument or via the GitHub API"));
         };
 
         push_new_release(
@@ -439,17 +552,16 @@ impl FlakeHubPushCli {
             &upload_bearer_token,
             &git_root,
             &subdir,
-            revision_info,
-            &repository,
+            revision,
+            commit_count,
             upload_name,
             mirror,
             visibility,
-            tag,
+            tag.0,
             rolling,
             rolling_minor.0,
-            github_graphql_data_result,
-            extra_labels,
-            spdx_expression.0,
+            labels,
+            spdx_expression,
             error_on_conflict,
             include_output_paths,
         )
