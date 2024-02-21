@@ -303,7 +303,7 @@ impl FlakeHubPushCli {
 
         let is_github_actions = std::env::var("GITHUB_ACTION").ok().is_some();
         if is_github_actions {
-            tracing::debug!("Running inside Github Actions, enrich arguments with GitHub Actions environment data");
+            tracing::debug!("Running inside Github Actions, enriching arguments with GitHub Actions environment data");
             self.populate_from_github_actions_environment()
         }
 
