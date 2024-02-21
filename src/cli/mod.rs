@@ -249,7 +249,7 @@ impl clap::builder::TypedValueParser for U64ToNoneParser {
 
 impl FlakeHubPushCli {
     #[tracing::instrument(skip_all)]
-    pub(crate) fn populate_missing_from_github(&mut self) {
+    pub(crate) fn populate_from_github_actions_environment(&mut self) {
         if self.git_root.0.is_none() {
             let env_key = "GITHUB_WORKSPACE";
             if let Ok(env_val) = std::env::var(env_key) {
@@ -301,11 +301,10 @@ impl FlakeHubPushCli {
         let span = tracing::Span::current();
         tracing::trace!("Executing");
 
-        let is_github_actions =
-            self.github_token.0.is_some() || std::env::var("GITHUB_ACTION").ok().is_some();
+        let is_github_actions = std::env::var("GITHUB_ACTION").ok().is_some();
         if is_github_actions {
-            tracing::debug!("Running inside Github Actions, will enrich with GitHub API data and push with authorized Github bearer token");
-            self.populate_missing_from_github()
+            tracing::debug!("Running inside Github Actions, enrich arguments with GitHub Actions environment data");
+            self.populate_from_github_actions_environment()
         }
 
         let Self {
@@ -428,13 +427,9 @@ impl FlakeHubPushCli {
             revision,
         } = RevisionInfo::from_git_root(&git_root)?;
 
-        let upload_bearer_token = if is_github_actions {
-            let github_token = if let Some(github_token) = &github_token.0 {
-                github_token.clone()
-            } else {
-                std::env::var("GITHUB_TOKEN")
-                    .wrap_err("Could not determine Github token, pass `--github-token`")?
-            };
+        let github_graphql_data_result = if let Some(github_token) = &github_token.0 {
+            tracing::debug!("Got Github token, enriching with GitHub API data");
+
             let github_api_client = build_http_client().build()?;
 
             // Take the opportunity to be able to populate/encrich data from the GitHub API since we need it for project/owner_id anywys
@@ -477,7 +472,7 @@ impl FlakeHubPushCli {
                     tracing::warn!(
                         "SPDX identifier `{}` was passed via argument, but GitHub's API suggests it may be `{}`",
                         spdx_expression.as_ref().map(|v| v.to_string()).unwrap_or_else(|| "None".to_string()),
-                        github_graphql_data_result.spdx_identifier.unwrap_or_else(|| "None".to_string()),
+                        github_graphql_data_result.spdx_identifier.clone().unwrap_or_else(|| "None".to_string()),
                     )
                 }
                 spdx_expression
@@ -486,47 +481,59 @@ impl FlakeHubPushCli {
             // Extend the labels provided by the user with those from GitHub.
             labels = labels
                 .into_iter()
-                .chain(github_graphql_data_result.topics.into_iter())
+                .chain(github_graphql_data_result.topics.iter().cloned())
                 .collect::<HashSet<String>>();
 
-            match jwt_issuer_uri.0 {
-                None => get_actions_id_bearer_token(&host)
-                    .await
-                    .wrap_err("Getting upload bearer token from GitHub")?,
+            Some(github_graphql_data_result)
+        } else {
+            None
+        };
 
-                Some(jwt_issuer_uri) => {
-                    let client = build_http_client().build()?;
-                    let mut claims = github_actions_oidc_claims::Claims::make_dummy();
-                    // FIXME: we should probably fill in more of these claims.
-                    claims.aud = "flakehub-localhost".to_string();
-                    claims.iss = "flakehub-push-dev".to_string();
-                    claims.repository = repository.clone();
-                    claims.repository_owner = project_owner.to_string();
+        let upload_bearer_token = match jwt_issuer_uri.0 {
+            None if is_github_actions => get_actions_id_bearer_token(&host)
+                .await
+                .wrap_err("Getting upload bearer token from GitHub")?,
+            None => {
+                // TODO: Accept a `--flakehub-token` arg to use a bearer token once FlakeHub supports it.
+                return Err(eyre!(
+                    "`flakehub-push` currently only runs inside Github Actions"
+                ));
+            }
+            Some(jwt_issuer_uri) => {
+                tracing::warn!("Running in a development-only context, pushing to https://api.flakehub.com will not work!");
+                let client = build_http_client().build()?;
+
+                let mut claims = github_actions_oidc_claims::Claims::make_dummy();
+                // FIXME: we should probably fill in more of these claims.
+                claims.aud = "flakehub-localhost".to_string();
+                claims.iss = "flakehub-push-dev".to_string();
+                claims.repository = repository.clone();
+                claims.repository_owner = project_owner.to_string();
+
+                if let Some(github_graphql_data_result) = github_graphql_data_result {
                     claims.repository_id = github_graphql_data_result.project_id.to_string();
                     claims.repository_owner_id = github_graphql_data_result.owner_id.to_string();
-
-                    let response = client
-                        .post(jwt_issuer_uri)
-                        .header("Content-Type", "application/json")
-                        .json(&claims)
-                        .send()
-                        .await
-                        .wrap_err("Sending request to JWT issuer")?;
-                    #[derive(serde::Deserialize)]
-                    struct Response {
-                        token: String,
-                    }
-                    let response_deserialized: Response = response
-                        .json()
-                        .await
-                        .wrap_err("Getting token from JWT issuer's response")?;
-                    response_deserialized.token
+                } else {
+                    return Err(eyre!("No populated GitHub API data (`--github-token` was likely not passed), cannot create the required JWT"));
                 }
+
+                let response = client
+                    .post(jwt_issuer_uri)
+                    .header("Content-Type", "application/json")
+                    .json(&claims)
+                    .send()
+                    .await
+                    .wrap_err("Sending request to JWT issuer")?;
+                #[derive(serde::Deserialize)]
+                struct Response {
+                    token: String,
+                }
+                let response_deserialized: Response = response
+                    .json()
+                    .await
+                    .wrap_err("Getting token from JWT issuer's response")?;
+                response_deserialized.token
             }
-        } else {
-            return Err(eyre!(
-                "`flakehub-push` currently only runs inside Github Actions"
-            ));
         };
 
         // Here we merge explicitly user-supplied labels and the labels ("topics")
