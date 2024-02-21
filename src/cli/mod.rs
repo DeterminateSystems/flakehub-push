@@ -60,7 +60,7 @@ pub(crate) struct FlakeHubPushCli {
     #[clap(long, env = "FLAKEHUB_PUSH_JWT_ISSUER_URI", value_parser = StringToNoneParser, default_value = "")]
     pub(crate) jwt_issuer_uri: OptionString,
 
-    /// User-supplied labels beyond those associated with the GitHub repository.
+    /// User-supplied labels, merged with any associated with GitHub repository (if possible)
     #[clap(
         long,
         short = 'l',
@@ -80,7 +80,7 @@ pub(crate) struct FlakeHubPushCli {
     )]
     pub(crate) extra_tags: Vec<String>,
 
-    /// An SPDX expression that overrides that which is returned from GitHub.
+    /// An SPDX identifier from https://spdx.org/licenses/, inferred from GitHub (if possible)
     #[clap(
         long,
         env = "FLAKEHUB_PUSH_SPDX_EXPRESSION",
@@ -386,7 +386,7 @@ impl FlakeHubPushCli {
         };
 
         let Some(repository) = repository.0 else {
-            return Err(eyre!("Could not determine repository name, pass `--repository` or the `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`"));
+            return Err(eyre!("Could not determine repository name, pass `--repository` formatted like `determinatesystems/flakehub-push`"));
         };
 
         // If the upload name is supplied by the user, ensure that it contains exactly
@@ -399,7 +399,7 @@ impl FlakeHubPushCli {
                 || !name.is_ascii()
                 || name.contains(char::is_whitespace)
             {
-                return Err(eyre!("The `upload-name` must be in the format of `owner-name/repo-name` and cannot contain whitespace or other special characters"));
+                return Err(eyre!("The argument `--name` must be in the format of `owner-name/repo-name` and cannot contain whitespace or other special characters"));
             } else {
                 name
             }
@@ -410,13 +410,13 @@ impl FlakeHubPushCli {
         let mut repository_split = repository.split('/');
         let project_owner = repository_split
             .next()
-            .ok_or_else(|| eyre!("Could not determine owner, pass `--repository` or the `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`"))?
+            .ok_or_else(|| eyre!("Could not determine owner, pass `--repository` formatted like `determinatesystems/flakehub-push`"))?
             .to_string();
         let project_name = repository_split.next()
-            .ok_or_else(|| eyre!("Could not determine project, pass `--repository` or `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`"))?
+            .ok_or_else(|| eyre!("Could not determine project, pass `--repository` formatted like `determinatesystems/flakehub-push`"))?
             .to_string();
         if repository_split.next().is_some() {
-            Err(eyre!("Could not determine the owner/project, pass `--repository` or `GITHUB_REPOSITORY` formatted like `determinatesystems/flakehub-push`. The passed value has too many slashes (/) to be a valid repository"))?;
+            Err(eyre!("Could not determine the owner/project, pass `--repository` formatted like `determinatesystems/flakehub-push`. The passed value has too many slashes (/) to be a valid repository"))?;
         }
 
         let mut spdx_expression = spdx_expression.0;
@@ -433,7 +433,7 @@ impl FlakeHubPushCli {
                 github_token.clone()
             } else {
                 std::env::var("GITHUB_TOKEN")
-                    .wrap_err("Could not determine Github token, pass `--github-token`, or set either `FLAKEHUB_PUSH_GITHUB_TOKEN` or `GITHUB_TOKEN`")?
+                    .wrap_err("Could not determine Github token, pass `--github-token`")?
             };
             let github_api_client = build_http_client().build()?;
 
