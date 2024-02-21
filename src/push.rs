@@ -343,7 +343,7 @@ pub(crate) async fn push_new_release(
 
     let tarball_put_response_status = tarball_put_response.status();
     tracing::trace!(
-        status = tracing::field::display(release_metadata_post_response_status),
+        status = tracing::field::display(tarball_put_response_status),
         "Got tarball PUT response"
     );
     if !tarball_put_response_status.is_success() {
