@@ -544,7 +544,7 @@ impl FlakeHubPushCli {
             .collect();
 
         let Some(commit_count) = commit_count else {
-            return Err(eyre!("Did not get `commit_count`"));
+            return Err(eyre!("Could not determine commit count, this is normally determined via the `--git-root` argument or via the GitHub API"));
         };
 
         push_new_release(
