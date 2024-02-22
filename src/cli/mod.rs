@@ -435,7 +435,7 @@ impl FlakeHubPushCli {
             // Take the opportunity to be able to populate/encrich data from the GitHub API since we need it for project/owner_id anywys
             let github_graphql_data_result = GithubGraphqlDataQuery::get(
                 &github_api_client,
-                &github_token,
+                github_token,
                 &project_owner,
                 &project_name,
                 &revision,
