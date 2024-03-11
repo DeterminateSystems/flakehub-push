@@ -19,4 +19,4 @@ jobs:
         with:
           name: "DeterminateSystems/flakehub-push"
           rolling: true
-          visibility: "private"
+          visibility: "public"
