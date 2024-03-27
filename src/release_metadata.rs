@@ -5,6 +5,7 @@ use crate::Visibility;
 
 const README_FILENAME_LOWERCASE: &str = "readme.md";
 
+// TODO(colemickens): fhlib?
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub(crate) struct ReleaseMetadata {
     pub(crate) commit_count: usize,
