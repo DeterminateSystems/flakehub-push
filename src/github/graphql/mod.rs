@@ -130,6 +130,7 @@ impl GithubGraphqlDataQuery {
             .collect();
 
         Ok(GithubGraphqlDataResult {
+            revision: revision.to_string(),
             rev_count,
             spdx_identifier,
             project_id,
@@ -141,6 +142,7 @@ impl GithubGraphqlDataQuery {
 
 #[derive(Debug)]
 pub(crate) struct GithubGraphqlDataResult {
+    pub(crate) revision: String,
     pub(crate) rev_count: i64,
     pub(crate) spdx_identifier: Option<String>,
     pub(crate) project_id: i64,

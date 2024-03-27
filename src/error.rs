@@ -3,10 +3,10 @@ pub(crate) enum Error {
     /// Unauthorized, with a single line message detailing the nature of the problem.
     #[error("Unauthorized: {0}")]
     Unauthorized(String),
-    #[error("{upload_name}/{rolling_prefix_or_tag} already exists")]
+    #[error("{upload_name}/{release_version} already exists")]
     Conflict {
         upload_name: String,
-        rolling_prefix_or_tag: String,
+        release_version: String,
     },
 }
 
