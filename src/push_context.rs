@@ -1,9 +1,22 @@
-use std::{collections::HashSet, path::{Path, PathBuf}, str::FromStr};
+use std::{
+    collections::HashSet,
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
 use color_eyre::eyre::{eyre, Context, Result};
 use spdx::Expression;
 
-use crate::{cli::FlakeHubPushCli, flake_info, flakehub_auth_fake, flakehub_client::Tarball, github::graphql::{GithubGraphqlDataQuery, GithubGraphqlDataResult, MAX_LABEL_LENGTH, MAX_NUM_TOTAL_LABELS}, release_metadata::{ReleaseMetadata, RevisionInfo}, DEFAULT_ROLLING_PREFIX};
+use crate::{
+    cli::FlakeHubPushCli,
+    flake_info, flakehub_auth_fake,
+    flakehub_client::Tarball,
+    github::graphql::{
+        GithubGraphqlDataQuery, GithubGraphqlDataResult, MAX_LABEL_LENGTH, MAX_NUM_TOTAL_LABELS,
+    },
+    release_metadata::{ReleaseMetadata, RevisionInfo},
+    DEFAULT_ROLLING_PREFIX,
+};
 
 pub struct GitContext {
     pub spdx_expression: Option<Expression>,
@@ -12,7 +25,10 @@ pub struct GitContext {
 }
 
 impl GitContext {
-    pub fn from_cli_and_github(cli: &FlakeHubPushCli, github_graphql_data_result: &GithubGraphqlDataResult) -> Result<Self> {
+    pub fn from_cli_and_github(
+        cli: &FlakeHubPushCli,
+        github_graphql_data_result: &GithubGraphqlDataResult,
+    ) -> Result<Self> {
         // do everything we need to get data from github here
 
         // step: validate spdx, backfill from GitHub API
@@ -37,23 +53,23 @@ impl GitContext {
                     github_graphql_data_result.spdx_identifier.clone().unwrap_or_else(|| "None".to_string()),
                 )
             }
-            cli.spdx_expression.0
+            cli.spdx_expression.0.clone()
         };
 
         let ctx = GitContext {
             spdx_expression: spdx_expression,
-            repo_topics: github_graphql_data_result.topics,
+            repo_topics: github_graphql_data_result.topics.clone(),
             revision_info: RevisionInfo {
                 // TODO(colemickens): type coherency here... :/ (as is bad)
                 commit_count: Some(github_graphql_data_result.rev_count as usize),
-                revision: github_graphql_data_result.revision,
+                revision: github_graphql_data_result.revision.clone(),
             },
         };
         Ok(ctx)
     }
 }
 
-pub(crate)  struct PushContext {
+pub(crate) struct PushContext {
     pub(crate) flakehub_host: url::Url,
     pub(crate) auth_token: String,
 
@@ -73,7 +89,7 @@ impl PushContext {
     pub async fn from_cli_and_env(cli: &mut FlakeHubPushCli) -> Result<Self> {
         // Take the opportunity to be able to populate/encrich data from the GitHub API
         // this is used to augment user/discovered data, and is used for the faked JWT for local flakehub-push testing
-        
+
         let client = reqwest::Client::new();
 
         let is_github = std::env::var("GITHUB_ACTION").ok().is_some();
@@ -82,11 +98,11 @@ impl PushContext {
         // "backfill" env vars from the environment, for the first time, anyway...
         if is_github {
             cli.backfill_from_github_env();
-        }        
+        }
         if is_gitlab {
             cli.backfill_from_gitlab_env();
         }
-    
+
         // STEP: determine and check 'repository' and 'upload_name'
         // If the upload name is supplied by the user, ensure that it contains exactly
         // one slash and no whitespace. Default to the repository name.
@@ -119,19 +135,25 @@ impl PushContext {
         if repository_split.next().is_some() {
             Err(eyre!("Could not determine the owner/project, pass `--repository` formatted like `determinatesystems/flakehub-push`. The passed value has too many slashes (/) to be a valid repository"))?;
         }
-        
+
         // TODO(colemickens): pretty sure there's a better way to write this:
         let local_git_root = (match &cli.git_root.0 {
             Some(gr) => Ok(gr.to_owned()),
             None => std::env::current_dir().map(PathBuf::from)
         }).wrap_err("Could not determine current `git_root`. Pass `--git-root` or set `FLAKEHUB_PUSH_GIT_ROOT`, or run `flakehub-push` with the git root as the current working directory")?;
 
-        let local_git_root = local_git_root.canonicalize().wrap_err("Failed to canonicalize `--git-root` argument")?;
+        let local_git_root = local_git_root
+            .canonicalize()
+            .wrap_err("Failed to canonicalize `--git-root` argument")?;
         let local_rev_info = RevisionInfo::from_git_root(&local_git_root)?;
 
         let (token, git_ctx) = match (is_github, is_gitlab, &cli.jwt_issuer_uri.0) {
             (true, false, None) => {
-                let github_token = cli.github_token.0.clone().expect("failed to get github token when running in GitHub Actions");
+                let github_token = cli
+                    .github_token
+                    .0
+                    .clone()
+                    .expect("failed to get github token when running in GitHub Actions");
 
                 let github_graphql_data_result = GithubGraphqlDataQuery::get(
                     &client,
@@ -149,7 +171,7 @@ impl PushContext {
                     .wrap_err("Getting upload bearer token from GitHub")?;
 
                 (token, git_ctx)
-            },
+            }
             (false, true, None) => {
                 let token = crate::gitlab::get_runner_bearer_token(&cli.host)
                     .await
@@ -157,10 +179,14 @@ impl PushContext {
                 // let git_ctx = GitContext::from_cli_and_gitlab(cli); // TODO: !!!!!
                 let git_ctx = todo!();
                 (token, git_ctx)
-            },
+            }
             (false, false, Some(u)) => {
                 // local, fake github, we need the ... github ids to get a faked token
-                let github_token = cli.github_token.0.clone().expect("failed to get github token when running locally");
+                let github_token = cli
+                    .github_token
+                    .0
+                    .clone()
+                    .expect("failed to get github token when running locally");
 
                 let github_graphql_data_result = GithubGraphqlDataQuery::get(
                     &client,
@@ -170,20 +196,29 @@ impl PushContext {
                     &local_rev_info.revision,
                 )
                 .await?;
-                
-                let git_ctx: GitContext = GitContext::from_cli_and_github(&cli, &github_graphql_data_result)?;
 
-                let token = flakehub_auth_fake::get_fake_bearer_token(u, &project_owner, &project_name, github_graphql_data_result).await?;
+                let git_ctx: GitContext =
+                    GitContext::from_cli_and_github(&cli, &github_graphql_data_result)?;
+
+                let token = flakehub_auth_fake::get_fake_bearer_token(
+                    u,
+                    &project_owner,
+                    &project_name,
+                    github_graphql_data_result,
+                )
+                .await?;
                 (token, git_ctx)
-            },
+            }
             (_, _, Some(_)) => {
                 // we're in GitHub or GitLab and jwt_issuer_uri was specified, invalid
-                return Err(eyre!("specifying the jwt_issuer_uri when running in GitHub or GitLab is invalid"));
-            },
+                return Err(eyre!(
+                    "specifying the jwt_issuer_uri when running in GitHub or GitLab is invalid"
+                ));
+            }
             _ => {
                 // who knows what's going on, invalid
                 return Err(eyre!("can't determine execution environment"));
-            },
+            }
         };
 
         // STEP: resolve "subdir" (use --directory flag from cli)
@@ -238,8 +273,7 @@ impl PushContext {
         let rolling_minor_with_postfix_or_tag = if cli.rolling_minor.0.is_some() || cli.rolling {
             format!(
                 "{rolling_prefix_or_tag}.{}+rev-{}",
-                commit_count,
-                git_ctx.revision_info.revision
+                commit_count, git_ctx.revision_info.revision
             )
         } else {
             rolling_prefix_or_tag.to_string() // This will always be the tag since `self.rolling_prefix` was empty.
@@ -249,8 +283,18 @@ impl PushContext {
         // - they can specify: extra_labels on cli
         // TODO: merge execution_environment's labels + cli extra_labels
         let merged_labels = {
-            let mut labels: HashSet<_> = cli.extra_labels.clone().into_iter().filter(|v| !v.is_empty()).collect();
-            let extra_tags: HashSet<_> = cli.extra_tags.clone().into_iter().filter(|v| !v.is_empty()).collect();
+            let mut labels: HashSet<_> = cli
+                .extra_labels
+                .clone()
+                .into_iter()
+                .filter(|v| !v.is_empty())
+                .collect();
+            let extra_tags: HashSet<_> = cli
+                .extra_tags
+                .clone()
+                .into_iter()
+                .filter(|v| !v.is_empty())
+                .collect();
 
             if !extra_tags.is_empty() {
                 let message = "`extra-tags` is deprecated and will be removed in the future. Please use `extra-labels` instead.";
@@ -295,7 +339,7 @@ impl PushContext {
                         && t.chars().all(|c| c.is_alphanumeric() || c == '-')
                 })
                 .collect();
-        
+
             merged_labels
         };
 
@@ -309,14 +353,16 @@ impl PushContext {
             .await
             .wrap_err("Getting flake metadata")?;
         tracing::debug!("Got flake metadata: {:?}", flake_metadata);
-    
+
         let flake_outputs = flake_metadata.outputs(cli.include_output_paths).await?;
         tracing::debug!("Got flake outputs: {:?}", flake_outputs);
 
-        let description = flake_metadata.metadata_json.get("description")
+        let description = flake_metadata
+            .metadata_json
+            .get("description")
             .and_then(serde_json::Value::as_str)
             .map(|s| s.to_string());
-        
+
         let readme = flake_metadata.get_readme_contents().await?;
 
         let release_metadata = ReleaseMetadata {
@@ -334,15 +380,16 @@ impl PushContext {
                     .to_str()
                     .map(|d| d.to_string())
                     .ok_or(eyre!("Directory {:?} is not a valid UTF-8 string", subdir))?,
-                ),
+            ),
             spdx_identifier: git_ctx.spdx_expression,
             labels: merged_labels,
         };
 
-        let flake_tarball = flake_metadata.flake_tarball()
+        let flake_tarball = flake_metadata
+            .flake_tarball()
             //.await //weird, tar is not async?
             .wrap_err("Making release tarball")?;
-        
+
         let ctx = Self {
             flakehub_host: cli.host.clone(),
             auth_token: token,
