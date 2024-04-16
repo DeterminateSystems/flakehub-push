@@ -63,8 +63,36 @@ impl GitContext {
 
     pub fn from_cli_and_gitlab(
         cli: &FlakeHubPushCli,
+        // local_revision_info likely
     ) -> Result<Self> {
-        todo!();
+        // Gitlab token during jobs for calling api: `CI_JOB_TOKEN`
+        // TODO(colemickens): graphql is a bit of a distraction right now, come back, just use REST for now
+
+        // repo_topics: GET /projects/:id/labels
+        // https://docs.gitlab.com/ee/api/labels.html
+        // TODO(colemickens): implement
+
+        // revision_info: GET /projects/:id/repository/commits
+        // https://docs.gitlab.com/ee/api/commits.html
+        // not sure this has what we need:
+        // - hitting projects endpoint with ?statistics=true gives a commit_count but it's unclear what that is
+        // -- https://gitlab.com/api/v4/projects/54746217?statistics=true
+        // -- https://gitlab.com/api/v4/projects/54746217/repository/commits/171d5b1d13b326e6870df1c38575c39c58acfcd4 (?stats does nothing)
+        // ---- unclear: https://forum.gitlab.com/t/gitlab-api-projects-statistics-true-commit-count/10435/3
+        // ---- another user wondering: https://forum.gitlab.com/t/api-to-get-total-commits-count/93118
+
+        // spdx_expression: can't find any evidence GitLab tries to surface this info
+
+        
+        let ctx = GitContext {
+            spdx_expression: None,
+            repo_topics: vec![],
+            revision_info: RevisionInfo {
+                commit_count: None,
+                revision: "foo".to_string(),
+            },
+        };
+        Ok(ctx)
     }
 }
 
@@ -94,7 +122,7 @@ impl PushContext {
         let is_github = std::env::var("GITHUB_ACTION").ok().is_some();
         let is_gitlab = std::env::var("GITLAB_CI").ok().is_some();
 
-        // "backfill" env vars from the environment, for the first time, anyway...
+        // "backfill" env vars from the environment
         if is_github {
             cli.backfill_from_github_env();
         }
@@ -102,17 +130,17 @@ impl PushContext {
             cli.backfill_from_gitlab_env();
         }
 
-        // STEP: determine and check 'repository' and 'upload_name'
-        // If the upload name is supplied by the user, ensure that it contains exactly
-        // one slash and no whitespace. Default to the repository name.
+        // notes for future readers:
+        // upload_name is derived from repository, unless set
+        // upload_name is then used for upload_name (and repository) there-after
+        // *except* in GitHub paths, where it's used to query the authoritative git_ctx and locally to fill the fake jwt
 
-        // Oh yeesh:
-        // upload_name is set from --repository if --name is not passed
-        // but --repository is used for the gh_owner/gh_repo, .... ?? only for github?
-        // I _HATE_ that we accept user input for this stuff when we don't even validate it, we just blindly re-display it
         let Some(ref repository) = cli.repository.0 else {
             return Err(eyre!("Could not determine repository name, pass `--repository` formatted like `determinatesystems/flakehub-push`"));
         };
+
+        // If the upload name is supplied by the user, ensure that it contains exactly
+        // one slash and no whitespace. Default to the repository name.
         let upload_name = if let Some(ref name) = cli.name.0 {
             let num_slashes = name.matches('/').count();
 
@@ -150,6 +178,8 @@ impl PushContext {
             .wrap_err("Failed to canonicalize `--git-root` argument")?;
         let local_rev_info = RevisionInfo::from_git_root(&local_git_root)?;
 
+        // "cli" and "git_ctx" are the user/env supplied info, augmented with data we might have fetched from github/gitlab apis
+
         let (token, git_ctx) = match (is_github, is_gitlab, &cli.jwt_issuer_uri.0) {
             (true, false, None) => {
                 // GITHUB CI
@@ -178,7 +208,7 @@ impl PushContext {
             }
             (false, true, None) => {
                 // GITLAB CI
-                let token = crate::gitlab::get_runner_bearer_token(&cli.host)
+                let token = crate::gitlab::get_runner_bearer_token()
                     .await
                     .wrap_err("Getting upload bearer token from GitLab")?;
                 let git_ctx = GitContext::from_cli_and_gitlab(cli)?;

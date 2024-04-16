@@ -135,7 +135,7 @@ async fn main() -> Result<std::process::ExitCode> {
     s3::upload_release_to_s3(stage_result.s3_upload_url, ctx.tarball).await?;
 
     // "publish.rs" - publish the release after upload
-    let publish_result = fhclient.release_publish(stage_result.uuid).await?;
+    let _publish_result = fhclient.release_publish(stage_result.uuid).await?;
 
     tracing::info!(
         "Successfully released new version of {}/{}",
