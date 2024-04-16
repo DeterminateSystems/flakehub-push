@@ -53,16 +53,16 @@ impl GitContext {
                     github_graphql_data_result.spdx_identifier.clone().unwrap_or_else(|| "None".to_string()),
                 )
             }
-            cli.spdx_expression.0
+            cli.spdx_expression.0.clone()
         };
 
         let ctx = GitContext {
             spdx_expression: spdx_expression,
-            repo_topics: github_graphql_data_result.topics,
+            repo_topics: github_graphql_data_result.topics.clone(),
             revision_info: RevisionInfo {
                 // TODO(colemickens): type coherency here... :/ (as is bad)
                 commit_count: Some(github_graphql_data_result.rev_count as usize),
-                revision: github_graphql_data_result.revision,
+                revision: github_graphql_data_result.revision.clone(),
             },
         };
         Ok(ctx)

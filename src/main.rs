@@ -1,4 +1,9 @@
-use std::{fmt::Display, io::IsTerminal, path::{Path, PathBuf}, process::ExitCode};
+use std::{
+    fmt::Display,
+    io::IsTerminal,
+    path::{Path, PathBuf},
+    process::ExitCode,
+};
 
 use clap::Parser;
 use color_eyre::eyre::{eyre, Result, WrapErr};
@@ -6,7 +11,10 @@ use error::Error;
 use http::StatusCode;
 use uuid::Uuid;
 
-use crate::{flakehub_client::FlakeHubClient, github::graphql::GithubGraphqlDataQuery, push_context::PushContext, release_metadata::ReleaseMetadata};
+use crate::{
+    flakehub_client::FlakeHubClient, github::graphql::GithubGraphqlDataQuery,
+    push_context::PushContext, release_metadata::ReleaseMetadata,
+};
 mod cli;
 mod error;
 mod flake_info;
@@ -48,7 +56,7 @@ async fn main() -> Result<std::process::ExitCode> {
         })
         .install()?;
 
-    let cli = cli::FlakeHubPushCli::parse();
+    let mut cli = cli::FlakeHubPushCli::parse();
     cli.instrumentation.setup()?;
 
     let ctx: PushContext = PushContext::from_cli_and_env(&mut cli).await?;
@@ -57,12 +65,14 @@ async fn main() -> Result<std::process::ExitCode> {
     let fhclient = FlakeHubClient::new(ctx.flakehub_host, ctx.auth_token)?;
 
     // "upload.rs" - stage the release
-    let stage_response = fhclient.release_stage(
-        ctx.upload_name,
-        ctx.release_version,
-        ctx.metadata,
-        ctx.tarball,
-    ).await?;
+    let stage_response = fhclient
+        .release_stage(
+            &ctx.upload_name,
+            &ctx.release_version,
+            &ctx.metadata,
+            &ctx.tarball,
+        )
+        .await?;
 
     // handle the response here, rather than in client, so we can do special behavior
     // TODO(colemickens/review): move this intoo release_create with another flag?
@@ -79,7 +89,7 @@ async fn main() -> Result<std::process::ExitCode> {
         StatusCode::CONFLICT => {
             tracing::info!(
                 "Release for revision `{revision}` of {upload_name}/{release_version} already exists; flakehub-push will not upload it again",
-                revision = ctx.metadata.revision,
+                revision = &ctx.metadata.revision,
                 upload_name = ctx.upload_name,
                 release_version = ctx.release_version,
             );
@@ -89,7 +99,7 @@ async fn main() -> Result<std::process::ExitCode> {
                     release_version: ctx.release_version,
                 })?;
             } else {
-                return Ok(());
+                todo!();
             }
         }
         StatusCode::UNAUTHORIZED => {
@@ -126,13 +136,15 @@ async fn main() -> Result<std::process::ExitCode> {
 
     // "publish.rs" - publish the release after upload
     let publish_result = fhclient.release_publish(stage_result.uuid).await?;
-        
+
     tracing::info!(
-        "Successfully released new version of {}/{}", ctx.upload_name, ctx.release_version
+        "Successfully released new version of {}/{}",
+        ctx.upload_name,
+        ctx.release_version
     );
 
     let exitcode = ExitCode::SUCCESS;
-    return Ok(exitcode);
+    Ok(exitcode)
 }
 
 #[derive(Debug, Clone, Copy, clap::ValueEnum, serde::Serialize, serde::Deserialize)]

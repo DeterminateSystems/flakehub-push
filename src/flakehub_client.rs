@@ -1,12 +1,11 @@
 use std::str::FromStr;
 
 use color_eyre::eyre::{eyre, Context, Result};
-use http::{StatusCode};
+use http::StatusCode;
 use reqwest::{header::HeaderMap, Response};
 use uuid::Uuid;
 
 use crate::release_metadata::ReleaseMetadata;
-
 
 pub struct FlakeHubClient {
     host: url::Url,
@@ -37,8 +36,7 @@ pub fn flakehub_headers() -> HeaderMap {
 
 impl FlakeHubClient {
     pub fn new(host: url::Url, token: String) -> Result<Self> {
-        let builder = reqwest::ClientBuilder::new();
-        builder.user_agent("flakehub-push");
+        let builder = reqwest::ClientBuilder::new().user_agent("flakehub-push");
 
         let client = builder.build()?;
 
@@ -50,21 +48,27 @@ impl FlakeHubClient {
 
         Ok(client)
     }
-    pub async fn release_stage(&self, upload_name: String, release_version: String, release_metadata: ReleaseMetadata, tarball: Tarball) -> Result<Response> {
+    pub async fn release_stage(
+        &self,
+        upload_name: &str,
+        release_version: &str,
+        release_metadata: &ReleaseMetadata,
+        tarball: &Tarball,
+    ) -> Result<Response> {
         let flake_tarball_len = tarball.bytes.len();
-        let flake_tarball_hash_base64 = tarball.hash_base64;
+        let flake_tarball_hash_base64 = &tarball.hash_base64;
         let relative_url = &format!("upload/{upload_name}/{release_version}/{flake_tarball_len}/{flake_tarball_hash_base64}");
-        
-        
+
         let release_metadata_post_url = format!("{}/{}", self.host, relative_url);
         // TODO(colemickens): better join
-        
+
         tracing::debug!(
             url = %release_metadata_post_url,
             "Computed release metadata POST URL"
         );
-        
-        let response = self.client
+
+        let response = self
+            .client
             .post(release_metadata_post_url)
             .bearer_auth(&self.bearer_token)
             .headers(flakehub_headers())
@@ -75,28 +79,28 @@ impl FlakeHubClient {
 
         Ok(response)
     }
-    
+
     pub async fn release_publish(&self, release_uuidv7: Uuid) -> Result<()> {
         let publish_post_url = format!("{}/publish/{}", self.host, release_uuidv7);
         // TODO(colemickens): fix url joining
 
-
         tracing::debug!(url = %publish_post_url, "Computed publish POST URL");
-    
-        let publish_response = self.client
+
+        let publish_response = self
+            .client
             .post(publish_post_url)
             .bearer_auth(&self.bearer_token)
             .headers(flakehub_headers())
             .send()
             .await
             .wrap_err("Publishing release")?;
-    
+
         let publish_response_status = publish_response.status();
         tracing::trace!(
             status = tracing::field::display(publish_response_status),
             "Got publish POST response"
         );
-    
+
         if publish_response_status != 200 {
             return Err(eyre!(
                 "\
@@ -107,7 +111,7 @@ impl FlakeHubClient {
             ));
         }
 
-        // TODO: return the actual response object?    
+        // TODO: return the actual response object?
         Ok(())
     }
 }

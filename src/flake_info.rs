@@ -1,4 +1,7 @@
-use std::{io::Write, path::{Path, PathBuf}};
+use std::{
+    io::Write,
+    path::{Path, PathBuf},
+};
 
 use color_eyre::eyre::{eyre, Result, WrapErr};
 use serde::Deserialize;
@@ -62,7 +65,6 @@ const README_FILENAME_LOWERCASE: &str = "readme.md";
 //     Ok(())
 // }
 
-
 #[derive(Debug)]
 pub struct FlakeMetadata {
     pub(crate) source_dir: std::path::PathBuf,
@@ -91,12 +93,13 @@ impl FlakeMetadata {
                 )
             })?;
 
-        let metadata_json: serde_json::Value = serde_json::from_slice(&output.stdout).wrap_err_with(|| {
-            eyre!(
-                "Parsing `nix flake metadata --json {}` as JSON",
-                directory.display()
-            )
-        })?;
+        let metadata_json: serde_json::Value = serde_json::from_slice(&output.stdout)
+            .wrap_err_with(|| {
+                eyre!(
+                    "Parsing `nix flake metadata --json {}` as JSON",
+                    directory.display()
+                )
+            })?;
 
         /*
             if flake_dir.join("flake.lock").exists() {
@@ -140,7 +143,7 @@ impl FlakeMetadata {
         */
 
         // determine flake's store (sub)dir:
-        
+
         let flake_locked_url = metadata_json
             .get("url")
             .and_then(serde_json::Value::as_str)
@@ -187,39 +190,41 @@ impl FlakeMetadata {
             ));
         };
         tracing::debug!("lastModified = {}", last_modified);
-    
+
         let mut tarball_builder = tar::Builder::new(vec![]);
         tarball_builder.follow_symlinks(false);
         tarball_builder.force_mtime(last_modified);
-    
+
         tracing::trace!("Creating tarball");
         // `tar` works according to the current directory (yay)
         // So we change dir and restory it after
         // TODO: Fix this
-        let source = self.source_dir; // refactor to be known when we create struct with from_dir
+        let source = &self.source_dir; // refactor to be known when we create struct with from_dir
         let current_dir = std::env::current_dir().wrap_err("Could not get current directory")?;
         std::env::set_current_dir(
             source
                 .parent()
                 .ok_or_else(|| eyre!("Getting parent directory"))?,
         )?;
-        let dirname = self.source_dir
+        let dirname = self
+            .source_dir
             .file_name()
             .ok_or_else(|| eyre!("No file name of directory"))?;
         tarball_builder
             .append_dir_all(dirname, dirname)
             .wrap_err_with(|| eyre!("Adding `{}` to tarball", self.source_dir.display()))?;
         std::env::set_current_dir(current_dir).wrap_err("Could not set current directory")?;
-    
+
         let tarball = tarball_builder.into_inner().wrap_err("Creating tarball")?;
         tracing::trace!("Created tarball, compressing...");
-        let mut gzip_encoder = flate2::write::GzEncoder::new(vec![], flate2::Compression::default());
+        let mut gzip_encoder =
+            flate2::write::GzEncoder::new(vec![], flate2::Compression::default());
         gzip_encoder
             .write_all(&tarball[..])
             .wrap_err("Adding tarball to gzip")?;
         let compressed_tarball = gzip_encoder.finish().wrap_err("Creating gzip")?;
         tracing::trace!("Compressed tarball");
-    
+
         let flake_tarball_hash = {
             let mut context = ring::digest::Context::new(&ring::digest::SHA256);
             context.update(&compressed_tarball);
@@ -230,12 +235,12 @@ impl FlakeMetadata {
             use base64::{engine::general_purpose::STANDARD, Engine as _};
             STANDARD.encode(flake_tarball_hash)
         };
-    
+
         let tarball = Tarball {
             bytes: compressed_tarball,
-            hash_base64: flake_tarball_hash_base64
+            hash_base64: flake_tarball_hash_base64,
         };
-    
+
         Ok(tarball)
     }
 
@@ -267,10 +272,12 @@ impl FlakeMetadata {
         cmd.arg("--json");
         cmd.arg("--no-write-lock-file");
         cmd.arg(format!("{}#contents", tempdir.path().display()));
-        let output = cmd
-            .output()
-            .await
-            .wrap_err_with(|| eyre!("Failed to get flake outputs from tarball {}", &self.flake_locked_url))?;
+        let output = cmd.output().await.wrap_err_with(|| {
+            eyre!(
+                "Failed to get flake outputs from tarball {}",
+                &self.flake_locked_url
+            )
+        })?;
 
         if !output.status.success() {
             return Err(eyre!(
@@ -289,9 +296,8 @@ impl FlakeMetadata {
         })?;
 
         Ok(output_json)
-    } 
+    }
 
-        
     #[tracing::instrument(skip_all, fields(readme_dir))]
     pub(crate) async fn get_readme_contents(&self) -> Result<Option<String>> {
         let mut read_dir = tokio::fs::read_dir(&self.source_dir).await?;
