@@ -14,57 +14,6 @@ use crate::flakehub_client::Tarball;
 const FLAKE_URL_PLACEHOLDER_UUID: &str = "c9026fc0-ced9-48e0-aa3c-fc86c4c86df1";
 const README_FILENAME_LOWERCASE: &str = "readme.md";
 
-// TODO: can't we just do this sanity checking in from_dir?
-// // TODO(colemickens): can we move this to a method on FlakeMetadata?
-// // maybe FlakeMetadata should know its dir? probably inside the json already
-// #[tracing::instrument(
-//     skip_all,
-//     fields(
-//         directory = %directory.display(),
-//     )
-// )]
-// pub(crate) async fn check_flake_evaluates(directory: &Path) -> color_eyre::Result<()> {
-//     let output = tokio::process::Command::new("nix")
-//         .arg("flake")
-//         .arg("show")
-//         .arg("--all-systems")
-//         .arg("--json")
-//         .arg("--no-write-lock-file")
-//         .arg(directory)
-//         .output()
-//         .await
-//         .wrap_err_with(|| {
-//             eyre!(
-//                 "Failed to execute `nix flake show --all-systems --json --no-write-lock-file {}`",
-//                 directory.display()
-//             )
-//         })?;
-
-//     if !output.status.success() {
-//         let command = format!(
-//             "nix flake show --all-systems --json --no-write-lock-file {}",
-//             directory.display(),
-//         );
-//         let msg = format!(
-//             "\
-//             Failed to execute command `{command}`{maybe_status} \n\
-//             stdout: {stdout}\n\
-//             stderr: {stderr}\n\
-//             ",
-//             stdout = String::from_utf8_lossy(&output.stdout),
-//             stderr = String::from_utf8_lossy(&output.stderr),
-//             maybe_status = if let Some(status) = output.status.code() {
-//                 format!(" with status {status}")
-//             } else {
-//                 String::new()
-//             }
-//         );
-//         return Err(eyre!(msg))?;
-//     }
-
-//     Ok(())
-// }
-
 #[derive(Debug)]
 pub struct FlakeMetadata {
     pub(crate) source_dir: std::path::PathBuf,
@@ -75,9 +24,13 @@ pub struct FlakeMetadata {
 #[derive(Debug, Deserialize)]
 pub struct FlakeOutputs(pub serde_json::Value);
 
+// notes: there are three distinct `nix` invocations throughout FlakeMetadata:
+// 1. to get the basic flake metadata (used for last_modified, initial sanity check, store output path(s))
+// 2. check_evaluates make sure all the outputs evaluate (TODO(review): seems a tad aggressive almost?)
+// 3. check_lock_if_exists makes sure the user has accidentally pushed a flake with incoherent `flake.{nix,lock}`
+
 impl FlakeMetadata {
     pub async fn from_dir(directory: &Path) -> Result<Self> {
-        // TODO(colemickens): the de-duped block below runs `--no-update-lock-file`, this one is `--no-write-lock-file`
         let output = tokio::process::Command::new("nix")
             .arg("flake")
             .arg("metadata")
@@ -100,49 +53,6 @@ impl FlakeMetadata {
                     directory.display()
                 )
             })?;
-
-        /*
-            if flake_dir.join("flake.lock").exists() {
-            let output = tokio::process::Command::new("nix")
-                .arg("flake")
-                .arg("metadata")
-                .arg("--json")
-                .arg("--no-update-lock-file")
-                .arg(&flake_dir)
-                .output()
-                .await
-                .wrap_err_with(|| {
-                    eyre!(
-                        "Failed to execute `nix flake metadata --json --no-update-lock-file {}`",
-                        flake_dir.display()
-                    )
-                })?;
-
-            if !output.status.success() {
-                let command = format!(
-                    "nix flake metadata --json --no-update-lock-file {}",
-                    flake_dir.display(),
-                );
-                let msg = format!(
-                    "\
-                    Failed to execute command `{command}`{maybe_status} \n\
-                    stdout: {stdout}\n\
-                    stderr: {stderr}\n\
-                    ",
-                    stdout = String::from_utf8_lossy(&output.stdout),
-                    stderr = String::from_utf8_lossy(&output.stderr),
-                    maybe_status = if let Some(status) = output.status.code() {
-                        format!(" with status {status}")
-                    } else {
-                        String::new()
-                    }
-                );
-                return Err(eyre!(msg))?;
-            }
-        }
-        */
-
-        // determine flake's store (sub)dir:
 
         let flake_locked_url = metadata_json
             .get("url")
@@ -172,11 +82,97 @@ impl FlakeMetadata {
             source_dir: source,
             flake_locked_url: flake_locked_url.to_string(),
             metadata_json: metadata_json,
-            // TODO(Colemickens): remove this, we want to use get_source()
-            //dir: directory,
-            // move the source determination to from_dir so we just know it as a property
-            // rename 'dir' to 'source'
         })
+    }
+
+    /// check_evalutes checks that the flake evaluates
+    /// (note it is not necessary for the target to have a flake.lock)
+    pub async fn check_evaluates(&self) -> Result<()> {
+        let output = tokio::process::Command::new("nix")
+                .arg("flake")
+                .arg("show")
+                .arg("--all-systems")
+                .arg("--json")
+                .arg("--no-write-lock-file")
+                .arg(&self.source_dir)
+                .output()
+                .await
+                .wrap_err_with(|| {
+                    eyre!(
+                        "Failed to execute `nix flake show --all-systems --json --no-write-lock-file {}`",
+                        self.source_dir.display()
+                    )
+                })?;
+        
+            if !output.status.success() {
+                let command = format!(
+                    "nix flake show --all-systems --json --no-write-lock-file {}",
+                    self.source_dir.display(),
+                );
+                let msg = format!(
+                    "\
+                    Failed to execute command `{command}`{maybe_status} \n\
+                    stdout: {stdout}\n\
+                    stderr: {stderr}\n\
+                    ",
+                    stdout = String::from_utf8_lossy(&output.stdout),
+                    stderr = String::from_utf8_lossy(&output.stderr),
+                    maybe_status = if let Some(status) = output.status.code() {
+                        format!(" with status {status}")
+                    } else {
+                        String::new()
+                    }
+                );
+                return Err(eyre!(msg))?;
+            }
+        
+            Ok(())
+    }
+
+    /// check_lock_if_exists is specifically to check locked flakes to make sure the flake.lock
+    /// has not "drifted" from flake.nix. This would happen if the user added a new flake.nix input,
+    /// and committed/pushed that without the corresponding update to the flake.lock. Importantly,
+    /// this does not ensure anything about the recentness of the locked revs.
+    pub async fn check_lock_if_exists(&self) -> Result<()> {
+        if self.source_dir.join("flake.lock").exists() {
+            let output = tokio::process::Command::new("nix")
+                .arg("flake")
+                .arg("metadata")
+                .arg("--json")
+                .arg("--no-update-lock-file")
+                .arg(&self.source_dir)
+                .output()
+                .await
+                .wrap_err_with(|| {
+                    eyre!(
+                        "Failed to execute `nix flake metadata --json --no-update-lock-file {}`",
+                        self.source_dir.display()
+                    )
+                })?;
+
+            if !output.status.success() {
+                let command = format!(
+                    "nix flake metadata --json --no-update-lock-file {}",
+                    self.source_dir.display(),
+                );
+                let msg = format!(
+                    "\
+                    Failed to execute command `{command}`{maybe_status} \n\
+                    stdout: {stdout}\n\
+                    stderr: {stderr}\n\
+                    ",
+                    stdout = String::from_utf8_lossy(&output.stdout),
+                    stderr = String::from_utf8_lossy(&output.stderr),
+                    maybe_status = if let Some(status) = output.status.code() {
+                        format!(" with status {status}")
+                    } else {
+                        String::new()
+                    }
+                );
+                return Err(eyre!(msg))?;
+            }
+        }
+        Ok(())
     }
 
     pub fn flake_tarball(&self) -> Result<Tarball> {
