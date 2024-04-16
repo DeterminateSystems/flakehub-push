@@ -354,6 +354,14 @@ impl PushContext {
             .wrap_err("Getting flake metadata")?;
         tracing::debug!("Got flake metadata: {:?}", flake_metadata);
 
+        // sanity checks
+        flake_metadata.check_evaluates()
+            .await
+            .wrap_err("failed to evaluate all system attrs of the flake")?;
+        flake_metadata.check_lock_if_exists()
+            .await
+            .wrap_err("failed to evaluate all system attrs of the flake")?;
+
         let flake_outputs = flake_metadata.outputs(cli.include_output_paths).await?;
         tracing::debug!("Got flake outputs: {:?}", flake_outputs);
 
