@@ -85,6 +85,8 @@ impl FlakeMetadata {
         })
     }
 
+    // TODO(colemickens): consider a nix_cmd() that wraps this stuff up and just takes the string args[] and handles errors etc
+
     /// check_evalutes checks that the flake evaluates
     /// (note it is not necessary for the target to have a flake.lock)
     pub async fn check_evaluates(&self) -> Result<()> {

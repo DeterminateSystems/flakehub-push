@@ -8,14 +8,9 @@ use color_eyre::eyre::{eyre, Context, Result};
 use spdx::Expression;
 
 use crate::{
-    cli::FlakeHubPushCli,
-    flake_info, flakehub_auth_fake,
-    flakehub_client::Tarball,
-    github::graphql::{
+    build_http_client, cli::FlakeHubPushCli, flake_info, flakehub_auth_fake, flakehub_client::Tarball, github::graphql::{
         GithubGraphqlDataQuery, GithubGraphqlDataResult, MAX_LABEL_LENGTH, MAX_NUM_TOTAL_LABELS,
-    },
-    release_metadata::{ReleaseMetadata, RevisionInfo},
-    DEFAULT_ROLLING_PREFIX,
+    }, release_metadata::ReleaseMetadata, revision_info::RevisionInfo, DEFAULT_ROLLING_PREFIX
 };
 
 pub struct GitContext {
@@ -29,8 +24,6 @@ impl GitContext {
         cli: &FlakeHubPushCli,
         github_graphql_data_result: &GithubGraphqlDataResult,
     ) -> Result<Self> {
-        // do everything we need to get data from github here
-
         // step: validate spdx, backfill from GitHub API
         let spdx_expression = if cli.spdx_expression.0.is_none() {
             if let Some(spdx_string) = &github_graphql_data_result.spdx_identifier {
@@ -67,6 +60,12 @@ impl GitContext {
         };
         Ok(ctx)
     }
+
+    pub fn from_cli_and_gitlab(
+        cli: &FlakeHubPushCli,
+    ) -> Result<Self> {
+        todo!();
+    }
 }
 
 pub(crate) struct PushContext {
@@ -90,7 +89,7 @@ impl PushContext {
         // Take the opportunity to be able to populate/encrich data from the GitHub API
         // this is used to augment user/discovered data, and is used for the faked JWT for local flakehub-push testing
 
-        let client = reqwest::Client::new();
+        let client = build_http_client().build()?;
 
         let is_github = std::env::var("GITHUB_ACTION").ok().is_some();
         let is_gitlab = std::env::var("GITLAB_CI").ok().is_some();
@@ -106,6 +105,11 @@ impl PushContext {
         // STEP: determine and check 'repository' and 'upload_name'
         // If the upload name is supplied by the user, ensure that it contains exactly
         // one slash and no whitespace. Default to the repository name.
+
+        // Oh yeesh:
+        // upload_name is set from --repository if --name is not passed
+        // but --repository is used for the gh_owner/gh_repo, .... ?? only for github?
+        // I _HATE_ that we accept user input for this stuff when we don't even validate it, we just blindly re-display it
         let Some(ref repository) = cli.repository.0 else {
             return Err(eyre!("Could not determine repository name, pass `--repository` formatted like `determinatesystems/flakehub-push`"));
         };
@@ -136,7 +140,6 @@ impl PushContext {
             Err(eyre!("Could not determine the owner/project, pass `--repository` formatted like `determinatesystems/flakehub-push`. The passed value has too many slashes (/) to be a valid repository"))?;
         }
 
-        // TODO(colemickens): pretty sure there's a better way to write this:
         let local_git_root = (match &cli.git_root.0 {
             Some(gr) => Ok(gr.to_owned()),
             None => std::env::current_dir().map(PathBuf::from)
@@ -149,6 +152,7 @@ impl PushContext {
 
         let (token, git_ctx) = match (is_github, is_gitlab, &cli.jwt_issuer_uri.0) {
             (true, false, None) => {
+                // GITHUB CI
                 let github_token = cli
                     .github_token
                     .0
@@ -173,15 +177,15 @@ impl PushContext {
                 (token, git_ctx)
             }
             (false, true, None) => {
+                // GITLAB CI
                 let token = crate::gitlab::get_runner_bearer_token(&cli.host)
                     .await
                     .wrap_err("Getting upload bearer token from GitLab")?;
-                // let git_ctx = GitContext::from_cli_and_gitlab(cli); // TODO: !!!!!
-                let git_ctx = todo!();
+                let git_ctx = GitContext::from_cli_and_gitlab(cli)?;
                 (token, git_ctx)
             }
             (false, false, Some(u)) => {
-                // local, fake github, we need the ... github ids to get a faked token
+                // LOCAL, DEV (aka emulating GITHUB)
                 let github_token = cli
                     .github_token
                     .0
@@ -210,7 +214,7 @@ impl PushContext {
                 (token, git_ctx)
             }
             (_, _, Some(_)) => {
-                // we're in GitHub or GitLab and jwt_issuer_uri was specified, invalid
+                // we're in (GitHub|GitLab) and jwt_issuer_uri was specified, invalid
                 return Err(eyre!(
                     "specifying the jwt_issuer_uri when running in GitHub or GitLab is invalid"
                 ));
@@ -221,9 +225,7 @@ impl PushContext {
             }
         };
 
-        // STEP: resolve "subdir" (use --directory flag from cli)
-        // TODO(colemickens): do we really need both in our source, "subdir" is part of release_metadata tho
-        // NOTE(colemickens,self): flake_dir can probably be evne more "intenral" only used for tarring/flake_info
+        // STEP: resolve/canonicalize "subdir"
         let subdir = if let Some(directory) = &cli.directory.0 {
             let absolute_directory = if directory.is_absolute() {
                 directory.clone()
@@ -265,8 +267,8 @@ impl PushContext {
             }
         };
 
-        // TODO(don't use revision_info, maybe, so we don't have this extra shadowy local var)
         let Some(commit_count) = git_ctx.revision_info.commit_count else {
+            // TODO(review): shouldn't this maybe only be fatal whenever we are rolling_minor||rolling?
             return Err(eyre!("Could not determine commit count, this is normally determined via the `--git-root` argument or via the GitHub API"));
         };
 
@@ -280,8 +282,6 @@ impl PushContext {
         };
 
         // STEP: calculate labels
-        // - they can specify: extra_labels on cli
-        // TODO: merge execution_environment's labels + cli extra_labels
         let merged_labels = {
             let mut labels: HashSet<_> = cli
                 .extra_labels
@@ -300,10 +300,9 @@ impl PushContext {
                 let message = "`extra-tags` is deprecated and will be removed in the future. Please use `extra-labels` instead.";
                 tracing::warn!("{message}");
 
-                // TODO(colemickens): restore this cleanly, have something on git_ctx that logs? rename git_ctx?
-                // if is_github_actions {
-                //     println!("::warning::{message}");
-                // }
+                if is_github {
+                    println!("::warning::{message}");
+                }
 
                 if labels.is_empty() {
                     labels = extra_tags;
@@ -312,10 +311,9 @@ impl PushContext {
                         "Both `extra-tags` and `extra-labels` were set; `extra-tags` will be ignored.";
                     tracing::warn!("{message}");
 
-                    // TODO(colemickens): restore this cleanly, have something on git_ctx that logs? rename git_ctx?
-                    // if is_github_actions {
-                    //     println!("::warning::{message}");
-                    // }
+                    if is_github {
+                        println!("::warning::{message}");
+                    }
                 }
             }
 
@@ -345,10 +343,9 @@ impl PushContext {
 
         // flake_dir is an absolute path of flake_root(aka git_root)/subdir
         let flake_dir = local_git_root.join(&subdir);
-        // TODO: depending on what the user called us with, this flake_dir isn't even necessarily canonicalized, is this a sec/traversal issue?
+        // TODO(review): depending on what the user called us with, this flake_dir isn't even necessarily canonicalized, is this a sec/traversal issue?
 
         // FIXME: bail out if flake_metadata denotes a dirty tree.
-        // (Todo make sure invariant checks are right, de-duped properly)
         let flake_metadata = flake_info::FlakeMetadata::from_dir(&flake_dir)
             .await
             .wrap_err("Getting flake metadata")?;
@@ -379,7 +376,8 @@ impl PushContext {
             outputs: flake_outputs.0,
             raw_flake_metadata: flake_metadata.metadata_json.clone(),
             readme: readme,
-            repo: repository.to_string(),
+            // TODO(colemickens): remove this confusing, redundant field (FH-267)
+            repo: upload_name.to_string(),
             revision: git_ctx.revision_info.revision,
             visibility: cli.visibility,
             mirrored: cli.mirror,
@@ -395,7 +393,6 @@ impl PushContext {
 
         let flake_tarball = flake_metadata
             .flake_tarball()
-            //.await //weird, tar is not async?
             .wrap_err("Making release tarball")?;
 
         let ctx = Self {
@@ -407,7 +404,6 @@ impl PushContext {
 
             error_if_release_conflicts: cli.error_on_conflict,
 
-            // this is the payload we send
             metadata: release_metadata,
             tarball: flake_tarball,
         };
