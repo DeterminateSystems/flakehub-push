@@ -57,15 +57,18 @@ impl FlakeHubClient {
     ) -> Result<Response> {
         let flake_tarball_len = tarball.bytes.len();
         let flake_tarball_hash_base64 = &tarball.hash_base64;
-        let relative_url = &format!("upload/{upload_name}/{release_version}/{flake_tarball_len}/{flake_tarball_hash_base64}");
+        let relative_url: &String = &format!("upload/{upload_name}/{release_version}/{flake_tarball_len}/{flake_tarball_hash_base64}");
 
-        let release_metadata_post_url = format!("{}/{}", self.host, relative_url);
-        // TODO(colemickens): better join
+        let release_metadata_post_url = self.host.join(relative_url)?;
 
         tracing::debug!(
             url = %release_metadata_post_url,
             "Computed release metadata POST URL"
         );
+        
+        tracing::debug!(?release_metadata); //TODO colemickens: sanity check this against main fhp
+        tracing::debug!("repo={}", release_metadata.repo);
+        tracing::debug!("upload_name={}", upload_name);
 
         let response = self
             .client
@@ -81,8 +84,8 @@ impl FlakeHubClient {
     }
 
     pub async fn release_publish(&self, release_uuidv7: Uuid) -> Result<()> {
-        let publish_post_url = format!("{}/publish/{}", self.host, release_uuidv7);
-        // TODO(colemickens): fix url joining
+        let relative_url = format!("publish/{}", release_uuidv7);
+        let publish_post_url = self.host.join(&relative_url)?;
 
         tracing::debug!(url = %publish_post_url, "Computed publish POST URL");
 
@@ -111,7 +114,6 @@ impl FlakeHubClient {
             ));
         }
 
-        // TODO: return the actual response object?
         Ok(())
     }
 }

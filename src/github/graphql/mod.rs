@@ -38,6 +38,9 @@ impl GithubGraphqlDataQuery {
                 revision: revision.to_string(),
                 max_num_topics: MAX_NUM_EXTRA_TOPICS,
             };
+
+            tracing::debug!(?variables); // TODO remove
+
             let query = GithubGraphqlDataQuery::build_query(variables);
             let reqwest_response = reqwest_client
                 .post(GITHUB_ENDPOINT)
@@ -46,6 +49,7 @@ impl GithubGraphqlDataQuery {
                 .send()
                 .await
                 .wrap_err("Failed to issue RevCountQuery request to Github's GraphQL API")?;
+
 
             let response_status = reqwest_response.status();
             let response: graphql_client::Response<

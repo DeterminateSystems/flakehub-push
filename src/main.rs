@@ -24,6 +24,7 @@ mod github;
 mod gitlab;
 mod push_context;
 mod release_metadata;
+mod revision_info;
 mod s3;
 
 const DEFAULT_ROLLING_PREFIX: &str = "0.1";
@@ -75,9 +76,7 @@ async fn main() -> Result<std::process::ExitCode> {
         .await?;
 
     // handle the response here, rather than in client, so we can do special behavior
-    // TODO(colemickens/review): move this intoo release_create with another flag?
-    // or "ReleaseOptions->error_on_conflict" and have a way to override options for a release
-    // creation??
+    // TODO(review): what do we things, some sort of ReleaseFlags and indeed handle this in the client?
     let release_metadata_post_response_status = stage_response.status();
     tracing::trace!(
         status = tracing::field::display(release_metadata_post_response_status),
@@ -99,7 +98,8 @@ async fn main() -> Result<std::process::ExitCode> {
                     release_version: ctx.release_version,
                 })?;
             } else {
-                todo!();
+                // we're just done, and happy about it:
+                return Ok(ExitCode::SUCCESS);
             }
         }
         StatusCode::UNAUTHORIZED => {
@@ -143,8 +143,7 @@ async fn main() -> Result<std::process::ExitCode> {
         ctx.release_version
     );
 
-    let exitcode = ExitCode::SUCCESS;
-    Ok(exitcode)
+    Ok(ExitCode::SUCCESS)
 }
 
 #[derive(Debug, Clone, Copy, clap::ValueEnum, serde::Serialize, serde::Deserialize)]
