@@ -18,7 +18,7 @@ pub struct Tarball {
     pub bytes: Vec<u8>,
 }
 
-// TODO(colemickens): static init
+// TODO(future): static init
 pub fn flakehub_headers() -> HeaderMap {
     let mut header_map = HeaderMap::new();
 

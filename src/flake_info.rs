@@ -24,11 +24,6 @@ pub struct FlakeMetadata {
 #[derive(Debug, Deserialize)]
 pub struct FlakeOutputs(pub serde_json::Value);
 
-// notes: there are three distinct `nix` invocations throughout FlakeMetadata:
-// 1. to get the basic flake metadata (used for last_modified, initial sanity check, store output path(s))
-// 2. check_evaluates make sure all the outputs evaluate (TODO(review): seems a tad aggressive almost?)
-// 3. check_lock_if_exists makes sure the user has accidentally pushed a flake with incoherent `flake.{nix,lock}`
-
 impl FlakeMetadata {
     pub async fn from_dir(directory: &Path) -> Result<Self> {
         let output = tokio::process::Command::new("nix")
@@ -84,8 +79,6 @@ impl FlakeMetadata {
             metadata_json: metadata_json,
         })
     }
-
-    // TODO(colemickens): consider a nix_cmd() that wraps this stuff up and just takes the string args[] and handles errors etc
 
     /// check_evalutes checks that the flake evaluates
     /// (note it is not necessary for the target to have a flake.lock)

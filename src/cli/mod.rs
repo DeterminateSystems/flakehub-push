@@ -8,7 +8,7 @@ use std::{
 };
 
 use crate::{
-    build_http_client, flakehub_client::Tarball, github::graphql::{GithubGraphqlDataQuery, MAX_LABEL_LENGTH, MAX_NUM_TOTAL_LABELS}, release_metadata::{ReleaseMetadata, RevisionInfo}
+    build_http_client, flakehub_client::Tarball, github::graphql::{GithubGraphqlDataQuery, MAX_LABEL_LENGTH, MAX_NUM_TOTAL_LABELS}, release_metadata::{ReleaseMetadata}
 };
 
 #[derive(Debug, clap::Parser)]
@@ -249,6 +249,8 @@ impl clap::builder::TypedValueParser for U64ToNoneParser {
 
 impl FlakeHubPushCli {
     pub(crate) fn backfill_from_github_env(&mut self) {
+        // https://docs.github.com/en/actions/learn-github-actions/variables
+
         if self.git_root.0.is_none() {
             let env_key = "GITHUB_WORKSPACE";
             if let Ok(env_val) = std::env::var(env_key) {
@@ -275,6 +277,31 @@ impl FlakeHubPushCli {
     }
 
     pub(crate) fn backfill_from_gitlab_env(&mut self) {
-        todo!();
+        // https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
+
+        if self.git_root.0.is_none() {
+            let env_key: &str = "CI_PROJECT_DIR";
+            if let Ok(env_val) = std::env::var(env_key) {
+                tracing::debug!(git_root = %env_val, "Set via `${env_key}`");
+                self.git_root.0 = Some(PathBuf::from(env_val));
+            }
+        }
+
+        if self.repository.0.is_none() {
+            let env_key = "CI_PROJECT_ID";
+            if let Ok(env_val) = std::env::var(env_key) {
+                tracing::debug!(repository = %env_val, "Set via `${env_key}`");
+                self.repository.0 = Some(env_val);
+            }
+        }
+
+        // TODO(review): this... isn't really a "tag" for github either, but I think maybe that's intentional?
+        if self.tag.0.is_none() {
+            let env_key = "CI_COMMIT_REF_NAME";
+            if let Ok(env_val) = std::env::var(env_key) {
+                tracing::debug!(repository = %env_val, "Set via `${env_key}`");
+                self.tag.0 = Some(env_val);
+            }
+        }
     }
 }
