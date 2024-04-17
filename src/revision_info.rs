@@ -1,9 +1,5 @@
 use color_eyre::eyre::{eyre, WrapErr};
-use std::path::{Path};
-
-
-
-const README_FILENAME_LOWERCASE: &str = "readme.md";
+use std::path::Path;
 
 #[derive(Clone)]
 pub(crate) struct RevisionInfo {
@@ -50,35 +46,5 @@ impl RevisionInfo {
             commit_count,
             revision,
         })
-    }
-}
-
-fn option_string_to_spdx<'de, D>(deserializer: D) -> Result<Option<spdx::Expression>, D::Error>
-where
-    D: serde::de::Deserializer<'de>,
-{
-    let spdx_identifier: Option<&str> = serde::Deserialize::deserialize(deserializer)?;
-
-    if let Some(spdx_identifier) = spdx_identifier {
-        spdx::Expression::parse(spdx_identifier)
-            .map_err(serde::de::Error::custom)
-            .map(Option::Some)
-    } else {
-        Ok(None)
-    }
-}
-
-fn option_spdx_serialize<S>(
-    spdx_identifier: &Option<spdx::Expression>,
-    serializer: S,
-) -> Result<S::Ok, S::Error>
-where
-    S: serde::ser::Serializer,
-{
-    if let Some(spdx_identifier) = spdx_identifier {
-        let spdx_string = spdx_identifier.to_string();
-        serializer.serialize_str(&spdx_string)
-    } else {
-        serializer.serialize_none()
     }
 }

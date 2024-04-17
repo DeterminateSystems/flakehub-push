@@ -1,4 +1,4 @@
-use color_eyre::eyre::{WrapErr};
+use color_eyre::eyre::WrapErr;
 
 #[tracing::instrument(skip_all, fields(audience = tracing::field::Empty))]
 pub(crate) async fn get_runner_bearer_token() -> color_eyre::Result<String> {

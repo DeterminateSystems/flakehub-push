@@ -1,9 +1,4 @@
-
-
-
 use crate::Visibility;
-
-const README_FILENAME_LOWERCASE: &str = "readme.md";
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub(crate) struct ReleaseMetadata {

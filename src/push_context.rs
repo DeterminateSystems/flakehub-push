@@ -58,7 +58,7 @@ impl GitContext {
         };
 
         let ctx = GitContext {
-            spdx_expression: spdx_expression,
+            spdx_expression,
             repo_topics: github_graphql_data_result.topics.clone(),
             revision_info: RevisionInfo {
                 // TODO(colemickens): type coherency here... :/ (as is bad)
@@ -216,7 +216,7 @@ impl PushContext {
                 )
                 .await?;
 
-                let git_ctx = GitContext::from_cli_and_github(&cli, &github_graphql_data_result)?;
+                let git_ctx = GitContext::from_cli_and_github(cli, &github_graphql_data_result)?;
 
                 let token = crate::github::get_actions_id_bearer_token(&cli.host)
                     .await
@@ -250,7 +250,7 @@ impl PushContext {
                 .await?;
 
                 let git_ctx: GitContext =
-                    GitContext::from_cli_and_github(&cli, &github_graphql_data_result)?;
+                    GitContext::from_cli_and_github(cli, &github_graphql_data_result)?;
 
                 let token = flakehub_auth_fake::get_fake_bearer_token(
                     u,
@@ -305,7 +305,7 @@ impl PushContext {
             (Some(minor), _) => format!("0.{minor}"),
             (None, _) if cli.rolling => DEFAULT_ROLLING_PREFIX.to_string(),
             (None, Some(tag)) => {
-                let version_only = tag.strip_prefix('v').unwrap_or(&tag);
+                let version_only = tag.strip_prefix('v').unwrap_or(tag);
                 // Ensure the version respects semver
                 semver::Version::from_str(version_only).wrap_err_with(|| eyre!("Failed to parse version `{tag}` as semver, see https://semver.org/ for specifications"))?;
                 tag.to_string()
@@ -422,11 +422,11 @@ impl PushContext {
         let readme = flake_metadata.get_readme_contents().await?;
 
         let release_metadata = ReleaseMetadata {
-            commit_count: commit_count,
-            description: description,
+            commit_count,
+            description,
             outputs: flake_outputs.0,
             raw_flake_metadata: flake_metadata.metadata_json.clone(),
-            readme: readme,
+            readme,
             // TODO(colemickens): remove this confusing, redundant field (FH-267)
             repo: upload_name.to_string(),
             revision: git_ctx.revision_info.revision,
@@ -450,7 +450,7 @@ impl PushContext {
             flakehub_host: cli.host.clone(),
             auth_token: token,
 
-            upload_name: upload_name,
+            upload_name,
             release_version: rolling_minor_with_postfix_or_tag,
 
             error_if_release_conflicts: cli.error_on_conflict,
