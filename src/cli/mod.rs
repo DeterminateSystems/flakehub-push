@@ -45,11 +45,9 @@ pub(crate) struct FlakeHubPushCli {
     // This should only be used by DeterminateSystems
     #[clap(long, env = "FLAKEHUB_PUSH_MIRROR", default_value_t = false)]
     pub(crate) mirror: bool,
-    /// URL of a JWT mock server (like https://github.com/ruiyang/jwt-mock-server) which can issue tokens.
-    ///
-    /// Used instead of ACTIONS_ID_TOKEN_REQUEST_URL/ACTIONS_ID_TOKEN_REQUEST_TOKEN when developing locally.
-    #[clap(long, env = "FLAKEHUB_PUSH_JWT_ISSUER_URI", value_parser = StringToNoneParser, default_value = "")]
-    pub(crate) jwt_issuer_uri: OptionString,
+
+    /// URL of a JWT mock server (like https://github.com/spectare/fakeidp) which can issue tokens.
+    pub(crate) jwt_issuer_uri: Option<url::Url>,
 
     /// User-supplied labels, merged with any associated with GitHub repository (if possible)
     #[clap(

@@ -3,7 +3,7 @@ use color_eyre::eyre::{Context, Result};
 use crate::github::graphql::GithubGraphqlDataResult;
 
 pub async fn get_fake_bearer_token(
-    jwt_issuer_uri: &str,
+    jwt_issuer_uri: &url::Url,
     project_owner: &str,
     repository: &str,
     github_graphql_data_result: GithubGraphqlDataResult,
@@ -27,21 +27,19 @@ pub async fn get_fake_bearer_token(
 
     tracing::debug!(?claims);
 
+    let token_gen_endpoint = jwt_issuer_uri.join("/token")?;
+
     let response = client
-        .post(jwt_issuer_uri)
+        .post(token_gen_endpoint)
         .header("Content-Type", "application/json")
         .json(&claims)
         .send()
         .await
         .wrap_err("Sending request to JWT issuer")?;
 
-    #[derive(serde::Deserialize)]
-    struct Response {
-        token: String,
-    }
-    let response_deserialized: Response = response
-        .json()
+    let token = response
+        .text()
         .await
         .wrap_err("Getting token from JWT issuer's response")?;
-    Ok(response_deserialized.token)
+    Ok(token)
 }

@@ -209,7 +209,7 @@ impl PushContext {
 
         // "cli" and "git_ctx" are the user/env supplied info, augmented with data we might have fetched from github/gitlab apis
 
-        let (token, git_ctx) = match (is_github, is_gitlab, &cli.jwt_issuer_uri.0) {
+        let (token, git_ctx) = match (is_github, is_gitlab, &cli.jwt_issuer_uri) {
             (true, false, None) => {
                 // GITHUB CI
                 let github_token = cli
