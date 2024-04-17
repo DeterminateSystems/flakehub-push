@@ -1,14 +1,8 @@
-use std::{
-    fmt::Display,
-    io::IsTerminal,
-    process::ExitCode,
-};
+use std::{fmt::Display, io::IsTerminal, process::ExitCode};
 
 use clap::Parser;
-use color_eyre::eyre::{eyre, Result, WrapErr};
+use color_eyre::eyre::Result;
 use error::Error;
-use http::StatusCode;
-use uuid::Uuid;
 
 use crate::{
     flakehub_client::{FlakeHubClient, StageResult},
