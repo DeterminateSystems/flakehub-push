@@ -50,6 +50,18 @@ async fn main() -> Result<std::process::ExitCode> {
         })
         .install()?;
 
+    match execute().await {
+        Ok(exit) => Ok(exit),
+        Err(error) => {
+            if let Some(known_error) = error.downcast_ref::<Error>() {
+                known_error.maybe_github_actions_annotation()
+            }
+            Err(error)
+        }
+    }
+}
+
+async fn execute() -> Result<std::process::ExitCode> {
     let mut cli = cli::FlakeHubPushCli::parse();
     cli.instrumentation.setup()?;
 
