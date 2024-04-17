@@ -8,7 +8,10 @@ use std::{
 };
 
 use crate::{
-    build_http_client, flakehub_client::Tarball, github::graphql::{GithubGraphqlDataQuery, MAX_LABEL_LENGTH, MAX_NUM_TOTAL_LABELS}, release_metadata::{ReleaseMetadata}
+    build_http_client,
+    flakehub_client::Tarball,
+    github::graphql::{GithubGraphqlDataQuery, MAX_LABEL_LENGTH, MAX_NUM_TOTAL_LABELS},
+    release_metadata::ReleaseMetadata,
 };
 
 #[derive(Debug, clap::Parser)]

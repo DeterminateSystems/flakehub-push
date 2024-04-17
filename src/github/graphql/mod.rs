@@ -50,7 +50,6 @@ impl GithubGraphqlDataQuery {
                 .await
                 .wrap_err("Failed to issue RevCountQuery request to Github's GraphQL API")?;
 
-
             let response_status = reqwest_response.status();
             let response: graphql_client::Response<
                 <crate::github::graphql::GithubGraphqlDataQuery as GraphQLQuery>::ResponseData,
