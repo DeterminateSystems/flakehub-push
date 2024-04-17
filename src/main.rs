@@ -1,4 +1,8 @@
-use std::{fmt::Display, io::IsTerminal, process::ExitCode};
+use std::{
+    fmt::Display,
+    io::IsTerminal,
+    process::ExitCode,
+};
 
 use clap::Parser;
 use color_eyre::eyre::{eyre, Result, WrapErr};
@@ -6,7 +10,10 @@ use error::Error;
 use http::StatusCode;
 use uuid::Uuid;
 
-use crate::{flakehub_client::FlakeHubClient, push_context::PushContext};
+use crate::{
+    flakehub_client::{FlakeHubClient, StageResult},
+    push_context::PushContext,
+};
 mod cli;
 mod error;
 mod flake_info;
@@ -58,70 +65,20 @@ async fn main() -> Result<std::process::ExitCode> {
     let fhclient = FlakeHubClient::new(ctx.flakehub_host, ctx.auth_token)?;
 
     // "upload.rs" - stage the release
-    let stage_response = fhclient
+    let stage_result: Option<StageResult> = fhclient
         .release_stage(
             &ctx.upload_name,
             &ctx.release_version,
             &ctx.metadata,
             &ctx.tarball,
+            ctx.error_if_release_conflicts,
         )
         .await?;
 
-    // handle the response here, rather than in client, so we can do special behavior
-    // TODO(review): what do we things, some sort of ReleaseFlags and indeed handle this in the client?
-    let release_metadata_post_response_status = stage_response.status();
-    tracing::trace!(
-        status = tracing::field::display(release_metadata_post_response_status),
-        "Got release metadata POST response"
-    );
-
-    match release_metadata_post_response_status {
-        StatusCode::OK => (),
-        StatusCode::CONFLICT => {
-            tracing::info!(
-                "Release for revision `{revision}` of {upload_name}/{release_version} already exists; flakehub-push will not upload it again",
-                revision = &ctx.metadata.revision,
-                upload_name = ctx.upload_name,
-                release_version = ctx.release_version,
-            );
-            if ctx.error_if_release_conflicts {
-                return Err(Error::Conflict {
-                    upload_name: ctx.upload_name,
-                    release_version: ctx.release_version,
-                })?;
-            } else {
-                // we're just done, and happy about it:
-                return Ok(ExitCode::SUCCESS);
-            }
-        }
-        StatusCode::UNAUTHORIZED => {
-            let body = stage_response.bytes().await?;
-            let message = serde_json::from_slice::<String>(&body)?;
-
-            return Err(Error::Unauthorized(message))?;
-        }
-        _ => {
-            let body = stage_response.bytes().await?;
-            let message = serde_json::from_slice::<String>(&body)?;
-            return Err(eyre!(
-                "\
-                Status {release_metadata_post_response_status} from metadata POST\n\
-                {}\
-            ",
-                message
-            ));
-        }
-    }
-
-    #[derive(serde::Deserialize)]
-    struct StageResult {
-        s3_upload_url: String,
-        uuid: Uuid,
-    }
-    let stage_result: StageResult = stage_response
-        .json()
-        .await
-        .wrap_err("Decoding release metadata POST response")?;
+    let stage_result = match stage_result {
+        Some(stage_result) => stage_result,
+        None => return Ok(ExitCode::SUCCESS),
+    };
 
     // upload tarball to s3
     s3::upload_release_to_s3(stage_result.s3_upload_url, ctx.tarball).await?;
