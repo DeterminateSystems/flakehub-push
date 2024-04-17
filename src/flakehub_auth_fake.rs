@@ -1,4 +1,4 @@
-use color_eyre::eyre::{eyre, Context, Result};
+use color_eyre::eyre::{Context, Result};
 
 use crate::github::graphql::GithubGraphqlDataResult;
 

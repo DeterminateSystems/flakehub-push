@@ -1,7 +1,7 @@
 use color_eyre::eyre::{eyre, WrapErr};
-use std::path::{Path, PathBuf};
+use std::path::{Path};
 
-use crate::Visibility;
+
 
 const README_FILENAME_LOWERCASE: &str = "readme.md";
 

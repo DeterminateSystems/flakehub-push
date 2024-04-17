@@ -1,7 +1,6 @@
 use std::{
     fmt::Display,
     io::IsTerminal,
-    path::{Path, PathBuf},
     process::ExitCode,
 };
 
@@ -12,8 +11,8 @@ use http::StatusCode;
 use uuid::Uuid;
 
 use crate::{
-    flakehub_client::FlakeHubClient, github::graphql::GithubGraphqlDataQuery,
-    push_context::PushContext, release_metadata::ReleaseMetadata,
+    flakehub_client::FlakeHubClient,
+    push_context::PushContext,
 };
 mod cli;
 mod error;

@@ -1,18 +1,11 @@
 mod instrumentation;
 
-use color_eyre::eyre::{eyre, WrapErr};
+
 use std::{
-    collections::HashSet,
-    path::{Path, PathBuf},
-    process::ExitCode,
+    path::{PathBuf},
 };
 
-use crate::{
-    build_http_client,
-    flakehub_client::Tarball,
-    github::graphql::{GithubGraphqlDataQuery, MAX_LABEL_LENGTH, MAX_NUM_TOTAL_LABELS},
-    release_metadata::ReleaseMetadata,
-};
+
 
 #[derive(Debug, clap::Parser)]
 #[clap(version)]
