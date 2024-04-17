@@ -76,7 +76,7 @@ impl FlakeMetadata {
         Ok(FlakeMetadata {
             source_dir: source,
             flake_locked_url: flake_locked_url.to_string(),
-            metadata_json: metadata_json,
+            metadata_json,
         })
     }
 
@@ -294,12 +294,13 @@ impl FlakeMetadata {
         let mut read_dir = tokio::fs::read_dir(&self.source_dir).await?;
 
         let readme_path: Option<PathBuf> = {
+            let mut readme_path = None;
             while let Some(entry) = read_dir.next_entry().await? {
                 if entry.file_name().to_ascii_lowercase() == README_FILENAME_LOWERCASE {
-                    Some(Some(entry.path()));
+                    readme_path = Some(entry.path());
                 }
             }
-            None
+            readme_path
         };
         let readme = if let Some(readme_path) = readme_path {
             Some(tokio::fs::read_to_string(&readme_path).await?)

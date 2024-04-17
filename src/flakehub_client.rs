@@ -1,7 +1,4 @@
-use std::str::FromStr;
-
 use color_eyre::eyre::{eyre, Context, Result};
-
 use reqwest::{header::HeaderMap, Response};
 use uuid::Uuid;
 
@@ -35,15 +32,15 @@ pub fn flakehub_headers() -> HeaderMap {
 }
 
 impl FlakeHubClient {
-    pub fn new(host: url::Url, token: String) -> Result<Self> {
+    pub fn new(host: url::Url, bearer_token: String) -> Result<Self> {
         let builder = reqwest::ClientBuilder::new().user_agent("flakehub-push");
 
         let client = builder.build()?;
 
         let client = Self {
-            client: client,
-            bearer_token: token,
-            host: host,
+            client,
+            bearer_token,
+            host,
         };
 
         Ok(client)

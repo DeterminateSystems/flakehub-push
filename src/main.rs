@@ -1,8 +1,4 @@
-use std::{
-    fmt::Display,
-    io::IsTerminal,
-    process::ExitCode,
-};
+use std::{fmt::Display, io::IsTerminal, process::ExitCode};
 
 use clap::Parser;
 use color_eyre::eyre::{eyre, Result, WrapErr};
@@ -10,10 +6,7 @@ use error::Error;
 use http::StatusCode;
 use uuid::Uuid;
 
-use crate::{
-    flakehub_client::FlakeHubClient,
-    push_context::PushContext,
-};
+use crate::{flakehub_client::FlakeHubClient, push_context::PushContext};
 mod cli;
 mod error;
 mod flake_info;
@@ -134,7 +127,7 @@ async fn main() -> Result<std::process::ExitCode> {
     s3::upload_release_to_s3(stage_result.s3_upload_url, ctx.tarball).await?;
 
     // "publish.rs" - publish the release after upload
-    let _publish_result = fhclient.release_publish(stage_result.uuid).await?;
+    fhclient.release_publish(stage_result.uuid).await?;
 
     tracing::info!(
         "Successfully released new version of {}/{}",

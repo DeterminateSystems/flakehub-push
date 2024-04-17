@@ -75,6 +75,7 @@
 
             nodejs_latest
             nodePackages_latest.pnpm
+            bacon
           ]
           ++ inputs.self.packages.${system}.flakehub-push.buildInputs
           ++ pkgs.lib.optionals pkgs.stdenv.isDarwin (with pkgs.darwin.apple_sdk.frameworks; [ Security ]);
