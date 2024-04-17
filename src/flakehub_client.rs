@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use color_eyre::eyre::{eyre, Context, Result};
-use http::StatusCode;
+
 use reqwest::{header::HeaderMap, Response};
 use uuid::Uuid;
 
