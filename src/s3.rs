@@ -11,7 +11,8 @@ pub async fn upload_release_to_s3(presigned_s3_url: String, tarball: Tarball) ->
             let mut header_map = HeaderMap::new();
             header_map.insert(
                 reqwest::header::CONTENT_LENGTH,
-                reqwest::header::HeaderValue::from_str(&format!("{}", tarball.bytes.len())).unwrap(),
+                reqwest::header::HeaderValue::from_str(&format!("{}", tarball.bytes.len()))
+                    .unwrap(),
             );
             header_map.insert(
                 reqwest::header::HeaderName::from_static("x-amz-checksum-sha256"),
@@ -41,4 +42,3 @@ pub async fn upload_release_to_s3(presigned_s3_url: String, tarball: Tarball) ->
 
     Ok(())
 }
-

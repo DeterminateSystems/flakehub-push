@@ -65,7 +65,7 @@ impl FlakeHubClient {
             url = %release_metadata_post_url,
             "Computed release metadata POST URL"
         );
-        
+
         tracing::debug!(?release_metadata); //TODO colemickens: sanity check this against main fhp
         tracing::debug!("repo={}", release_metadata.repo);
         tracing::debug!("upload_name={}", upload_name);

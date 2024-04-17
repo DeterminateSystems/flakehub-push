@@ -8,7 +8,10 @@ use std::{
 };
 
 use crate::{
-    build_http_client, flakehub_client::Tarball, github::graphql::{GithubGraphqlDataQuery, MAX_LABEL_LENGTH, MAX_NUM_TOTAL_LABELS}, release_metadata::{ReleaseMetadata}
+    build_http_client,
+    flakehub_client::Tarball,
+    github::graphql::{GithubGraphqlDataQuery, MAX_LABEL_LENGTH, MAX_NUM_TOTAL_LABELS},
+    release_metadata::ReleaseMetadata,
 };
 
 #[derive(Debug, clap::Parser)]
@@ -269,7 +272,6 @@ impl FlakeHubPushCli {
             }
         }
     }
-
 
     pub(crate) fn backfill_from_gitlab_env(&mut self) {
         // https://docs.gitlab.com/ee/ci/variables/predefined_variables.html

@@ -2,7 +2,12 @@ use color_eyre::eyre::{eyre, Context, Result};
 
 use crate::github::graphql::GithubGraphqlDataResult;
 
-pub async fn get_fake_bearer_token(jwt_issuer_uri: &str, project_owner: &str, repository: &str, github_graphql_data_result: GithubGraphqlDataResult) -> Result<String> {
+pub async fn get_fake_bearer_token(
+    jwt_issuer_uri: &str,
+    project_owner: &str,
+    repository: &str,
+    github_graphql_data_result: GithubGraphqlDataResult,
+) -> Result<String> {
     tracing::warn!("running outside github/gitlab - minting a dev-signed JWT");
 
     let client = reqwest::Client::new();
@@ -29,7 +34,7 @@ pub async fn get_fake_bearer_token(jwt_issuer_uri: &str, project_owner: &str, re
         .send()
         .await
         .wrap_err("Sending request to JWT issuer")?;
-    
+
     #[derive(serde::Deserialize)]
     struct Response {
         token: String,

@@ -98,30 +98,30 @@ impl FlakeMetadata {
                         self.source_dir.display()
                     )
                 })?;
-        
-            if !output.status.success() {
-                let command = format!(
-                    "nix flake show --all-systems --json --no-write-lock-file {}",
-                    self.source_dir.display(),
-                );
-                let msg = format!(
-                    "\
+
+        if !output.status.success() {
+            let command = format!(
+                "nix flake show --all-systems --json --no-write-lock-file {}",
+                self.source_dir.display(),
+            );
+            let msg = format!(
+                "\
                     Failed to execute command `{command}`{maybe_status} \n\
                     stdout: {stdout}\n\
                     stderr: {stderr}\n\
                     ",
-                    stdout = String::from_utf8_lossy(&output.stdout),
-                    stderr = String::from_utf8_lossy(&output.stderr),
-                    maybe_status = if let Some(status) = output.status.code() {
-                        format!(" with status {status}")
-                    } else {
-                        String::new()
-                    }
-                );
-                return Err(eyre!(msg))?;
-            }
-        
-            Ok(())
+                stdout = String::from_utf8_lossy(&output.stdout),
+                stderr = String::from_utf8_lossy(&output.stderr),
+                maybe_status = if let Some(status) = output.status.code() {
+                    format!(" with status {status}")
+                } else {
+                    String::new()
+                }
+            );
+            return Err(eyre!(msg))?;
+        }
+
+        Ok(())
     }
 
     /// check_lock_if_exists is specifically to check locked flakes to make sure the flake.lock

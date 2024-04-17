@@ -5,7 +5,6 @@ use crate::Visibility;
 
 const README_FILENAME_LOWERCASE: &str = "readme.md";
 
-
 #[derive(Clone)]
 pub(crate) struct RevisionInfo {
     pub(crate) commit_count: Option<usize>,

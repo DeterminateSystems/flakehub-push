@@ -9,9 +9,16 @@ use gitlab::api::Query;
 use spdx::Expression;
 
 use crate::{
-    build_http_client, cli::FlakeHubPushCli, flake_info, flakehub_auth_fake, flakehub_client::Tarball, github::graphql::{
+    build_http_client,
+    cli::FlakeHubPushCli,
+    flake_info, flakehub_auth_fake,
+    flakehub_client::Tarball,
+    github::graphql::{
         GithubGraphqlDataQuery, GithubGraphqlDataResult, MAX_LABEL_LENGTH, MAX_NUM_TOTAL_LABELS,
-    }, release_metadata::ReleaseMetadata, revision_info::RevisionInfo, DEFAULT_ROLLING_PREFIX
+    },
+    release_metadata::ReleaseMetadata,
+    revision_info::RevisionInfo,
+    DEFAULT_ROLLING_PREFIX,
 };
 
 pub struct GitContext {
@@ -67,18 +74,22 @@ impl GitContext {
         local_revision_info: RevisionInfo,
     ) -> Result<Self> {
         // Gitlab token during jobs for calling api: `CI_JOB_TOKEN`
-        let gitlab_host = std::env::var("CI_SERVER_FQDN")
-            .wrap_err("couldn't determinte CI_SERVER_FQDN")?;
-        let gitlab_token = std::env::var("CI_JOB_TOKEN")
-            .wrap_err("couldn't determinte CI_JOB_TOKEN")?;
+        let gitlab_host =
+            std::env::var("CI_SERVER_FQDN").wrap_err("couldn't determinte CI_SERVER_FQDN")?;
+        let gitlab_token =
+            std::env::var("CI_JOB_TOKEN").wrap_err("couldn't determinte CI_JOB_TOKEN")?;
 
         let gitlab_client = gitlab::Gitlab::new(gitlab_host, gitlab_token)?;
 
         // gitlab -> repo labels
-        let labels_endpoint = gitlab::api::projects::labels::Labels::builder().build().unwrap();
+        let labels_endpoint = gitlab::api::projects::labels::Labels::builder()
+            .build()
+            .unwrap();
         let repo_labels = gitlab::api::paged(
             labels_endpoint,
-            gitlab::api::Pagination::Limit(MAX_LABEL_LENGTH)).query(&gitlab_client)?;
+            gitlab::api::Pagination::Limit(MAX_LABEL_LENGTH),
+        )
+        .query(&gitlab_client)?;
 
         // revision_info: GET /projects/:id/repository/commits
         // https://docs.gitlab.com/ee/api/commits.html
@@ -92,7 +103,7 @@ impl GitContext {
         //  -- not finding anything obvious, not seeing the equivalent of the related github graphql query
 
         // spdx_expression: can't find any evidence GitLab tries to surface this info
-        let spdx_expression = &cli.spdx_expression.0; 
+        let spdx_expression = &cli.spdx_expression.0;
 
         let ctx = GitContext {
             spdx_expression: spdx_expression.clone(),
@@ -390,10 +401,12 @@ impl PushContext {
         tracing::debug!("Got flake metadata: {:?}", flake_metadata);
 
         // sanity checks
-        flake_metadata.check_evaluates()
+        flake_metadata
+            .check_evaluates()
             .await
             .wrap_err("failed to evaluate all system attrs of the flake")?;
-        flake_metadata.check_lock_if_exists()
+        flake_metadata
+            .check_lock_if_exists()
             .await
             .wrap_err("failed to evaluate all system attrs of the flake")?;
 
