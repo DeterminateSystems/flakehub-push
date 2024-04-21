@@ -94270,7 +94270,7 @@ var FlakeHubPushAction = class {
   constructor() {
     const options = {
       name: "flakehub-push",
-      fetchStyle: "gh-env-style",
+      fetchStyle: "nix-style",
       diagnosticsUrl: new URL(
         "https://install.determinate.systems/flakehub-push/telemetry"
       ),
@@ -94298,13 +94298,6 @@ var FlakeHubPushAction = class {
     this.errorOnConflict = inputs_exports.getBool("error-on-conflict");
     this.includeOutputPaths = inputs_exports.getBool("include-output-paths");
     this.flakeHubPushBinary = inputs_exports.getStringOrNull("flakehub-push-binary");
-    this.flakeHubPushBranch = inputs_exports.getString("flakehub-push-branch");
-    this.flakeHubPushPullRequest = inputs_exports.getStringOrNull("flakehub-push-pr");
-    this.flakeHubPushRevision = inputs_exports.getStringOrNull(
-      "flakehub-push-revision"
-    );
-    this.flakeHubPushTag = inputs_exports.getStringOrNull("flakehub-push-tag");
-    this.flakeHubPushUrl = inputs_exports.getStringOrNull("flakehub-push-url");
   }
   verifyVisibility() {
     const visibility = inputs_exports.getString("visibility");
@@ -94315,15 +94308,10 @@ var FlakeHubPushAction = class {
     }
     return visibility;
   }
-  makeUrl(endpoint, item) {
-    return `https://install.determinate.systems/${this.name}/${endpoint}/${item}/${this.architecture}?ci=github`;
-  }
-  get defaultBinaryUrl() {
-    return `https://install.determinate.systems/${this.name}/stable/${this.architecture}?ci=github`;
-  }
   async executionEnvironment() {
     const env = {};
     env.FLAKEHUB_PUSH_VISIBLITY = this.visibility;
+    env.FLAKEHUB_PUSH_TAG = this.tag;
     env.FLAKEHUB_PUSH_ROLLING = this.rolling.toString();
     env.FLAKEHUB_PUSH_HOST = this.host;
     env.FLAKEHUB_PUSH_LOG_DIRECTIVES = this.logDirectives;
@@ -94338,9 +94326,6 @@ var FlakeHubPushAction = class {
     env.FLAKEHUB_PUSH_SPDX_EXPRESSION = this.spdxExpression;
     env.FLAKEHUB_PUSH_ERROR_ON_CONFLICT = this.errorOnConflict.toString();
     env.FLAKEHUB_PUSH_INCLUDE_OUTPUT_PATHS = this.includeOutputPaths.toString();
-    if (this.flakeHubPushTag !== null) {
-      env.FLAKEHUB_PUSH_TAG = this.flakeHubPushTag;
-    }
     if (this.rollingMinor !== null) {
       env.FLAKEHUB_PUSH_ROLLING_MINOR = this.rollingMinor;
     }

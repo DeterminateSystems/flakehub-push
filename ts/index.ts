@@ -33,7 +33,6 @@ type ExecutionEnvironment = {
 
 class FlakeHubPushAction {
   idslib: IdsToolbox;
-  private architecture: string;
 
   // Action inputs
   private visibility: Visibility;
@@ -43,7 +42,7 @@ class FlakeHubPushAction {
   private directory: string;
   private gitRoot: string;
   private tag: string;
-  private rollingMinor: string | null;
+  private rollingMinor: number | null;
   private rolling: boolean;
   private host: string;
   private logDirectives: string;
@@ -54,16 +53,11 @@ class FlakeHubPushAction {
   private errorOnConflict: boolean;
   private includeOutputPaths: boolean;
   private flakeHubPushBinary: string | null;
-  private flakeHubPushBranch: string;
-  private flakeHubPushPullRequest: string | null;
-  private flakeHubPushRevision: string | null;
-  private flakeHubPushTag: string | null;
-  private flakeHubPushUrl: string | null;
 
   constructor() {
     const options: ActionOptions = {
       name: "flakehub-push",
-      fetchStyle: "gh-env-style",
+      fetchStyle: "nix-style",
       diagnosticsUrl: new URL(
         "https://install.determinate.systems/flakehub-push/telemetry",
       ),
@@ -72,7 +66,6 @@ class FlakeHubPushAction {
     };
 
     this.idslib = new IdsToolbox(options);
-    this.architecture = platform.getArchOs();
 
     // Inputs
     const visibility = this.verifyVisibility();
@@ -84,7 +77,7 @@ class FlakeHubPushAction {
     this.directory = inputs.getString("directory");
     this.gitRoot = inputs.getString("git-root");
     this.tag = inputs.getString("tag");
-    this.rollingMinor = inputs.getStringOrNull("rolling-minor");
+    this.rollingMinor = inputs.getNumberOrNull("rolling-minor");
     this.rolling = inputs.getBool("rolling");
     this.host = inputs.getString("host");
     this.logDirectives = inputs.getString("log-directives");
@@ -99,13 +92,6 @@ class FlakeHubPushAction {
     this.errorOnConflict = inputs.getBool("error-on-conflict");
     this.includeOutputPaths = inputs.getBool("include-output-paths");
     this.flakeHubPushBinary = inputs.getStringOrNull("flakehub-push-binary");
-    this.flakeHubPushBranch = inputs.getString("flakehub-push-branch");
-    this.flakeHubPushPullRequest = inputs.getStringOrNull("flakehub-push-pr");
-    this.flakeHubPushRevision = inputs.getStringOrNull(
-      "flakehub-push-revision",
-    );
-    this.flakeHubPushTag = inputs.getStringOrNull("flakehub-push-tag");
-    this.flakeHubPushUrl = inputs.getStringOrNull("flakehub-push-url");
   }
 
   private verifyVisibility(): Visibility {
@@ -118,18 +104,11 @@ class FlakeHubPushAction {
     return visibility as Visibility;
   }
 
-  private makeUrl(endpoint: string, item: string): string {
-    return `https://install.determinate.systems/${this.name}/${endpoint}/${item}/${this.architecture}?ci=github`;
-  }
-
-  private get defaultBinaryUrl(): string {
-    return `https://install.determinate.systems/${this.name}/stable/${this.architecture}?ci=github`;
-  }
-
   private async executionEnvironment(): Promise<ExecutionEnvironment> {
     const env: ExecutionEnvironment = {};
 
     env.FLAKEHUB_PUSH_VISIBLITY = this.visibility;
+    env.FLAKEHUB_PUSH_TAG = this.tag;
     env.FLAKEHUB_PUSH_ROLLING = this.rolling.toString();
     env.FLAKEHUB_PUSH_HOST = this.host;
     env.FLAKEHUB_PUSH_LOG_DIRECTIVES = this.logDirectives;
@@ -145,12 +124,8 @@ class FlakeHubPushAction {
     env.FLAKEHUB_PUSH_ERROR_ON_CONFLICT = this.errorOnConflict.toString();
     env.FLAKEHUB_PUSH_INCLUDE_OUTPUT_PATHS = this.includeOutputPaths.toString();
 
-    if (this.flakeHubPushTag !== null) {
-      env.FLAKEHUB_PUSH_TAG = this.flakeHubPushTag;
-    }
-
     if (this.rollingMinor !== null) {
-      env.FLAKEHUB_PUSH_ROLLING_MINOR = this.rollingMinor;
+      env.FLAKEHUB_PUSH_ROLLING_MINOR = this.rollingMinor.toString();
     }
 
     return env;
