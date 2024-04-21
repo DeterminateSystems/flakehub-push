@@ -26,7 +26,7 @@ pub(crate) struct FlakeHubPushCli {
         default_value = "https://api.flakehub.com"
     )]
     pub(crate) host: url::Url,
-    #[clap(long, env = "FLAKEHUB_PUSH_VISIBLITY")]
+    #[clap(long, env = "FLAKEHUB_PUSH_VISIBILITY")]
     pub(crate) visibility: crate::Visibility,
     // Will also detect `GITHUB_REF_NAME`
     #[clap(long, env = "FLAKEHUB_PUSH_TAG", value_parser = StringToNoneParser, default_value = "")]
