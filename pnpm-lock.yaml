@@ -8,6 +8,9 @@ dependencies:
   '@actions/core':
     specifier: ^1.10.1
     version: 1.10.1
+  '@actions/exec':
+    specifier: ^1.1.1
+    version: 1.1.1
   detsys-ts:
     specifier: github:DeterminateSystems/detsys-ts
     version: github.com/DeterminateSystems/detsys-ts/56a244c061429692b1c7d80fc068d684db3ae4d2

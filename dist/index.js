@@ -86425,14 +86425,14 @@ var __webpack_exports__ = {};
 
 // EXTERNAL MODULE: ./node_modules/.pnpm/@actions+core@1.10.1/node_modules/@actions/core/lib/core.js
 var core = __nccwpck_require__(9093);
+// EXTERNAL MODULE: ./node_modules/.pnpm/@actions+exec@1.1.1/node_modules/@actions/exec/lib/exec.js
+var exec = __nccwpck_require__(7775);
 ;// CONCATENATED MODULE: external "node:fs"
 const external_node_fs_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs");
 // EXTERNAL MODULE: external "node:os"
 var external_node_os_ = __nccwpck_require__(612);
 // EXTERNAL MODULE: external "node:util"
 var external_node_util_ = __nccwpck_require__(7261);
-// EXTERNAL MODULE: ./node_modules/.pnpm/@actions+exec@1.1.1/node_modules/@actions/exec/lib/exec.js
-var exec = __nccwpck_require__(7775);
 // EXTERNAL MODULE: external "os"
 var external_os_ = __nccwpck_require__(2037);
 ;// CONCATENATED MODULE: external "node:crypto"
@@ -94263,6 +94263,9 @@ function mungeDiagnosticEndpoint(inputUrl) {
 // ts/index.ts
 
 
+
+var EVENT_EXECUTION_FAILURE = "execution_failure";
+var VISIBILITY_OPTIONS = ["public", "unlisted", "private"];
 var FlakeHubPushAction = class {
   constructor() {
     const options = {
@@ -94271,11 +94274,12 @@ var FlakeHubPushAction = class {
       diagnosticsUrl: new URL(
         "https://install.determinate.systems/flakehub-push/telemetry"
       ),
+      legacySourcePrefix: "flakehub-push",
       requireNix: "ignore"
     };
     this.idslib = new IdsToolbox(options);
     this.architecture = platform_exports.getArchOs();
-    const visibility = inputs_exports.getString("visibility");
+    const visibility = this.verifyVisibility();
     this.visibility = visibility;
     this.name = inputs_exports.getStringOrNull("name");
     this.repository = inputs_exports.getString("repository");
@@ -94302,30 +94306,90 @@ var FlakeHubPushAction = class {
     this.flakeHubPushTag = inputs_exports.getStringOrNull("flakehub-push-tag");
     this.flakeHubPushUrl = inputs_exports.getStringOrNull("flakehub-push-url");
   }
+  verifyVisibility() {
+    const visibility = inputs_exports.getString("visibility");
+    if (!VISIBILITY_OPTIONS.includes(visibility)) {
+      core.setFailed(
+        `Visibility option \`${visibility}\` not recognized. Available options: ${VISIBILITY_OPTIONS.join(", ")}.`
+      );
+    }
+    return visibility;
+  }
   makeUrl(endpoint, item) {
-    return `https://install.determinate.systems/flakehub-push/${endpoint}/${item}/${this.architecture}?ci=github`;
+    return `https://install.determinate.systems/${this.name}/${endpoint}/${item}/${this.architecture}?ci=github`;
   }
   get defaultBinaryUrl() {
-    return `https://install.determinate.systems/flakehub-push/stable/${this.architecture}?ci=github`;
+    return `https://install.determinate.systems/${this.name}/stable/${this.architecture}?ci=github`;
   }
-  get pushBinaryUrl() {
-    if (this.flakeHubPushBinary !== null) {
-      return this.flakeHubPushBinary;
-    } else if (this.flakeHubPushPullRequest !== null) {
-      return this.makeUrl("pr", this.flakeHubPushPullRequest);
-    } else if (this.flakeHubPushTag !== null) {
-      return this.makeUrl("tag", this.flakeHubPushTag);
-    } else if (this.flakeHubPushRevision !== null) {
-      return this.makeUrl("rev", this.flakeHubPushRevision);
-    } else if (this.flakeHubPushBranch !== null) {
-      return this.makeUrl("branch", this.flakeHubPushBranch);
-    } else {
-      return this.defaultBinaryUrl;
+  async executionEnvironment() {
+    const env = {};
+    env.FLAKEHUB_PUSH_VISIBLITY = this.visibility;
+    env.FLAKEHUB_PUSH_ROLLING = this.rolling.toString();
+    env.FLAKEHUB_PUSH_HOST = this.host;
+    env.FLAKEHUB_PUSH_LOG_DIRECTIVES = this.logDirectives;
+    env.FLAKEHUB_PUSH_LOGGER = this.logger;
+    env.FLAKEHUB_PUSH_GITHUB_TOKEN = this.gitHubToken;
+    env.FLAKEHUB_PUSH_NAME = this.flakeName;
+    env.FLAKEHUB_PUSH_MIRROR = this.mirror.toString();
+    env.FLAKEHUB_PUSH_REPOSITORY = this.repository;
+    env.FLAKEHUB_PUSH_DIRECTORY = this.directory;
+    env.FLAKEHUB_PUSH_GIT_ROOT = this.gitRoot;
+    env.FLAKEHUB_PUSH_EXTRA_LABELS = this.extraLabels;
+    env.FLAKEHUB_PUSH_SPDX_EXPRESSION = this.spdxExpression;
+    env.FLAKEHUB_PUSH_ERROR_ON_CONFLICT = this.errorOnConflict.toString();
+    env.FLAKEHUB_PUSH_INCLUDE_OUTPUT_PATHS = this.includeOutputPaths.toString();
+    if (this.flakeHubPushTag !== null) {
+      env.FLAKEHUB_PUSH_TAG = this.flakeHubPushTag;
     }
+    if (this.rollingMinor !== null) {
+      env.FLAKEHUB_PUSH_ROLLING_MINOR = this.rollingMinor;
+    }
+    return env;
+  }
+  get flakeName() {
+    let name;
+    const org = process.env["GITHUB_REPOSITORY_OWNER"];
+    const repo = process.env["GITHUB_REPOSITORY"];
+    if (this.name !== null) {
+      if (this.name === "") {
+        core.setFailed("The `name` field can't be an empty string");
+      }
+      const parts = this.name.split("/");
+      if (parts.length === 1 || parts.length > 2) {
+        core.setFailed(
+          "The specified `name` must of the form {org}/{flake}"
+        );
+      }
+      if (parts.at(0) !== org) {
+        core.setFailed(
+          `The org name \`${parts.at(0)}\` that you specified using the \`name\` input doesn't match the actual org name \`${org}\``
+        );
+      }
+      name = `${parts.at(0)}/${parts.at(1)}`;
+    } else {
+      name = `${org}/${repo}`;
+    }
+    return name;
   }
   async push() {
-    const pusbBinaryUrl = this.pushBinaryUrl;
-    core.info(`Fetching flakehub-push binary from ${pusbBinaryUrl}`);
+    const executionEnv = await this.executionEnvironment();
+    const binary = this.flakeHubPushBinary !== null ? this.flakeHubPushBinary : await this.idslib.fetchExecutable();
+    core.debug(
+      `execution environment: ${JSON.stringify(executionEnv, null, 2)}`
+    );
+    const exitCode = await exec.exec(binary, [], {
+      env: {
+        ...executionEnv,
+        ...process.env
+        // To get PATH, etc.
+      }
+    });
+    if (exitCode !== 0) {
+      this.idslib.recordEvent(EVENT_EXECUTION_FAILURE, {
+        exitCode
+      });
+      core.setFailed(`non-zero exit code of ${exitCode} detected`);
+    }
   }
 };
 function main() {

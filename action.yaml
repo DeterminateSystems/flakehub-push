@@ -101,30 +101,11 @@ inputs:
 
 # https://docs.github.com/en/actions/creating-actions/metadata-syntax-for-github-actions#runs-for-docker-container-actions
 runs:
-  using: composite
+  using: "node20"
+  main: "dist/index.js"
   steps:
     - name: Install `flakehub-push`
       shell: bash
-      env:
-        FLAKEHUB_PUSH_VISIBLITY: ${{ inputs.visibility }}
-        FLAKEHUB_PUSH_TAG: ${{ inputs.tag }}
-        FLAKEHUB_PUSH_ROLLING_MINOR: ${{ inputs.rolling-minor }}
-        FLAKEHUB_PUSH_ROLLING: ${{ inputs.rolling }}
-        FLAKEHUB_PUSH_HOST: ${{ inputs.host }}
-        FLAKEHUB_PUSH_LOG_DIRECTIVES: ${{ inputs.log-directives }}
-        FLAKEHUB_PUSH_LOGGER: ${{ inputs.logger }}
-        FLAKEHUB_PUSH_GITHUB_TOKEN: ${{ inputs.github-token }}
-        FLAKEHUB_PUSH_NAME: ${{ inputs.name }}
-        FLAKEHUB_PUSH_MIRROR: ${{ inputs.mirror }}
-        FLAKEHUB_PUSH_REPOSITORY: ${{ inputs.repository }}
-        FLAKEHUB_PUSH_DIRECTORY: ${{ inputs.directory }}
-        FLAKEHUB_PUSH_GIT_ROOT: ${{ inputs.git-root }}
-        FLAKEHUB_PUSH_EXTRA_LABELS: ${{ inputs.extra-labels }}
-        FLAKEHUB_PUSH_EXTRA_TAGS: ${{ inputs.extra-tags }}
-        FLAKEHUB_PUSH_SPDX_EXPRESSION: ${{ inputs.spdx-expression }}
-        FLAKEHUB_PUSH_ERROR_ON_CONFLICT: ${{ inputs.error-on-conflict }}
-        FLAKEHUB_PUSH_INCLUDE_OUTPUT_PATHS: ${{ inputs.include-output-paths }}
-        # Also GITHUB_REPOSITORY, GITHUB_REF_NAME, GITHUB_TOKEN, ACTIONS_ID_TOKEN_REQUEST_TOKEN, ACTIONS_ID_TOKEN_REQUEST_URL
       run: |
         if [ "${RUNNER_OS}" == "Linux" ]; then
           export ARCHITECTURE_OS="Linux"

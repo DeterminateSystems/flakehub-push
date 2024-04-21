@@ -1,7 +1,35 @@
 import * as actionsCore from "@actions/core";
+import * as actionsExec from "@actions/exec";
 import { ActionOptions, IdsToolbox, inputs, platform } from "detsys-ts";
 
+const EVENT_EXECUTION_FAILURE = "execution_failure";
+
+const VISIBILITY_OPTIONS = ["public", "unlisted", "private"];
+
 type Visibility = "public" | "unlisted" | "private";
+
+type ExecutionEnvironment = {
+  RUST_BACKTRACE?: string;
+
+  FLAKEHUB_PUSH_VISIBLITY?: string;
+  FLAKEHUB_PUSH_TAG?: string;
+  FLAKEHUB_PUSH_ROLLING_MINOR?: string;
+  FLAKEHUB_PUSH_ROLLING?: string;
+  FLAKEHUB_PUSH_HOST?: string;
+  FLAKEHUB_PUSH_LOG_DIRECTIVES?: string;
+  FLAKEHUB_PUSH_LOGGER?: string;
+  FLAKEHUB_PUSH_GITHUB_TOKEN?: string;
+  FLAKEHUB_PUSH_NAME?: string;
+  FLAKEHUB_PUSH_MIRROR?: string;
+  FLAKEHUB_PUSH_REPOSITORY?: string;
+  FLAKEHUB_PUSH_DIRECTORY?: string;
+  FLAKEHUB_PUSH_GIT_ROOT?: string;
+  FLAKEHUB_PUSH_EXTRA_LABELS?: string;
+  FLAKEHUB_PUSH_EXTRA_TAGS?: string;
+  FLAKEHUB_PUSH_SPDX_EXPRESSION?: string;
+  FLAKEHUB_PUSH_ERROR_ON_CONFLICT?: string;
+  FLAKEHUB_PUSH_INCLUDE_OUTPUT_PATHS?: string;
+};
 
 class FlakeHubPushAction {
   idslib: IdsToolbox;
@@ -39,6 +67,7 @@ class FlakeHubPushAction {
       diagnosticsUrl: new URL(
         "https://install.determinate.systems/flakehub-push/telemetry",
       ),
+      legacySourcePrefix: "flakehub-push",
       requireNix: "ignore",
     };
 
@@ -46,8 +75,7 @@ class FlakeHubPushAction {
     this.architecture = platform.getArchOs();
 
     // Inputs
-    // TODO: check enum values
-    const visibility = inputs.getString("visibility") as Visibility;
+    const visibility = this.verifyVisibility();
     this.visibility = visibility;
 
     this.name = inputs.getStringOrNull("name");
@@ -80,33 +108,112 @@ class FlakeHubPushAction {
     this.flakeHubPushUrl = inputs.getStringOrNull("flakehub-push-url");
   }
 
+  private verifyVisibility(): Visibility {
+    const visibility = inputs.getString("visibility");
+    if (!VISIBILITY_OPTIONS.includes(visibility)) {
+      actionsCore.setFailed(
+        `Visibility option \`${visibility}\` not recognized. Available options: ${VISIBILITY_OPTIONS.join(", ")}.`,
+      );
+    }
+    return visibility as Visibility;
+  }
+
   private makeUrl(endpoint: string, item: string): string {
-    return `https://install.determinate.systems/flakehub-push/${endpoint}/${item}/${this.architecture}?ci=github`;
+    return `https://install.determinate.systems/${this.name}/${endpoint}/${item}/${this.architecture}?ci=github`;
   }
 
   private get defaultBinaryUrl(): string {
-    return `https://install.determinate.systems/flakehub-push/stable/${this.architecture}?ci=github`;
+    return `https://install.determinate.systems/${this.name}/stable/${this.architecture}?ci=github`;
   }
 
-  private get pushBinaryUrl(): string {
-    if (this.flakeHubPushBinary !== null) {
-      return this.flakeHubPushBinary;
-    } else if (this.flakeHubPushPullRequest !== null) {
-      return this.makeUrl("pr", this.flakeHubPushPullRequest);
-    } else if (this.flakeHubPushTag !== null) {
-      return this.makeUrl("tag", this.flakeHubPushTag);
-    } else if (this.flakeHubPushRevision !== null) {
-      return this.makeUrl("rev", this.flakeHubPushRevision);
-    } else if (this.flakeHubPushBranch !== null) {
-      return this.makeUrl("branch", this.flakeHubPushBranch);
-    } else {
-      return this.defaultBinaryUrl;
+  private async executionEnvironment(): Promise<ExecutionEnvironment> {
+    const env: ExecutionEnvironment = {};
+
+    env.FLAKEHUB_PUSH_VISIBLITY = this.visibility;
+    env.FLAKEHUB_PUSH_ROLLING = this.rolling.toString();
+    env.FLAKEHUB_PUSH_HOST = this.host;
+    env.FLAKEHUB_PUSH_LOG_DIRECTIVES = this.logDirectives;
+    env.FLAKEHUB_PUSH_LOGGER = this.logger;
+    env.FLAKEHUB_PUSH_GITHUB_TOKEN = this.gitHubToken;
+    env.FLAKEHUB_PUSH_NAME = this.flakeName;
+    env.FLAKEHUB_PUSH_MIRROR = this.mirror.toString();
+    env.FLAKEHUB_PUSH_REPOSITORY = this.repository;
+    env.FLAKEHUB_PUSH_DIRECTORY = this.directory;
+    env.FLAKEHUB_PUSH_GIT_ROOT = this.gitRoot;
+    env.FLAKEHUB_PUSH_EXTRA_LABELS = this.extraLabels;
+    env.FLAKEHUB_PUSH_SPDX_EXPRESSION = this.spdxExpression;
+    env.FLAKEHUB_PUSH_ERROR_ON_CONFLICT = this.errorOnConflict.toString();
+    env.FLAKEHUB_PUSH_INCLUDE_OUTPUT_PATHS = this.includeOutputPaths.toString();
+
+    if (this.flakeHubPushTag !== null) {
+      env.FLAKEHUB_PUSH_TAG = this.flakeHubPushTag;
     }
+
+    if (this.rollingMinor !== null) {
+      env.FLAKEHUB_PUSH_ROLLING_MINOR = this.rollingMinor;
+    }
+
+    return env;
+  }
+
+  private get flakeName(): string {
+    let name: string;
+
+    const org = process.env["GITHUB_REPOSITORY_OWNER"];
+    const repo = process.env["GITHUB_REPOSITORY"];
+
+    if (this.name !== null) {
+      if (this.name === "") {
+        actionsCore.setFailed("The `name` field can't be an empty string");
+      }
+
+      const parts = this.name.split("/");
+
+      if (parts.length === 1 || parts.length > 2) {
+        actionsCore.setFailed(
+          "The specified `name` must of the form {org}/{flake}",
+        );
+      }
+
+      if (parts.at(0) !== org) {
+        actionsCore.setFailed(
+          `The org name \`${parts.at(0)}\` that you specified using the \`name\` input doesn't match the actual org name \`${org}\``,
+        );
+      }
+
+      name = `${parts.at(0)}/${parts.at(1)}`;
+    } else {
+      name = `${org}/${repo}`;
+    }
+
+    return name;
   }
 
   async push(): Promise<void> {
-    const pusbBinaryUrl = this.pushBinaryUrl;
-    actionsCore.info(`Fetching flakehub-push binary from ${pusbBinaryUrl}`);
+    const executionEnv = await this.executionEnvironment();
+
+    const binary =
+      this.flakeHubPushBinary !== null
+        ? this.flakeHubPushBinary
+        : await this.idslib.fetchExecutable();
+
+    actionsCore.debug(
+      `execution environment: ${JSON.stringify(executionEnv, null, 2)}`,
+    );
+
+    const exitCode = await actionsExec.exec(binary, [], {
+      env: {
+        ...executionEnv,
+        ...process.env, // To get PATH, etc.
+      },
+    });
+
+    if (exitCode !== 0) {
+      this.idslib.recordEvent(EVENT_EXECUTION_FAILURE, {
+        exitCode,
+      });
+      actionsCore.setFailed(`non-zero exit code of ${exitCode} detected`);
+    }
   }
 }
 

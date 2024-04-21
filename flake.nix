@@ -72,6 +72,7 @@
             rust-analyzer
             rustc
             cargo
+            nodejs_latest
           ]
           ++ inputs.self.packages.${system}.flakehub-push.buildInputs
           ++ pkgs.lib.optionals pkgs.stdenv.isDarwin (with pkgs.darwin.apple_sdk.frameworks; [ Security ]);
