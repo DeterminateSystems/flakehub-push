@@ -94274,6 +94274,7 @@ var FlakeHubPushAction = class {
       requireNix: "ignore"
     };
     this.idslib = new IdsToolbox(options);
+    this.architecture = platform_exports.getArchOs();
     const visibility = inputs_exports.getString("visibility");
     this.visibility = visibility;
     this.name = inputs_exports.getStringOrNull("name");
@@ -94287,20 +94288,44 @@ var FlakeHubPushAction = class {
     this.host = inputs_exports.getString("host");
     this.logDirectives = inputs_exports.getString("log-directives");
     this.logger = inputs_exports.getString("logger");
-    this.githubToken = inputs_exports.getString("github-token");
+    this.gitHubToken = inputs_exports.getString("github-token");
     this.extraLabels = inputs_exports.getString("extra-labels") === "" ? inputs_exports.getString("extra-tags") : "";
     this.spdxExpression = inputs_exports.getString("spdx-expression");
     this.errorOnConflict = inputs_exports.getBool("error-on-conflict");
     this.includeOutputPaths = inputs_exports.getBool("include-output-paths");
-    this.flakehubPushBinary = inputs_exports.getString("flakehub-push-binary");
-    this.flakehubPushBranch = inputs_exports.getString("flakehub-push-branch");
-    this.flakehubPushPullRequest = inputs_exports.getString("flakehub-push-pr");
-    this.flakehubPushRevision = inputs_exports.getString("flakehub-push-revision");
-    this.flakehubPushTag = inputs_exports.getString("flakehub-push-tag");
-    this.flakehubPushUrl = inputs_exports.getString("flakehub-push-url");
+    this.flakeHubPushBinary = inputs_exports.getStringOrNull("flakehub-push-binary");
+    this.flakeHubPushBranch = inputs_exports.getString("flakehub-push-branch");
+    this.flakeHubPushPullRequest = inputs_exports.getStringOrNull("flakehub-push-pr");
+    this.flakeHubPushRevision = inputs_exports.getStringOrNull(
+      "flakehub-push-revision"
+    );
+    this.flakeHubPushTag = inputs_exports.getStringOrNull("flakehub-push-tag");
+    this.flakeHubPushUrl = inputs_exports.getStringOrNull("flakehub-push-url");
+  }
+  makeUrl(endpoint, item) {
+    return `https://install.determinate.systems/flakehub-push/${endpoint}/${item}/${this.architecture}?ci=github`;
+  }
+  get defaultBinaryUrl() {
+    return `https://install.determinate.systems/flakehub-push/stable/${this.architecture}?ci=github`;
+  }
+  get pushBinaryUrl() {
+    if (this.flakeHubPushBinary !== null) {
+      return this.flakeHubPushBinary;
+    } else if (this.flakeHubPushPullRequest !== null) {
+      return this.makeUrl("pr", this.flakeHubPushPullRequest);
+    } else if (this.flakeHubPushTag !== null) {
+      return this.makeUrl("tag", this.flakeHubPushTag);
+    } else if (this.flakeHubPushRevision !== null) {
+      return this.makeUrl("rev", this.flakeHubPushRevision);
+    } else if (this.flakeHubPushBranch !== null) {
+      return this.makeUrl("branch", this.flakeHubPushBranch);
+    } else {
+      return this.defaultBinaryUrl;
+    }
   }
   async push() {
-    core.info("Done");
+    const pusbBinaryUrl = this.pushBinaryUrl;
+    core.info(`Fetching flakehub-push binary from ${pusbBinaryUrl}`);
   }
 };
 function main() {

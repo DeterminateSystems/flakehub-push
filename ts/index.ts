@@ -1,10 +1,13 @@
 import * as actionsCore from "@actions/core";
-import { ActionOptions, IdsToolbox, inputs } from "detsys-ts";
+import { ActionOptions, IdsToolbox, inputs, platform } from "detsys-ts";
 
 type Visibility = "public" | "unlisted" | "private";
 
 class FlakeHubPushAction {
   idslib: IdsToolbox;
+  private architecture: string;
+
+  // Action inputs
   private visibility: Visibility;
   private name: string | null;
   private repository: string;
@@ -17,17 +20,17 @@ class FlakeHubPushAction {
   private host: string;
   private logDirectives: string;
   private logger: string;
-  private githubToken: string;
+  private gitHubToken: string;
   private extraLabels: string;
   private spdxExpression: string;
   private errorOnConflict: boolean;
   private includeOutputPaths: boolean;
-  private flakehubPushBinary: string;
-  private flakehubPushBranch: string;
-  private flakehubPushPullRequest: string;
-  private flakehubPushRevision: string;
-  private flakehubPushTag: string;
-  private flakehubPushUrl: string;
+  private flakeHubPushBinary: string | null;
+  private flakeHubPushBranch: string;
+  private flakeHubPushPullRequest: string | null;
+  private flakeHubPushRevision: string | null;
+  private flakeHubPushTag: string | null;
+  private flakeHubPushUrl: string | null;
 
   constructor() {
     const options: ActionOptions = {
@@ -40,6 +43,7 @@ class FlakeHubPushAction {
     };
 
     this.idslib = new IdsToolbox(options);
+    this.architecture = platform.getArchOs();
 
     // Inputs
     // TODO: check enum values
@@ -57,7 +61,7 @@ class FlakeHubPushAction {
     this.host = inputs.getString("host");
     this.logDirectives = inputs.getString("log-directives");
     this.logger = inputs.getString("logger");
-    this.githubToken = inputs.getString("github-token");
+    this.gitHubToken = inputs.getString("github-token");
     // extra-tags is deprecated but we still honor it
     this.extraLabels =
       inputs.getString("extra-labels") === ""
@@ -66,16 +70,43 @@ class FlakeHubPushAction {
     this.spdxExpression = inputs.getString("spdx-expression");
     this.errorOnConflict = inputs.getBool("error-on-conflict");
     this.includeOutputPaths = inputs.getBool("include-output-paths");
-    this.flakehubPushBinary = inputs.getString("flakehub-push-binary");
-    this.flakehubPushBranch = inputs.getString("flakehub-push-branch");
-    this.flakehubPushPullRequest = inputs.getString("flakehub-push-pr");
-    this.flakehubPushRevision = inputs.getString("flakehub-push-revision");
-    this.flakehubPushTag = inputs.getString("flakehub-push-tag");
-    this.flakehubPushUrl = inputs.getString("flakehub-push-url");
+    this.flakeHubPushBinary = inputs.getStringOrNull("flakehub-push-binary");
+    this.flakeHubPushBranch = inputs.getString("flakehub-push-branch");
+    this.flakeHubPushPullRequest = inputs.getStringOrNull("flakehub-push-pr");
+    this.flakeHubPushRevision = inputs.getStringOrNull(
+      "flakehub-push-revision",
+    );
+    this.flakeHubPushTag = inputs.getStringOrNull("flakehub-push-tag");
+    this.flakeHubPushUrl = inputs.getStringOrNull("flakehub-push-url");
+  }
+
+  private makeUrl(endpoint: string, item: string): string {
+    return `https://install.determinate.systems/flakehub-push/${endpoint}/${item}/${this.architecture}?ci=github`;
+  }
+
+  private get defaultBinaryUrl(): string {
+    return `https://install.determinate.systems/flakehub-push/stable/${this.architecture}?ci=github`;
+  }
+
+  private get pushBinaryUrl(): string {
+    if (this.flakeHubPushBinary !== null) {
+      return this.flakeHubPushBinary;
+    } else if (this.flakeHubPushPullRequest !== null) {
+      return this.makeUrl("pr", this.flakeHubPushPullRequest);
+    } else if (this.flakeHubPushTag !== null) {
+      return this.makeUrl("tag", this.flakeHubPushTag);
+    } else if (this.flakeHubPushRevision !== null) {
+      return this.makeUrl("rev", this.flakeHubPushRevision);
+    } else if (this.flakeHubPushBranch !== null) {
+      return this.makeUrl("branch", this.flakeHubPushBranch);
+    } else {
+      return this.defaultBinaryUrl;
+    }
   }
 
   async push(): Promise<void> {
-    actionsCore.info("Done");
+    const pusbBinaryUrl = this.pushBinaryUrl;
+    actionsCore.info(`Fetching flakehub-push binary from ${pusbBinaryUrl}`);
   }
 }
 

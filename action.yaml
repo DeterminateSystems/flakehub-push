@@ -81,6 +81,7 @@ inputs:
 
   flakehub-push-binary:
     description: Run a version of the `flakehub-push` binary from somewhere already on disk. Conflicts with all other `flakehub-push-*` options.
+    required: false
   flakehub-push-branch:
     description: The branch of `flakehub-push` to use. Conflicts with all other `flakehub-push-*` options.
     required: false
