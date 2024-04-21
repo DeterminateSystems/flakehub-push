@@ -1,0 +1,1 @@
+{"version":3,"sources":["../ts/index.ts"],"sourcesContent":["function main(): void {\n  console.log(\"It works\");\n}\n\nmain();\n"],"mappings":";AAAA,SAAS,OAAa;AACpB,UAAQ,IAAI,UAAU;AACxB;AAEA,KAAK;","names":[]}

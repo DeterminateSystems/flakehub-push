@@ -102,68 +102,68 @@ inputs:
 runs:
   using: composite
   steps:
-  - name: Install `flakehub-push`
-    shell: bash
-    env:
-      FLAKEHUB_PUSH_VISIBLITY: ${{ inputs.visibility }}
-      FLAKEHUB_PUSH_TAG: ${{ inputs.tag }}
-      FLAKEHUB_PUSH_ROLLING_MINOR: ${{ inputs.rolling-minor }}
-      FLAKEHUB_PUSH_ROLLING: ${{ inputs.rolling }}
-      FLAKEHUB_PUSH_HOST: ${{ inputs.host }}
-      FLAKEHUB_PUSH_LOG_DIRECTIVES: ${{ inputs.log-directives }}
-      FLAKEHUB_PUSH_LOGGER: ${{ inputs.logger }}
-      FLAKEHUB_PUSH_GITHUB_TOKEN: ${{ inputs.github-token }}
-      FLAKEHUB_PUSH_NAME: ${{ inputs.name }}
-      FLAKEHUB_PUSH_MIRROR: ${{ inputs.mirror }}
-      FLAKEHUB_PUSH_REPOSITORY: ${{ inputs.repository }}
-      FLAKEHUB_PUSH_DIRECTORY: ${{ inputs.directory }}
-      FLAKEHUB_PUSH_GIT_ROOT: ${{ inputs.git-root }}
-      FLAKEHUB_PUSH_EXTRA_LABELS: ${{ inputs.extra-labels }}
-      FLAKEHUB_PUSH_EXTRA_TAGS: ${{ inputs.extra-tags }}
-      FLAKEHUB_PUSH_SPDX_EXPRESSION: ${{ inputs.spdx-expression }}
-      FLAKEHUB_PUSH_ERROR_ON_CONFLICT: ${{ inputs.error-on-conflict }}
-      FLAKEHUB_PUSH_INCLUDE_OUTPUT_PATHS: ${{ inputs.include-output-paths }}
-      # Also GITHUB_REPOSITORY, GITHUB_REF_NAME, GITHUB_TOKEN, ACTIONS_ID_TOKEN_REQUEST_TOKEN, ACTIONS_ID_TOKEN_REQUEST_URL
-    run: |
-      if [ "${RUNNER_OS}" == "Linux" ]; then
-        export ARCHITECTURE_OS="Linux"
-      else
-        echo "${RUNNER_OS} not supported"
-        exit 1
-      fi
-
-      if [ "${RUNNER_ARCH}" == "X64" ]; then
-        export ARCHITECTURE_ARCH="X64"
-      else
-        echo "${RUNNER_ARCH} not supported"
-        exit 1
-      fi
-
-      export ARCHITECTURE="${ARCHITECTURE_ARCH}-${ARCHITECTURE_OS}"
-
-      if [ -n "${{ inputs.flakehub-push-url }}" ]; then
-        export FLAKEHUB_PUSH_URL="${{ inputs.flakehub-push-url }}"
-      else
-        if [ -n "${{ inputs.flakehub-push-pr }}" ]; then
-          export FLAKEHUB_PUSH_URL="https://install.determinate.systems/flakehub-push/pr/${{ inputs.flakehub-push-pr }}/${ARCHITECTURE}?ci=github"
-        elif [ -n "${{ inputs.flakehub-push-tag }}" ]; then
-          export FLAKEHUB_PUSH_URL="https://install.determinate.systems/flakehub-push/tag/${{ inputs.flakehub-push-tag }}/${ARCHITECTURE}?ci=github"
-        elif [ -n "${{ inputs.flakehub-push-revision }}" ]; then
-          export FLAKEHUB_PUSH_URL="https://install.determinate.systems/flakehub-push/rev/${{ inputs.flakehub-push-revision }}/${ARCHITECTURE}?ci=github"
-        elif [ -n "${{ inputs.flakehub-push-branch }}" ]; then
-          export FLAKEHUB_PUSH_URL="https://install.determinate.systems/flakehub-push/branch/${{ inputs.flakehub-push-branch }}/${ARCHITECTURE}?ci=github"
+    - name: Install `flakehub-push`
+      shell: bash
+      env:
+        FLAKEHUB_PUSH_VISIBLITY: ${{ inputs.visibility }}
+        FLAKEHUB_PUSH_TAG: ${{ inputs.tag }}
+        FLAKEHUB_PUSH_ROLLING_MINOR: ${{ inputs.rolling-minor }}
+        FLAKEHUB_PUSH_ROLLING: ${{ inputs.rolling }}
+        FLAKEHUB_PUSH_HOST: ${{ inputs.host }}
+        FLAKEHUB_PUSH_LOG_DIRECTIVES: ${{ inputs.log-directives }}
+        FLAKEHUB_PUSH_LOGGER: ${{ inputs.logger }}
+        FLAKEHUB_PUSH_GITHUB_TOKEN: ${{ inputs.github-token }}
+        FLAKEHUB_PUSH_NAME: ${{ inputs.name }}
+        FLAKEHUB_PUSH_MIRROR: ${{ inputs.mirror }}
+        FLAKEHUB_PUSH_REPOSITORY: ${{ inputs.repository }}
+        FLAKEHUB_PUSH_DIRECTORY: ${{ inputs.directory }}
+        FLAKEHUB_PUSH_GIT_ROOT: ${{ inputs.git-root }}
+        FLAKEHUB_PUSH_EXTRA_LABELS: ${{ inputs.extra-labels }}
+        FLAKEHUB_PUSH_EXTRA_TAGS: ${{ inputs.extra-tags }}
+        FLAKEHUB_PUSH_SPDX_EXPRESSION: ${{ inputs.spdx-expression }}
+        FLAKEHUB_PUSH_ERROR_ON_CONFLICT: ${{ inputs.error-on-conflict }}
+        FLAKEHUB_PUSH_INCLUDE_OUTPUT_PATHS: ${{ inputs.include-output-paths }}
+        # Also GITHUB_REPOSITORY, GITHUB_REF_NAME, GITHUB_TOKEN, ACTIONS_ID_TOKEN_REQUEST_TOKEN, ACTIONS_ID_TOKEN_REQUEST_URL
+      run: |
+        if [ "${RUNNER_OS}" == "Linux" ]; then
+          export ARCHITECTURE_OS="Linux"
         else
-          export FLAKEHUB_PUSH_URL="https://install.determinate.systems/flakehub-push/stable/${ARCHITECTURE}?ci=github"
+          echo "${RUNNER_OS} not supported"
+          exit 1
         fi
-      fi
-      echo "Set FLAKEHUB_PUSH_URL=$FLAKEHUB_PUSH_URL"
 
-      if [ -n "${{ inputs.flakehub-push-binary }}" ]; then
-        chmod +x ${{ inputs.flakehub-push-binary }}
-        exec ${{ inputs.flakehub-push-binary }}
-      else
-        DEST=$(mktemp -d)
-        curl --retry 20 -L $FLAKEHUB_PUSH_URL -o $DEST/flakehub-push
-        chmod +x $DEST/flakehub-push
-        exec $DEST/flakehub-push
-      fi
+        if [ "${RUNNER_ARCH}" == "X64" ]; then
+          export ARCHITECTURE_ARCH="X64"
+        else
+          echo "${RUNNER_ARCH} not supported"
+          exit 1
+        fi
+
+        export ARCHITECTURE="${ARCHITECTURE_ARCH}-${ARCHITECTURE_OS}"
+
+        if [ -n "${{ inputs.flakehub-push-url }}" ]; then
+          export FLAKEHUB_PUSH_URL="${{ inputs.flakehub-push-url }}"
+        else
+          if [ -n "${{ inputs.flakehub-push-pr }}" ]; then
+            export FLAKEHUB_PUSH_URL="https://install.determinate.systems/flakehub-push/pr/${{ inputs.flakehub-push-pr }}/${ARCHITECTURE}?ci=github"
+          elif [ -n "${{ inputs.flakehub-push-tag }}" ]; then
+            export FLAKEHUB_PUSH_URL="https://install.determinate.systems/flakehub-push/tag/${{ inputs.flakehub-push-tag }}/${ARCHITECTURE}?ci=github"
+          elif [ -n "${{ inputs.flakehub-push-revision }}" ]; then
+            export FLAKEHUB_PUSH_URL="https://install.determinate.systems/flakehub-push/rev/${{ inputs.flakehub-push-revision }}/${ARCHITECTURE}?ci=github"
+          elif [ -n "${{ inputs.flakehub-push-branch }}" ]; then
+            export FLAKEHUB_PUSH_URL="https://install.determinate.systems/flakehub-push/branch/${{ inputs.flakehub-push-branch }}/${ARCHITECTURE}?ci=github"
+          else
+            export FLAKEHUB_PUSH_URL="https://install.determinate.systems/flakehub-push/stable/${ARCHITECTURE}?ci=github"
+          fi
+        fi
+        echo "Set FLAKEHUB_PUSH_URL=$FLAKEHUB_PUSH_URL"
+
+        if [ -n "${{ inputs.flakehub-push-binary }}" ]; then
+          chmod +x ${{ inputs.flakehub-push-binary }}
+          exec ${{ inputs.flakehub-push-binary }}
+        else
+          DEST=$(mktemp -d)
+          curl --retry 20 -L $FLAKEHUB_PUSH_URL -o $DEST/flakehub-push
+          chmod +x $DEST/flakehub-push
+          exec $DEST/flakehub-push
+        fi
