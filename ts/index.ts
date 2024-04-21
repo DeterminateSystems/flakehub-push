@@ -9,8 +9,6 @@ const VISIBILITY_OPTIONS = ["public", "unlisted", "private"];
 type Visibility = "public" | "unlisted" | "private";
 
 type ExecutionEnvironment = {
-  RUST_BACKTRACE?: string;
-
   FLAKEHUB_PUSH_VISIBLITY?: string;
   FLAKEHUB_PUSH_TAG?: string;
   FLAKEHUB_PUSH_ROLLING_MINOR?: string;
@@ -97,7 +95,7 @@ class FlakeHubPushAction {
   private verifyVisibility(): Visibility {
     const visibility = inputs.getString("visibility");
     if (!VISIBILITY_OPTIONS.includes(visibility)) {
-      actionsCore.setFailed(
+      throw new Error(
         `Visibility option \`${visibility}\` not recognized. Available options: ${VISIBILITY_OPTIONS.join(", ")}.`,
       );
     }
@@ -151,25 +149,23 @@ class FlakeHubPushAction {
 
     if (this.name !== null) {
       if (this.name === "") {
-        actionsCore.setFailed("The `name` field can't be an empty string");
+        throw new Error("The `name` field can't be an empty string");
       }
 
       const parts = this.name.split("/");
 
       if (parts.length === 1 || parts.length > 2) {
-        actionsCore.setFailed(
-          "The specified `name` must of the form {org}/{flake}",
-        );
-      }
-
-      if (parts.at(0) !== org) {
-        actionsCore.setFailed(
-          `The org name \`${parts.at(0)}\` that you specified using the \`name\` input doesn't match the actual org name \`${org}\``,
-        );
+        throw new Error("The specified `name` must of the form {org}/{repo}");
       }
 
       const orgName = parts.at(0);
       const repoName = parts.at(1);
+
+      if (orgName !== org) {
+        throw new Error(
+          `The org name \`${orgName}\` that you specified using the \`name\` input doesn't match the actual org name \`${org}\``,
+        );
+      }
 
       name = `${orgName}/${repoName}`;
     } else {
@@ -202,7 +198,7 @@ class FlakeHubPushAction {
       this.idslib.recordEvent(EVENT_EXECUTION_FAILURE, {
         exitCode,
       });
-      actionsCore.setFailed(`non-zero exit code of ${exitCode} detected`);
+      throw new Error(`non-zero exit code of ${exitCode} detected`);
     }
   }
 }
