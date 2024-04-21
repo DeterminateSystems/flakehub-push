@@ -94278,7 +94278,6 @@ var FlakeHubPushAction = class {
       requireNix: "ignore"
     };
     this.idslib = new IdsToolbox(options);
-    this.architecture = platform_exports.getArchOs();
     const visibility = this.verifyVisibility();
     this.visibility = visibility;
     this.name = inputs_exports.getStringOrNull("name");
@@ -94287,7 +94286,7 @@ var FlakeHubPushAction = class {
     this.directory = inputs_exports.getString("directory");
     this.gitRoot = inputs_exports.getString("git-root");
     this.tag = inputs_exports.getString("tag");
-    this.rollingMinor = inputs_exports.getStringOrNull("rolling-minor");
+    this.rollingMinor = inputs_exports.getNumberOrNull("rolling-minor");
     this.rolling = inputs_exports.getBool("rolling");
     this.host = inputs_exports.getString("host");
     this.logDirectives = inputs_exports.getString("log-directives");
@@ -94312,22 +94311,30 @@ var FlakeHubPushAction = class {
     const env = {};
     env.FLAKEHUB_PUSH_VISIBLITY = this.visibility;
     env.FLAKEHUB_PUSH_TAG = this.tag;
-    env.FLAKEHUB_PUSH_ROLLING = this.rolling.toString();
     env.FLAKEHUB_PUSH_HOST = this.host;
     env.FLAKEHUB_PUSH_LOG_DIRECTIVES = this.logDirectives;
     env.FLAKEHUB_PUSH_LOGGER = this.logger;
     env.FLAKEHUB_PUSH_GITHUB_TOKEN = this.gitHubToken;
     env.FLAKEHUB_PUSH_NAME = this.flakeName;
-    env.FLAKEHUB_PUSH_MIRROR = this.mirror.toString();
     env.FLAKEHUB_PUSH_REPOSITORY = this.repository;
     env.FLAKEHUB_PUSH_DIRECTORY = this.directory;
     env.FLAKEHUB_PUSH_GIT_ROOT = this.gitRoot;
     env.FLAKEHUB_PUSH_EXTRA_LABELS = this.extraLabels;
     env.FLAKEHUB_PUSH_SPDX_EXPRESSION = this.spdxExpression;
-    env.FLAKEHUB_PUSH_ERROR_ON_CONFLICT = this.errorOnConflict.toString();
-    env.FLAKEHUB_PUSH_INCLUDE_OUTPUT_PATHS = this.includeOutputPaths.toString();
+    if (!this.rolling) {
+      env.FLAKEHUB_PUSH_ROLLING = "false";
+    }
+    if (!this.mirror) {
+      env.FLAKEHUB_PUSH_MIRROR = "false";
+    }
+    if (!this.errorOnConflict) {
+      env.FLAKEHUB_PUSH_ERROR_ON_CONFLICT = "false";
+    }
+    if (!this.includeOutputPaths) {
+      env.FLAKEHUB_PUSH_INCLUDE_OUTPUT_PATHS = "false";
+    }
     if (this.rollingMinor !== null) {
-      env.FLAKEHUB_PUSH_ROLLING_MINOR = this.rollingMinor;
+      env.FLAKEHUB_PUSH_ROLLING_MINOR = this.rollingMinor.toString();
     }
     return env;
   }
@@ -94350,7 +94357,9 @@ var FlakeHubPushAction = class {
           `The org name \`${parts.at(0)}\` that you specified using the \`name\` input doesn't match the actual org name \`${org}\``
         );
       }
-      name = `${parts.at(0)}/${parts.at(1)}`;
+      const orgName = parts.at(0);
+      const repoName = parts.at(1);
+      name = `${orgName}/${repoName}`;
     } else {
       name = `${org}/${repo}`;
     }

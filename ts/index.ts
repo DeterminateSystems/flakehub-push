@@ -1,6 +1,6 @@
 import * as actionsCore from "@actions/core";
 import * as actionsExec from "@actions/exec";
-import { ActionOptions, IdsToolbox, inputs, platform } from "detsys-ts";
+import { ActionOptions, IdsToolbox, inputs } from "detsys-ts";
 
 const EVENT_EXECUTION_FAILURE = "execution_failure";
 
@@ -109,20 +109,32 @@ class FlakeHubPushAction {
 
     env.FLAKEHUB_PUSH_VISIBLITY = this.visibility;
     env.FLAKEHUB_PUSH_TAG = this.tag;
-    env.FLAKEHUB_PUSH_ROLLING = this.rolling.toString();
     env.FLAKEHUB_PUSH_HOST = this.host;
     env.FLAKEHUB_PUSH_LOG_DIRECTIVES = this.logDirectives;
     env.FLAKEHUB_PUSH_LOGGER = this.logger;
     env.FLAKEHUB_PUSH_GITHUB_TOKEN = this.gitHubToken;
     env.FLAKEHUB_PUSH_NAME = this.flakeName;
-    env.FLAKEHUB_PUSH_MIRROR = this.mirror.toString();
     env.FLAKEHUB_PUSH_REPOSITORY = this.repository;
     env.FLAKEHUB_PUSH_DIRECTORY = this.directory;
     env.FLAKEHUB_PUSH_GIT_ROOT = this.gitRoot;
     env.FLAKEHUB_PUSH_EXTRA_LABELS = this.extraLabels;
     env.FLAKEHUB_PUSH_SPDX_EXPRESSION = this.spdxExpression;
-    env.FLAKEHUB_PUSH_ERROR_ON_CONFLICT = this.errorOnConflict.toString();
-    env.FLAKEHUB_PUSH_INCLUDE_OUTPUT_PATHS = this.includeOutputPaths.toString();
+
+    if (!this.rolling) {
+      env.FLAKEHUB_PUSH_ROLLING = "false";
+    }
+
+    if (!this.mirror) {
+      env.FLAKEHUB_PUSH_MIRROR = "false";
+    }
+
+    if (!this.errorOnConflict) {
+      env.FLAKEHUB_PUSH_ERROR_ON_CONFLICT = "false";
+    }
+
+    if (!this.includeOutputPaths) {
+      env.FLAKEHUB_PUSH_INCLUDE_OUTPUT_PATHS = "false";
+    }
 
     if (this.rollingMinor !== null) {
       env.FLAKEHUB_PUSH_ROLLING_MINOR = this.rollingMinor.toString();
@@ -156,7 +168,10 @@ class FlakeHubPushAction {
         );
       }
 
-      name = `${parts.at(0)}/${parts.at(1)}`;
+      const orgName = parts.at(0);
+      const repoName = parts.at(1);
+
+      name = `${orgName}/${repoName}`;
     } else {
       name = `${org}/${repo}`;
     }
