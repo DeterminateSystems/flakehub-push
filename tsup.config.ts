@@ -1,7 +1,7 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  name: "detsys-ts",
+  name: "flakehub-push",
   entry: ["ts/index.ts"],
   format: ["esm"],
   target: "node20",
