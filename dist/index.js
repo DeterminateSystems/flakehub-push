@@ -94278,27 +94278,26 @@ var FlakeHubPushAction = class {
       requireNix: "fail"
     };
     this.idslib = new IdsToolbox(options);
-    const visibility = this.verifyVisibility();
-    this.visibility = visibility;
-    this.name = inputs_exports.getStringOrNull("name");
-    this.repository = inputs_exports.getString("repository");
-    this.mirror = inputs_exports.getBool("mirror");
-    this.directory = inputs_exports.getString("directory");
-    this.gitRoot = inputs_exports.getString("git-root");
+    this.visibility = this.determineVisibility();
     this.tag = inputs_exports.getString("tag");
-    this.rollingMinor = inputs_exports.getNumberOrNull("rolling-minor");
-    this.rolling = inputs_exports.getBool("rolling");
     this.host = inputs_exports.getString("host");
     this.logDirectives = inputs_exports.getString("log-directives");
     this.logger = inputs_exports.getString("logger");
     this.gitHubToken = inputs_exports.getString("github-token");
+    this.name = inputs_exports.getStringOrNull("name");
+    this.repository = inputs_exports.getString("repository");
+    this.directory = inputs_exports.getString("directory");
+    this.gitRoot = inputs_exports.getString("git-root");
     this.extraLabels = inputs_exports.getString("extra-labels") === "" ? inputs_exports.getString("extra-tags") : "";
     this.spdxExpression = inputs_exports.getString("spdx-expression");
     this.errorOnConflict = inputs_exports.getBool("error-on-conflict");
     this.includeOutputPaths = inputs_exports.getBool("include-output-paths");
+    this.rolling = inputs_exports.getBool("rolling");
+    this.mirror = inputs_exports.getBool("mirror");
+    this.rollingMinor = inputs_exports.getNumberOrNull("rolling-minor");
     this.flakeHubPushBinary = inputs_exports.getStringOrNull("flakehub-push-binary");
   }
-  verifyVisibility() {
+  determineVisibility() {
     const visibility = inputs_exports.getString("visibility");
     if (!VISIBILITY_OPTIONS.includes(visibility)) {
       throw new Error(
@@ -94309,7 +94308,7 @@ var FlakeHubPushAction = class {
   }
   async executionEnvironment() {
     const env = {};
-    env.FLAKEHUB_PUSH_VISIBLITY = this.visibility;
+    env.FLAKEHUB_PUSH_VISIBILITY = this.visibility;
     env.FLAKEHUB_PUSH_TAG = this.tag;
     env.FLAKEHUB_PUSH_HOST = this.host;
     env.FLAKEHUB_PUSH_LOG_DIRECTIVES = this.logDirectives;
@@ -94321,18 +94320,10 @@ var FlakeHubPushAction = class {
     env.FLAKEHUB_PUSH_GIT_ROOT = this.gitRoot;
     env.FLAKEHUB_PUSH_EXTRA_LABELS = this.extraLabels;
     env.FLAKEHUB_PUSH_SPDX_EXPRESSION = this.spdxExpression;
-    if (!this.rolling) {
-      env.FLAKEHUB_PUSH_ROLLING = "false";
-    }
-    if (!this.mirror) {
-      env.FLAKEHUB_PUSH_MIRROR = "false";
-    }
-    if (!this.errorOnConflict) {
-      env.FLAKEHUB_PUSH_ERROR_ON_CONFLICT = "false";
-    }
-    if (!this.includeOutputPaths) {
-      env.FLAKEHUB_PUSH_INCLUDE_OUTPUT_PATHS = "false";
-    }
+    env.FLAKEHUB_PUSH_ERROR_ON_CONFLICT = this.errorOnConflict.toString();
+    env.FLAKEHUB_PUSH_INCLUDE_OUTPUT_PATHS = this.includeOutputPaths.toString();
+    env.FLAKEHUB_PUSH_ROLLING = this.rolling.toString();
+    env.FLAKEHUB_PUSH_MIRROR = this.mirror.toString();
     if (this.rollingMinor !== null) {
       env.FLAKEHUB_PUSH_ROLLING_MINOR = this.rollingMinor.toString();
     }
