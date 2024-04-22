@@ -94373,7 +94373,7 @@ var FlakeHubPushAction = class {
       this.idslib.recordEvent(EVENT_EXECUTION_FAILURE, {
         exitCode
       });
-      throw new Error(`non-zero exit code of ${exitCode} detected`);
+      core.setFailed(`non-zero exit code of ${exitCode} detected`);
     }
   }
 };
