@@ -96,7 +96,7 @@ class FlakeHubPushAction {
   private determineVisibility(): Visibility {
     const visibility = inputs.getString("visibility");
     if (!VISIBILITY_OPTIONS.includes(visibility)) {
-      throw new Error(
+      actionsCore.setFailed(
         `Visibility option \`${visibility}\` not recognized. Available options: ${VISIBILITY_OPTIONS.join(", ")}.`,
       );
     }
@@ -139,13 +139,15 @@ class FlakeHubPushAction {
 
     if (this.name !== null) {
       if (this.name === "") {
-        throw new Error("The `name` field can't be an empty string");
+        actionsCore.setFailed("The `name` field can't be an empty string");
       }
 
       const parts = this.name.split("/");
 
       if (parts.length === 1 || parts.length > 2) {
-        throw new Error("The specified `name` must of the form {org}/{repo}");
+        actionsCore.setFailed(
+          "The specified `name` must of the form {org}/{repo}",
+        );
       }
 
       const orgName = parts.at(0);
@@ -153,7 +155,7 @@ class FlakeHubPushAction {
 
       // Fail on mismatched org names only when *not* mirroring
       if (orgName !== org && !this.mirror) {
-        throw new Error(
+        actionsCore.setFailed(
           `The org name \`${orgName}\` that you specified using the \`name\` input doesn't match the actual org name \`${org}\``,
         );
       }
@@ -189,7 +191,7 @@ class FlakeHubPushAction {
       this.idslib.recordEvent(EVENT_EXECUTION_FAILURE, {
         exitCode,
       });
-      throw new Error(`non-zero exit code of ${exitCode} detected`);
+      actionsCore.setFailed(`non-zero exit code of ${exitCode} detected`);
     }
   }
 }

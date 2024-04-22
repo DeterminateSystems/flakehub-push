@@ -94300,7 +94300,7 @@ var FlakeHubPushAction = class {
   determineVisibility() {
     const visibility = inputs_exports.getString("visibility");
     if (!VISIBILITY_OPTIONS.includes(visibility)) {
-      throw new Error(
+      core.setFailed(
         `Visibility option \`${visibility}\` not recognized. Available options: ${VISIBILITY_OPTIONS.join(", ")}.`
       );
     }
@@ -94335,16 +94335,18 @@ var FlakeHubPushAction = class {
     const repo = process.env["GITHUB_REPOSITORY"];
     if (this.name !== null) {
       if (this.name === "") {
-        throw new Error("The `name` field can't be an empty string");
+        core.setFailed("The `name` field can't be an empty string");
       }
       const parts = this.name.split("/");
       if (parts.length === 1 || parts.length > 2) {
-        throw new Error("The specified `name` must of the form {org}/{repo}");
+        core.setFailed(
+          "The specified `name` must of the form {org}/{repo}"
+        );
       }
       const orgName = parts.at(0);
       const repoName = parts.at(1);
       if (orgName !== org && !this.mirror) {
-        throw new Error(
+        core.setFailed(
           `The org name \`${orgName}\` that you specified using the \`name\` input doesn't match the actual org name \`${org}\``
         );
       }
