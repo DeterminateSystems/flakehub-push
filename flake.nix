@@ -63,8 +63,7 @@
 
       devShells = forAllSystems ({ system, pkgs, ... }: {
         default = pkgs.mkShell {
-          name = "dev";
-          buildInputs = with pkgs; [
+          packages = with pkgs; [
             nixpkgs-fmt
             rustfmt
             cargo-outdated
@@ -78,10 +77,6 @@
           ]
           ++ inputs.self.packages.${system}.flakehub-push.buildInputs
           ++ pkgs.lib.optionals pkgs.stdenv.isDarwin (with pkgs.darwin.apple_sdk.frameworks; [ Security ]);
-
-          nativeBuildInputs = with pkgs; [
-          ]
-          ++ inputs.self.packages.${system}.flakehub-push.nativeBuildInputs;
         };
       });
 
