@@ -60,7 +60,7 @@ class FlakeHubPushAction {
         "https://install.determinate.systems/flakehub-push/telemetry",
       ),
       legacySourcePrefix: "flakehub-push",
-      requireNix: "ignore",
+      requireNix: "fail",
     };
 
     this.idslib = new IdsToolbox(options);

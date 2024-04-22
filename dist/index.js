@@ -94275,7 +94275,7 @@ var FlakeHubPushAction = class {
         "https://install.determinate.systems/flakehub-push/telemetry"
       ),
       legacySourcePrefix: "flakehub-push",
-      requireNix: "ignore"
+      requireNix: "fail"
     };
     this.idslib = new IdsToolbox(options);
     const visibility = this.verifyVisibility();
