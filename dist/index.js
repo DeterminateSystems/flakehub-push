@@ -94352,7 +94352,7 @@ var FlakeHubPushAction = class {
       }
       const orgName = parts.at(0);
       const repoName = parts.at(1);
-      if (orgName !== org) {
+      if (orgName !== org && !this.mirror) {
         throw new Error(
           `The org name \`${orgName}\` that you specified using the \`name\` input doesn't match the actual org name \`${org}\``
         );
