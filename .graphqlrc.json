@@ -1,8 +1,4 @@
 {
-    "schema": [
-        "src/graphql/github_schema.graphql"
-    ],
-    "documents": [
-        "src/graphql/query/*.graphql"
-    ]
+  "schema": ["src/graphql/github_schema.graphql"],
+  "documents": ["src/graphql/query/*.graphql"]
 }
