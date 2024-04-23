@@ -17,8 +17,12 @@
     "type": "git",
     "url": "git+https://github.com/DeterminateSystems/flakehub-push.git"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "nix",
+    "flakes",
+    "flakehub"
+  ],
+  "author": "Determinate Systems",
   "license": "LGPL",
   "bugs": {
     "url": "https://github.com/DeterminateSystems/flakehub-push/issues"
