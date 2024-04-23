@@ -94311,7 +94311,6 @@ var FlakeHubPushAction = class {
   }
   executionEnvironment() {
     const env = {};
-    env.FLAKEHUB_PUSH_VISIBILITY = this.visibility;
     env.FLAKEHUB_PUSH_TAG = this.tag;
     env.FLAKEHUB_PUSH_HOST = this.host;
     env.FLAKEHUB_PUSH_LOG_DIRECTIVES = this.logDirectives;

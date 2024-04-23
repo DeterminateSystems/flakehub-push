@@ -5,7 +5,9 @@ import { ActionOptions, IdsToolbox, inputs } from "detsys-ts";
 const EVENT_EXECUTION_FAILURE = "execution_failure";
 
 type ExecutionEnvironment = {
-  FLAKEHUB_PUSH_VISIBILITY?: string;
+  // This needs to remain commented out until PR #25 is merged to prevent any
+  // potential issues with setting this via flag instead (see below)
+  //FLAKEHUB_PUSH_VISIBILITY?: string;
   FLAKEHUB_PUSH_TAG?: string;
   FLAKEHUB_PUSH_HOST?: string;
   FLAKEHUB_PUSH_LOG_DIRECTIVES?: string;
@@ -104,7 +106,9 @@ class FlakeHubPushAction {
   private executionEnvironment(): ExecutionEnvironment {
     const env: ExecutionEnvironment = {};
 
-    env.FLAKEHUB_PUSH_VISIBILITY = this.visibility;
+    // This needs to remain commented out until PR #25 is merged to prevent any
+    // potential issues with setting this via flag instead (see below)
+    //env.FLAKEHUB_PUSH_VISIBILITY = this.visibility;
     env.FLAKEHUB_PUSH_TAG = this.tag;
     env.FLAKEHUB_PUSH_HOST = this.host;
     env.FLAKEHUB_PUSH_LOG_DIRECTIVES = this.logDirectives;
