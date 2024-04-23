@@ -101,8 +101,7 @@ class FlakeHubPushAction {
       "flakehub-push-binary",
     );
 
-    // We could use something simpler like nullish coalescing here but let's keep it explicit
-    return sourceBinaryInput === "" || sourceBinaryInput === null
+    return sourceBinaryInput !== ""
       ? sourceBinaryInput
       : flakeHubPushBinaryInput;
   }
