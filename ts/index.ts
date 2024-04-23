@@ -97,7 +97,7 @@ class FlakeHubPushAction {
     const visibility = inputs.getString("visibility");
     if (!VISIBILITY_OPTIONS.includes(visibility)) {
       actionsCore.setFailed(
-        `Visibility option \`${visibility}\` not recognized. Available options: ${VISIBILITY_OPTIONS.join(", ")}.`,
+        `Visibility option \`${visibility}\` not recognized. Available options: ${VISIBILITY_OPTIONS.map((opt) => `\`${opt}\``).join(", ")}.`,
       );
     }
     return visibility as Visibility;

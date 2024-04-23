@@ -94301,7 +94301,7 @@ var FlakeHubPushAction = class {
     const visibility = inputs_exports.getString("visibility");
     if (!VISIBILITY_OPTIONS.includes(visibility)) {
       core.setFailed(
-        `Visibility option \`${visibility}\` not recognized. Available options: ${VISIBILITY_OPTIONS.join(", ")}.`
+        `Visibility option \`${visibility}\` not recognized. Available options: ${VISIBILITY_OPTIONS.map((opt) => `\`${opt}\``).join(", ")}.`
       );
     }
     return visibility;
