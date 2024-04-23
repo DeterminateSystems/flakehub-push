@@ -94374,6 +94374,8 @@ var FlakeHubPushAction = class {
         exitCode
       });
       core.setFailed(`non-zero exit code of ${exitCode} detected`);
+    } else {
+      core.info(`Flake release was successfully published`);
     }
   }
 };
