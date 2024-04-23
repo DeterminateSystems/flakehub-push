@@ -32,7 +32,6 @@ class FlakeHubPushAction {
   idslib: IdsToolbox;
 
   // Action inputs translated into environment variables to pass to flakehub-push
-  private visibility: Visibility;
   private tag: string;
   private host: string;
   private logDirectives: string;
@@ -50,9 +49,6 @@ class FlakeHubPushAction {
   private name: string | null;
   private rollingMinor: number | null;
 
-  // Other Action inputs
-  private sourceBinary: string | null;
-
   constructor() {
     const options: ActionOptions = {
       name: "flakehub-push",
@@ -67,7 +63,6 @@ class FlakeHubPushAction {
     this.idslib = new IdsToolbox(options);
 
     // Inputs translated into environment variables for flakehub-push
-    this.visibility = this.determineVisibility();
     this.tag = inputs.getString("tag");
     this.host = inputs.getString("host");
     this.logDirectives = inputs.getString("log-directives");
@@ -88,14 +83,11 @@ class FlakeHubPushAction {
     this.mirror = inputs.getBool("mirror");
     this.name = inputs.getStringOrNull("name");
     this.rollingMinor = inputs.getNumberOrNull("rolling-minor");
-
-    // Other inputs
-    this.sourceBinary = this.determineSourceBinary;
   }
 
-  // We first check for a value using the `source-binary` input; if
+  // We first check for a value using the `source-binary` input and fall back to the
   // now-deprecated `flakehub-push-binary`
-  private get determineSourceBinary(): string | null {
+  private get sourceBinary(): string | null {
     const sourceBinaryInput = inputs.getStringOrNull("source-binary");
     const flakeHubPushBinaryInput = inputs.getStringOrNull(
       "flakehub-push-binary",
@@ -106,7 +98,7 @@ class FlakeHubPushAction {
       : flakeHubPushBinaryInput;
   }
 
-  private determineVisibility(): Visibility {
+  private get visibility(): Visibility {
     const visibility = inputs.getString("visibility");
     if (!VISIBILITY_OPTIONS.includes(visibility)) {
       actionsCore.setFailed(

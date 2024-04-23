@@ -94278,7 +94278,6 @@ var FlakeHubPushAction = class {
       requireNix: "fail"
     };
     this.idslib = new IdsToolbox(options);
-    this.visibility = this.determineVisibility();
     this.tag = inputs_exports.getString("tag");
     this.host = inputs_exports.getString("host");
     this.logDirectives = inputs_exports.getString("log-directives");
@@ -94295,18 +94294,17 @@ var FlakeHubPushAction = class {
     this.mirror = inputs_exports.getBool("mirror");
     this.name = inputs_exports.getStringOrNull("name");
     this.rollingMinor = inputs_exports.getNumberOrNull("rolling-minor");
-    this.sourceBinary = this.determineSourceBinary;
   }
-  // We first check for a value using the `source-binary` input; if
+  // We first check for a value using the `source-binary` input and fall back to the
   // now-deprecated `flakehub-push-binary`
-  get determineSourceBinary() {
+  get sourceBinary() {
     const sourceBinaryInput = inputs_exports.getStringOrNull("source-binary");
     const flakeHubPushBinaryInput = inputs_exports.getStringOrNull(
       "flakehub-push-binary"
     );
     return sourceBinaryInput !== "" ? sourceBinaryInput : flakeHubPushBinaryInput;
   }
-  determineVisibility() {
+  get visibility() {
     const visibility = inputs_exports.getString("visibility");
     if (!VISIBILITY_OPTIONS.includes(visibility)) {
       core.setFailed(
