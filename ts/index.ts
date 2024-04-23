@@ -143,8 +143,8 @@ class FlakeHubPushAction {
   private get flakeName(): string {
     let name: string;
 
-    const org = process.env["GITHUB_REPOSITORY_OWNER"];
-    const repo = process.env["GITHUB_REPOSITORY"];
+    const githubOrg = process.env["GITHUB_REPOSITORY_OWNER"];
+    const githubRepo = process.env["GITHUB_REPOSITORY"];
 
     if (this.name !== null) {
       if (this.name === "") {
@@ -159,19 +159,19 @@ class FlakeHubPushAction {
         );
       }
 
-      const orgName = parts.at(0);
-      const repoName = parts.at(1);
+      const suppliedOrgName = parts.at(0);
+      const suppliedRepoName = parts.at(1);
 
       // Fail on mismatched org names only when *not* mirroring
-      if (orgName !== org && !this.mirror) {
+      if (suppliedOrgName !== githubOrg && !this.mirror) {
         actionsCore.setFailed(
-          `The org name \`${orgName}\` that you specified using the \`name\` input doesn't match the actual org name \`${org}\``,
+          `The org name \`${suppliedOrgName}\` that you specified using the \`name\` input doesn't match the actual GitHub org name \`${githubOrg}\``,
         );
       }
 
-      name = `${orgName}/${repoName}`;
+      name = `${suppliedOrgName}/${suppliedRepoName}`;
     } else {
-      name = `${org}/${repo}`;
+      name = `${githubOrg}/${githubRepo}`;
     }
 
     return name;
