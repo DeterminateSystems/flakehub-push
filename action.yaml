@@ -78,17 +78,17 @@ inputs:
   include-output-paths:
     description: Whether to register the output paths of each flake output with FlakeHub.
     required: false
+  flakehub-push-binary:
+    description: Run a version of the `flakehub-push` binary from somewhere already on disk. Conflicts with all `source-*` options.
+    required: false
 
   # Used to construct the binary download URL
-  source-binary:
-    description: Run a version of the `flakehub-push` binary from somewhere already on disk. Conflicts with all other `source-*` options.
-    required: false
   source-branch:
     description: The branch of `flakehub-push` to use. Conflicts with all other `source-*` options.
     required: false
     default: main
   source-pr:
-    description: The PR of `flakehub-push` to use. Conflicts with all other `source-*` options.
+    description: The pull request (PR) of `flakehub-push` to use. Conflicts with all other `source-*` options.
     required: false
   source-revision:
     description: The revision of `flakehub-push` to use. Conflicts with all other `source-*` options.
@@ -98,6 +98,24 @@ inputs:
     required: false
   source-url:
     description: A URL pointing to a `flakehub-push` binary. Overrides all other `source-*` options.
+    required: false
+
+  # DEPRECATED options (use the `source-*` equivalents above)
+  flakehub-push-branch:
+    description: The branch of `flakehub-push` to use. Conflicts with all other `flakehub-push-*` options.
+    required: false
+    default: main
+  flakehub-push-pr:
+    description: The pull request (PR) of `flakehub-push` to use. Conflicts with all `flakehub-push-*` options.
+    required: false
+  flakehub-push-revision:
+    description: The revision of `flakehub-push` to use. Conflicts with all other `flakehub-push-*` options.
+    required: false
+  flakehub-push-tag:
+    description: The tag of `flakehub-push` to use. Conflicts with all other `flakehub-push-*` options.
+    required: false
+  flakehub-push-url:
+    description: A URL pointing to a `flakehub-push` binary. Overrides all other `flakehub-push-*` options.
     required: false
 
 runs:
