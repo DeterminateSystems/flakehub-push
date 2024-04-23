@@ -101,7 +101,7 @@ class FlakeHubPushAction {
       : flakeHubPushBinaryInput;
   }
 
-  private async executionEnvironment(): Promise<ExecutionEnvironment> {
+  private executionEnvironment(): ExecutionEnvironment {
     const env: ExecutionEnvironment = {};
 
     env.FLAKEHUB_PUSH_VISIBILITY = this.visibility;
@@ -133,7 +133,7 @@ class FlakeHubPushAction {
   }
 
   async push(): Promise<void> {
-    const executionEnv = await this.executionEnvironment();
+    const executionEnv = this.executionEnvironment();
 
     const binary =
       this.sourceBinary !== null

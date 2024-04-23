@@ -94309,7 +94309,7 @@ var FlakeHubPushAction = class {
     );
     return sourceBinaryInput !== "" ? sourceBinaryInput : flakeHubPushBinaryInput;
   }
-  async executionEnvironment() {
+  executionEnvironment() {
     const env = {};
     env.FLAKEHUB_PUSH_VISIBILITY = this.visibility;
     env.FLAKEHUB_PUSH_TAG = this.tag;
@@ -94335,7 +94335,7 @@ var FlakeHubPushAction = class {
     return env;
   }
   async push() {
-    const executionEnv = await this.executionEnvironment();
+    const executionEnv = this.executionEnvironment();
     const binary = this.sourceBinary !== null ? this.sourceBinary : await this.idslib.fetchExecutable();
     core.debug(
       `execution environment: ${JSON.stringify(executionEnv, null, 2)}`
