@@ -192,6 +192,8 @@ class FlakeHubPushAction {
         exitCode,
       });
       actionsCore.setFailed(`non-zero exit code of ${exitCode} detected`);
+    } else {
+      actionsCore.info(`Flake release was successfully published`);
     }
   }
 }
