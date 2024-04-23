@@ -78,6 +78,7 @@ inputs:
   include-output-paths:
     description: Whether to register the output paths of each flake output with FlakeHub.
     required: false
+    default: true
 
   # Used to construct the binary download URL
   source-binary:
