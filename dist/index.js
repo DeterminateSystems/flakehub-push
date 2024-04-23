@@ -94297,10 +94297,14 @@ var FlakeHubPushAction = class {
     this.rollingMinor = inputs_exports.getNumberOrNull("rolling-minor");
     this.sourceBinary = this.determineSourceBinary;
   }
-  // We first check for a value using `source-binary` and then check the
+  // We first check for a value using the `source-binary` input; if
   // now-deprecated `flakehub-push-binary`
   get determineSourceBinary() {
-    return inputs_exports.getStringOrNull("source-binary") ?? inputs_exports.getStringOrNull("flakehub-push-binary");
+    const sourceBinaryInput = inputs_exports.getStringOrNull("source-binary");
+    const flakeHubPushBinaryInput = inputs_exports.getStringOrNull(
+      "flakehub-push-binary"
+    );
+    return sourceBinaryInput === "" || sourceBinaryInput === null ? sourceBinaryInput : flakeHubPushBinaryInput;
   }
   determineVisibility() {
     const visibility = inputs_exports.getString("visibility");
@@ -94369,6 +94373,8 @@ var FlakeHubPushAction = class {
     );
     const exitCode = await exec.exec(
       binary,
+      // We're setting this via flag for now due to a misspelling in the original environment variable.
+      // Remove this in favor of the environment variable only after PR #125 is merged.
       ["--visibility", this.visibility],
       {
         env: {

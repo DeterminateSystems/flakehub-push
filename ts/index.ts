@@ -93,13 +93,18 @@ class FlakeHubPushAction {
     this.sourceBinary = this.determineSourceBinary;
   }
 
-  // We first check for a value using `source-binary` and then check the
+  // We first check for a value using the `source-binary` input; if
   // now-deprecated `flakehub-push-binary`
   private get determineSourceBinary(): string | null {
-    return (
-      inputs.getStringOrNull("source-binary") ??
-      inputs.getStringOrNull("flakehub-push-binary")
+    const sourceBinaryInput = inputs.getStringOrNull("source-binary");
+    const flakeHubPushBinaryInput = inputs.getStringOrNull(
+      "flakehub-push-binary",
     );
+
+    // We could use something simpler like nullish coalescing here but let's keep it explicit
+    return sourceBinaryInput === "" || sourceBinaryInput === null
+      ? sourceBinaryInput
+      : flakeHubPushBinaryInput;
   }
 
   private determineVisibility(): Visibility {
@@ -191,6 +196,8 @@ class FlakeHubPushAction {
 
     const exitCode = await actionsExec.exec(
       binary,
+      // We're setting this via flag for now due to a misspelling in the original environment variable.
+      // Remove this in favor of the environment variable only after PR #125 is merged.
       ["--visibility", this.visibility],
       {
         env: {
