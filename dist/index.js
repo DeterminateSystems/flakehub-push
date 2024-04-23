@@ -94284,7 +94284,6 @@ var FlakeHubPushAction = class {
     this.logDirectives = inputs_exports.getString("log-directives");
     this.logger = inputs_exports.getString("logger");
     this.gitHubToken = inputs_exports.getString("github-token");
-    this.name = inputs_exports.getStringOrNull("name");
     this.repository = inputs_exports.getString("repository");
     this.directory = inputs_exports.getString("directory");
     this.gitRoot = inputs_exports.getString("git-root");
@@ -94294,6 +94293,7 @@ var FlakeHubPushAction = class {
     this.includeOutputPaths = inputs_exports.getBool("include-output-paths");
     this.rolling = inputs_exports.getBool("rolling");
     this.mirror = inputs_exports.getBool("mirror");
+    this.name = inputs_exports.getStringOrNull("name");
     this.rollingMinor = inputs_exports.getNumberOrNull("rolling-minor");
     this.sourceBinary = this.determineSourceBinary;
   }
@@ -94323,7 +94323,6 @@ var FlakeHubPushAction = class {
     env.FLAKEHUB_PUSH_LOG_DIRECTIVES = this.logDirectives;
     env.FLAKEHUB_PUSH_LOGGER = this.logger;
     env.FLAKEHUB_PUSH_GITHUB_TOKEN = this.gitHubToken;
-    env.FLAKEHUB_PUSH_NAME = this.flakeName;
     env.FLAKEHUB_PUSH_REPOSITORY = this.repository;
     env.FLAKEHUB_PUSH_DIRECTORY = this.directory;
     env.FLAKEHUB_PUSH_GIT_ROOT = this.gitRoot;
@@ -94333,37 +94332,13 @@ var FlakeHubPushAction = class {
     env.FLAKEHUB_PUSH_INCLUDE_OUTPUT_PATHS = this.includeOutputPaths.toString();
     env.FLAKEHUB_PUSH_ROLLING = this.rolling.toString();
     env.FLAKEHUB_PUSH_MIRROR = this.mirror.toString();
+    if (this.name !== null) {
+      env.FLAKEHUB_PUSH_NAME = this.name;
+    }
     if (this.rollingMinor !== null) {
       env.FLAKEHUB_PUSH_ROLLING_MINOR = this.rollingMinor.toString();
     }
     return env;
-  }
-  get flakeName() {
-    let name;
-    const githubOrg = process.env["GITHUB_REPOSITORY_OWNER"];
-    const githubRepo = process.env["GITHUB_REPOSITORY"];
-    if (this.name !== null) {
-      if (this.name === "") {
-        core.setFailed("The `name` field can't be an empty string");
-      }
-      const parts = this.name.split("/");
-      if (parts.length === 1 || parts.length > 2) {
-        core.setFailed(
-          "The specified `name` must of the form {org}/{repo}"
-        );
-      }
-      const suppliedOrgName = parts.at(0);
-      const suppliedRepoName = parts.at(1);
-      if (suppliedOrgName !== githubOrg && !this.mirror) {
-        core.setFailed(
-          `The org name \`${suppliedOrgName}\` that you specified using the \`name\` input doesn't match the actual GitHub org name \`${githubOrg}\``
-        );
-      }
-      name = `${suppliedOrgName}/${suppliedRepoName}`;
-    } else {
-      name = `${githubOrg}/${githubRepo}`;
-    }
-    return name;
   }
   async push() {
     const executionEnv = await this.executionEnvironment();

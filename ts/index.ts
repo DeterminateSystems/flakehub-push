@@ -38,7 +38,6 @@ class FlakeHubPushAction {
   private logDirectives: string;
   private logger: string;
   private gitHubToken: string;
-  private name: string | null;
   private repository: string;
   private directory: string;
   private gitRoot: string;
@@ -48,6 +47,7 @@ class FlakeHubPushAction {
   private includeOutputPaths: boolean;
   private rolling: boolean;
   private mirror: boolean;
+  private name: string | null;
   private rollingMinor: number | null;
 
   // Other Action inputs
@@ -73,7 +73,6 @@ class FlakeHubPushAction {
     this.logDirectives = inputs.getString("log-directives");
     this.logger = inputs.getString("logger");
     this.gitHubToken = inputs.getString("github-token");
-    this.name = inputs.getStringOrNull("name");
     this.repository = inputs.getString("repository");
     this.directory = inputs.getString("directory");
     this.gitRoot = inputs.getString("git-root");
@@ -87,6 +86,7 @@ class FlakeHubPushAction {
     this.includeOutputPaths = inputs.getBool("include-output-paths");
     this.rolling = inputs.getBool("rolling");
     this.mirror = inputs.getBool("mirror");
+    this.name = inputs.getStringOrNull("name");
     this.rollingMinor = inputs.getNumberOrNull("rolling-minor");
 
     // Other inputs
@@ -126,7 +126,6 @@ class FlakeHubPushAction {
     env.FLAKEHUB_PUSH_LOG_DIRECTIVES = this.logDirectives;
     env.FLAKEHUB_PUSH_LOGGER = this.logger;
     env.FLAKEHUB_PUSH_GITHUB_TOKEN = this.gitHubToken;
-    env.FLAKEHUB_PUSH_NAME = this.flakeName;
     env.FLAKEHUB_PUSH_REPOSITORY = this.repository;
     env.FLAKEHUB_PUSH_DIRECTORY = this.directory;
     env.FLAKEHUB_PUSH_GIT_ROOT = this.gitRoot;
@@ -138,48 +137,15 @@ class FlakeHubPushAction {
     env.FLAKEHUB_PUSH_ROLLING = this.rolling.toString();
     env.FLAKEHUB_PUSH_MIRROR = this.mirror.toString();
 
+    if (this.name !== null) {
+      env.FLAKEHUB_PUSH_NAME = this.name;
+    }
+
     if (this.rollingMinor !== null) {
       env.FLAKEHUB_PUSH_ROLLING_MINOR = this.rollingMinor.toString();
     }
 
     return env;
-  }
-
-  private get flakeName(): string {
-    let name: string;
-
-    const githubOrg = process.env["GITHUB_REPOSITORY_OWNER"];
-    const githubRepo = process.env["GITHUB_REPOSITORY"];
-
-    if (this.name !== null) {
-      if (this.name === "") {
-        actionsCore.setFailed("The `name` field can't be an empty string");
-      }
-
-      const parts = this.name.split("/");
-
-      if (parts.length === 1 || parts.length > 2) {
-        actionsCore.setFailed(
-          "The specified `name` must of the form {org}/{repo}",
-        );
-      }
-
-      const suppliedOrgName = parts.at(0);
-      const suppliedRepoName = parts.at(1);
-
-      // Fail on mismatched org names only when *not* mirroring
-      if (suppliedOrgName !== githubOrg && !this.mirror) {
-        actionsCore.setFailed(
-          `The org name \`${suppliedOrgName}\` that you specified using the \`name\` input doesn't match the actual GitHub org name \`${githubOrg}\``,
-        );
-      }
-
-      name = `${suppliedOrgName}/${suppliedRepoName}`;
-    } else {
-      name = `${githubOrg}/${githubRepo}`;
-    }
-
-    return name;
   }
 
   async push(): Promise<void> {
