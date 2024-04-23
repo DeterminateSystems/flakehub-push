@@ -56,7 +56,7 @@ class FlakeHubPushAction {
   constructor() {
     const options: ActionOptions = {
       name: "flakehub-push",
-      fetchStyle: "nix-style",
+      fetchStyle: "gh-env-style",
       diagnosticsUrl: new URL(
         "https://install.determinate.systems/flakehub-push/telemetry",
       ),
