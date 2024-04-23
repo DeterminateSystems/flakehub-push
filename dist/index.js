@@ -94265,7 +94265,6 @@ function mungeDiagnosticEndpoint(inputUrl) {
 
 
 var EVENT_EXECUTION_FAILURE = "execution_failure";
-var VISIBILITY_OPTIONS = ["public", "unlisted", "private"];
 var FlakeHubPushAction = class {
   constructor() {
     const options = {
@@ -94278,6 +94277,7 @@ var FlakeHubPushAction = class {
       requireNix: "fail"
     };
     this.idslib = new IdsToolbox(options);
+    this.visibility = inputs_exports.getString("visibility");
     this.tag = inputs_exports.getString("tag");
     this.host = inputs_exports.getString("host");
     this.logDirectives = inputs_exports.getString("log-directives");
@@ -94308,15 +94308,6 @@ var FlakeHubPushAction = class {
       "flakehub-push-binary"
     );
     return sourceBinaryInput !== "" ? sourceBinaryInput : flakeHubPushBinaryInput;
-  }
-  get visibility() {
-    const visibility = inputs_exports.getString("visibility");
-    if (!VISIBILITY_OPTIONS.includes(visibility)) {
-      core.setFailed(
-        `Visibility option \`${visibility}\` not recognized. Available options: ${VISIBILITY_OPTIONS.map((opt) => `\`${opt}\``).join(", ")}.`
-      );
-    }
-    return visibility;
   }
   async executionEnvironment() {
     const env = {};

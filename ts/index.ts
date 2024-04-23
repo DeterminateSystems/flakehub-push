@@ -4,10 +4,6 @@ import { ActionOptions, IdsToolbox, inputs } from "detsys-ts";
 
 const EVENT_EXECUTION_FAILURE = "execution_failure";
 
-const VISIBILITY_OPTIONS = ["public", "unlisted", "private"];
-
-type Visibility = "public" | "unlisted" | "private";
-
 type ExecutionEnvironment = {
   FLAKEHUB_PUSH_VISIBILITY?: string;
   FLAKEHUB_PUSH_TAG?: string;
@@ -32,6 +28,7 @@ class FlakeHubPushAction {
   idslib: IdsToolbox;
 
   // Action inputs translated into environment variables to pass to flakehub-push
+  private visibility: string;
   private tag: string;
   private host: string;
   private logDirectives: string;
@@ -62,6 +59,7 @@ class FlakeHubPushAction {
     this.idslib = new IdsToolbox(options);
 
     // Inputs translated into environment variables for flakehub-push
+    this.visibility = inputs.getString("visibility");
     this.tag = inputs.getString("tag");
     this.host = inputs.getString("host");
     this.logDirectives = inputs.getString("log-directives");
@@ -101,16 +99,6 @@ class FlakeHubPushAction {
     return sourceBinaryInput !== ""
       ? sourceBinaryInput
       : flakeHubPushBinaryInput;
-  }
-
-  private get visibility(): Visibility {
-    const visibility = inputs.getString("visibility");
-    if (!VISIBILITY_OPTIONS.includes(visibility)) {
-      actionsCore.setFailed(
-        `Visibility option \`${visibility}\` not recognized. Available options: ${VISIBILITY_OPTIONS.map((opt) => `\`${opt}\``).join(", ")}.`,
-      );
-    }
-    return visibility as Visibility;
   }
 
   private async executionEnvironment(): Promise<ExecutionEnvironment> {
