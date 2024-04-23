@@ -94367,13 +94367,17 @@ var FlakeHubPushAction = class {
     core.debug(
       `execution environment: ${JSON.stringify(executionEnv, null, 2)}`
     );
-    const exitCode = await exec.exec(binary, [], {
-      env: {
-        ...executionEnv,
-        ...process.env
-        // To get PATH, etc.
+    const exitCode = await exec.exec(
+      binary,
+      ["--visibility", this.visibility],
+      {
+        env: {
+          ...executionEnv,
+          ...process.env
+          // To get PATH, etc.
+        }
       }
-    });
+    );
     if (exitCode !== 0) {
       this.idslib.recordEvent(EVENT_EXECUTION_FAILURE, {
         exitCode

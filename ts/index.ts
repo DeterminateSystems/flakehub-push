@@ -189,12 +189,16 @@ class FlakeHubPushAction {
       `execution environment: ${JSON.stringify(executionEnv, null, 2)}`,
     );
 
-    const exitCode = await actionsExec.exec(binary, [], {
-      env: {
-        ...executionEnv,
-        ...process.env, // To get PATH, etc.
+    const exitCode = await actionsExec.exec(
+      binary,
+      ["--visibility", this.visibility],
+      {
+        env: {
+          ...executionEnv,
+          ...process.env, // To get PATH, etc.
+        },
       },
-    });
+    );
 
     if (exitCode !== 0) {
       this.idslib.recordEvent(EVENT_EXECUTION_FAILURE, {
