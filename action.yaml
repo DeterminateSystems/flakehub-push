@@ -80,24 +80,24 @@ inputs:
     required: false
 
   # Used to construct the binary download URL
-  flakehub-push-binary:
-    description: Run a version of the `flakehub-push` binary from somewhere already on disk. Conflicts with all other `flakehub-push-*` options.
+  source-binary:
+    description: Run a version of the `flakehub-push` binary from somewhere already on disk. Conflicts with all other `source-*` options.
     required: false
-  flakehub-push-branch:
-    description: The branch of `flakehub-push` to use. Conflicts with all other `flakehub-push-*` options.
+  source-branch:
+    description: The branch of `flakehub-push` to use. Conflicts with all other `source-*` options.
     required: false
     default: main
-  flakehub-push-pr:
-    description: The PR of `flakehub-push` to use. Conflicts with all other `flakehub-push-*` options.
+  source-pr:
+    description: The PR of `flakehub-push` to use. Conflicts with all other `source-*` options.
     required: false
-  flakehub-push-revision:
-    description: The revision of `flakehub-push` to use. Conflicts with all other `flakehub-push-*` options.
+  source-revision:
+    description: The revision of `flakehub-push` to use. Conflicts with all other `source-*` options.
     required: false
-  flakehub-push-tag:
-    description: The tag of `flakehub-push` to use. Conflicts with all other `flakehub-push-*` options.
+  source-tag:
+    description: The tag of `flakehub-push` to use. Conflicts with all other `source-*` options.
     required: false
-  flakehub-push-url:
-    description: A URL pointing to a `flakehub-push` binary. Overrides all other `flakehub-push-*` options.
+  source-url:
+    description: A URL pointing to a `flakehub-push` binary. Overrides all other `source-*` options.
     required: false
 
 runs:
