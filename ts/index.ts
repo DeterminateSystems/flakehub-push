@@ -40,7 +40,6 @@ class FlakeHubPushAction {
   private repository: string;
   private directory: string;
   private gitRoot: string;
-  private extraLabels: string;
   private spdxExpression: string;
   private errorOnConflict: boolean;
   private includeOutputPaths: boolean;
@@ -71,11 +70,6 @@ class FlakeHubPushAction {
     this.repository = inputs.getString("repository");
     this.directory = inputs.getString("directory");
     this.gitRoot = inputs.getString("git-root");
-    // extra-tags is deprecated but we still honor it
-    this.extraLabels =
-      inputs.getString("extra-labels") === ""
-        ? inputs.getString("extra-tags")
-        : "";
     this.spdxExpression = inputs.getString("spdx-expression");
     this.errorOnConflict = inputs.getBool("error-on-conflict");
     this.includeOutputPaths = inputs.getBool("include-output-paths");
@@ -83,6 +77,17 @@ class FlakeHubPushAction {
     this.mirror = inputs.getBool("mirror");
     this.name = inputs.getStringOrNull("name");
     this.rollingMinor = inputs.getNumberOrNull("rolling-minor");
+  }
+
+  // extra-tags is deprecated but we still honor it
+  private get extraLabels(): string {
+    const labels = inputs.getString("extra-labels"); // current input name
+    const tags = inputs.getString("extra-tags"); // deprecated input name
+
+    // If `extra-labels` is set to something use it, otherwise use `extra-tags`.
+    // It `extra-tags` is also not set, which means that it's an empty string, that's
+    // still valid, as the flakehub-push CLI expects a comma-separated list here.
+    return labels !== "" ? labels : tags;
   }
 
   // We first check for a value using the `source-binary` input and fall back to the

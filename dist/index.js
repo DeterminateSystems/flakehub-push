@@ -94286,7 +94286,6 @@ var FlakeHubPushAction = class {
     this.repository = inputs_exports.getString("repository");
     this.directory = inputs_exports.getString("directory");
     this.gitRoot = inputs_exports.getString("git-root");
-    this.extraLabels = inputs_exports.getString("extra-labels") === "" ? inputs_exports.getString("extra-tags") : "";
     this.spdxExpression = inputs_exports.getString("spdx-expression");
     this.errorOnConflict = inputs_exports.getBool("error-on-conflict");
     this.includeOutputPaths = inputs_exports.getBool("include-output-paths");
@@ -94294,6 +94293,12 @@ var FlakeHubPushAction = class {
     this.mirror = inputs_exports.getBool("mirror");
     this.name = inputs_exports.getStringOrNull("name");
     this.rollingMinor = inputs_exports.getNumberOrNull("rolling-minor");
+  }
+  // extra-tags is deprecated but we still honor it
+  get extraLabels() {
+    const labels = inputs_exports.getString("extra-labels");
+    const tags = inputs_exports.getString("extra-tags");
+    return labels !== "" ? labels : tags;
   }
   // We first check for a value using the `source-binary` input and fall back to the
   // now-deprecated `flakehub-push-binary`
