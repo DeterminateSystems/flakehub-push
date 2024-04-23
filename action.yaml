@@ -108,7 +108,6 @@ inputs:
   flakehub-push-branch:
     description: The branch of `flakehub-push` to use. Conflicts with all other `flakehub-push-*` options.
     required: false
-    default: main
   flakehub-push-pr:
     description: The pull request (PR) of `flakehub-push` to use. Conflicts with all `flakehub-push-*` options.
     required: false
