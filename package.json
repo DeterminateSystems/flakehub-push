@@ -11,6 +11,7 @@
     "check-fmt": "prettier --check .",
     "lint": "eslint ts/**/*.ts",
     "package": "ncc build",
+    "test": "vitest",
     "all": "pnpm run format && pnpm run lint && pnpm run build && pnpm run package"
   },
   "repository": {
@@ -41,6 +42,7 @@
     "ncc": "^0.3.6",
     "prettier": "^3.2.5",
     "tsup": "^8.0.2",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "vitest": "^1.5.0"
   }
 }

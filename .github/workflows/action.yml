@@ -22,6 +22,8 @@ jobs:
         run: nix develop --command pnpm run check-fmt
       - name: Run ESLint
         run: nix develop --command pnpm run lint
+      - name: Run tests
+        run: nix develop --command pnpm run test
       - name: Build bundle
         run: nix develop --command pnpm run build
       - name: Package as Node.js runnable
