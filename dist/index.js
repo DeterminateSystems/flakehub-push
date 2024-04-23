@@ -94295,7 +94295,12 @@ var FlakeHubPushAction = class {
     this.rolling = inputs_exports.getBool("rolling");
     this.mirror = inputs_exports.getBool("mirror");
     this.rollingMinor = inputs_exports.getNumberOrNull("rolling-minor");
-    this.flakeHubPushBinary = inputs_exports.getStringOrNull("flakehub-push-binary");
+    this.sourceBinary = this.determineSourceBinary;
+  }
+  // We first check for a value using `source-binary` and then check the
+  // now-deprecated `flakehub-push-binary`
+  get determineSourceBinary() {
+    return inputs_exports.getStringOrNull("source-binary") ?? inputs_exports.getStringOrNull("flakehub-push-binary");
   }
   determineVisibility() {
     const visibility = inputs_exports.getString("visibility");
@@ -94358,7 +94363,7 @@ var FlakeHubPushAction = class {
   }
   async push() {
     const executionEnv = await this.executionEnvironment();
-    const binary = this.flakeHubPushBinary !== null ? this.flakeHubPushBinary : await this.idslib.fetchExecutable();
+    const binary = this.sourceBinary !== null ? this.sourceBinary : await this.idslib.fetchExecutable();
     core.debug(
       `execution environment: ${JSON.stringify(executionEnv, null, 2)}`
     );

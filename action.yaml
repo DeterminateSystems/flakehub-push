@@ -78,11 +78,11 @@ inputs:
   include-output-paths:
     description: Whether to register the output paths of each flake output with FlakeHub.
     required: false
-  flakehub-push-binary:
-    description: Run a version of the `flakehub-push` binary from somewhere already on disk. Conflicts with all `source-*` options.
-    required: false
 
   # Used to construct the binary download URL
+  source-binary:
+    description: Run a version of the `flakehub-push` binary from somewhere already on disk. Conflicts with all `source-*` options.
+    required: false
   source-branch:
     description: The branch of `flakehub-push` to use. Conflicts with all other `source-*` options.
     required: false
@@ -101,6 +101,9 @@ inputs:
     required: false
 
   # DEPRECATED options (use the `source-*` equivalents above)
+  flakehub-push-binary:
+    description: Run a version of the `flakehub-push` binary from somewhere already on disk. Conflicts with all `flakehub-push-*` options.
+    required: false
   flakehub-push-branch:
     description: The branch of `flakehub-push` to use. Conflicts with all other `flakehub-push-*` options.
     required: false

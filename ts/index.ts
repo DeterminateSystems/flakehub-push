@@ -51,7 +51,7 @@ class FlakeHubPushAction {
   private rollingMinor: number | null;
 
   // Other Action inputs
-  private flakeHubPushBinary: string | null;
+  private sourceBinary: string | null;
 
   constructor() {
     const options: ActionOptions = {
@@ -90,7 +90,16 @@ class FlakeHubPushAction {
     this.rollingMinor = inputs.getNumberOrNull("rolling-minor");
 
     // Other inputs
-    this.flakeHubPushBinary = inputs.getStringOrNull("flakehub-push-binary");
+    this.sourceBinary = this.determineSourceBinary;
+  }
+
+  // We first check for a value using `source-binary` and then check the
+  // now-deprecated `flakehub-push-binary`
+  private get determineSourceBinary(): string | null {
+    return (
+      inputs.getStringOrNull("source-binary") ??
+      inputs.getStringOrNull("flakehub-push-binary")
+    );
   }
 
   private determineVisibility(): Visibility {
@@ -172,8 +181,8 @@ class FlakeHubPushAction {
     const executionEnv = await this.executionEnvironment();
 
     const binary =
-      this.flakeHubPushBinary !== null
-        ? this.flakeHubPushBinary
+      this.sourceBinary !== null
+        ? this.sourceBinary
         : await this.idslib.fetchExecutable();
 
     actionsCore.debug(
