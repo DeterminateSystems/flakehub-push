@@ -94304,7 +94304,7 @@ var FlakeHubPushAction = class {
     const flakeHubPushBinaryInput = inputs_exports.getStringOrNull(
       "flakehub-push-binary"
     );
-    return sourceBinaryInput !== "" || sourceBinaryInput !== null ? sourceBinaryInput : flakeHubPushBinaryInput;
+    return sourceBinaryInput !== "" ? sourceBinaryInput : flakeHubPushBinaryInput;
   }
   determineVisibility() {
     const visibility = inputs_exports.getString("visibility");
