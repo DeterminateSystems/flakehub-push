@@ -26,8 +26,14 @@ pub(crate) struct FlakeHubPushCli {
         default_value = "https://api.flakehub.com"
     )]
     pub(crate) host: url::Url,
+
+    #[clap(long, env = "FLAKEHUB_PUSH_VISIBILITY")]
+    pub(crate) visibility: Option<crate::Visibility>,
+    // This was the original env var to set this value. As you can see, we previously misspelled it.
+    // We need to continue to support it just in case.
     #[clap(long, env = "FLAKEHUB_PUSH_VISIBLITY")]
-    pub(crate) visibility: crate::Visibility,
+    pub(crate) visibility_alt: Option<crate::Visibility>,
+
     // Will also detect `GITHUB_REF_NAME`
     #[clap(long, env = "FLAKEHUB_PUSH_TAG", value_parser = StringToNoneParser, default_value = "")]
     pub(crate) tag: OptionString,
@@ -281,6 +287,7 @@ impl FlakeHubPushCli {
         fields(
             host = %self.host,
             visibility = ?self.visibility,
+            visibility_alt = ?self.visibility_alt,
             name = self.name.0,
             tag = tracing::field::Empty,
             rolling_minor = tracing::field::Empty,
@@ -310,6 +317,7 @@ impl FlakeHubPushCli {
         let Self {
             host,
             visibility,
+            visibility_alt,
             name,
             tag,
             rolling,
@@ -326,7 +334,19 @@ impl FlakeHubPushCli {
             extra_tags,
             error_on_conflict,
             include_output_paths,
+            ..
         } = self;
+
+        // Check for the misspelled env var value first (FLAKEHUB_PUSH_VISIBLITY) and use the properly
+        // spelled env var value (FLAKEHUB_PUSH_VISIBILITY) if not.
+        let visibility =
+            match (visibility_alt, visibility) {
+                (Some(v), _) => v,
+                (None, Some(v)) => v,
+                (None, None) => return Err(eyre!(
+                    "Could not determine the flake's desired visibility. Use `--visibility` to set this to one of the following: public, unlisted, private.",
+                )),
+            };
 
         let mut labels: HashSet<_> = extra_labels.into_iter().filter(|v| !v.is_empty()).collect();
         let extra_tags: HashSet<_> = extra_tags.into_iter().filter(|v| !v.is_empty()).collect();

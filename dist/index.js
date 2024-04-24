@@ -94311,6 +94311,7 @@ var FlakeHubPushAction = class {
   }
   executionEnvironment() {
     const env = {};
+    env.FLAKEHUB_PUSH_VISIBILITY = this.visibility;
     env.FLAKEHUB_PUSH_TAG = this.tag;
     env.FLAKEHUB_PUSH_HOST = this.host;
     env.FLAKEHUB_PUSH_LOG_DIRECTIVES = this.logDirectives;
@@ -94339,19 +94340,13 @@ var FlakeHubPushAction = class {
     core.debug(
       `execution environment: ${JSON.stringify(executionEnv, null, 2)}`
     );
-    const exitCode = await exec.exec(
-      binary,
-      // We're setting this via flag for now due to a misspelling in the original environment variable.
-      // Remove this in favor of the environment variable only after PR #125 is merged.
-      ["--visibility", this.visibility],
-      {
-        env: {
-          ...executionEnv,
-          ...process.env
-          // To get PATH, etc.
-        }
+    const exitCode = await exec.exec(binary, [], {
+      env: {
+        ...executionEnv,
+        ...process.env
+        // To get PATH, etc.
       }
-    );
+    });
     if (exitCode !== 0) {
       this.idslib.recordEvent(EVENT_EXECUTION_FAILURE, {
         exitCode

@@ -5,9 +5,7 @@ import { ActionOptions, IdsToolbox, inputs } from "detsys-ts";
 const EVENT_EXECUTION_FAILURE = "execution_failure";
 
 type ExecutionEnvironment = {
-  // This needs to remain commented out until PR #25 is merged to prevent any
-  // potential issues with setting this via flag instead (see below)
-  //FLAKEHUB_PUSH_VISIBILITY?: string;
+  FLAKEHUB_PUSH_VISIBILITY?: string;
   FLAKEHUB_PUSH_TAG?: string;
   FLAKEHUB_PUSH_HOST?: string;
   FLAKEHUB_PUSH_LOG_DIRECTIVES?: string;
@@ -106,9 +104,7 @@ class FlakeHubPushAction {
   private executionEnvironment(): ExecutionEnvironment {
     const env: ExecutionEnvironment = {};
 
-    // This needs to remain commented out until PR #25 is merged to prevent any
-    // potential issues with setting this via flag instead (see below)
-    //env.FLAKEHUB_PUSH_VISIBILITY = this.visibility;
+    env.FLAKEHUB_PUSH_VISIBILITY = this.visibility;
     env.FLAKEHUB_PUSH_TAG = this.tag;
     env.FLAKEHUB_PUSH_HOST = this.host;
     env.FLAKEHUB_PUSH_LOG_DIRECTIVES = this.logDirectives;
@@ -148,18 +144,12 @@ class FlakeHubPushAction {
       `execution environment: ${JSON.stringify(executionEnv, null, 2)}`,
     );
 
-    const exitCode = await actionsExec.exec(
-      binary,
-      // We're setting this via flag for now due to a misspelling in the original environment variable.
-      // Remove this in favor of the environment variable only after PR #125 is merged.
-      ["--visibility", this.visibility],
-      {
-        env: {
-          ...executionEnv,
-          ...process.env, // To get PATH, etc.
-        },
+    const exitCode = await actionsExec.exec(binary, [], {
+      env: {
+        ...executionEnv,
+        ...process.env, // To get PATH, etc.
       },
-    );
+    });
 
     if (exitCode !== 0) {
       this.idslib.recordEvent(EVENT_EXECUTION_FAILURE, {
