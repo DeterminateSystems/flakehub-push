@@ -344,7 +344,7 @@ impl FlakeHubPushCli {
                 (Some(v), _) => v,
                 (None, Some(v)) => v,
                 (None, None) => return Err(eyre!(
-                    "Could not determine the flake's desired visibility. Use `--visibility` to set this to one of the following: public, unlisted, private",
+                    "Could not determine the flake's desired visibility. Use `--visibility` to set this to one of the following: public, unlisted, private.",
                 )),
             };
 
