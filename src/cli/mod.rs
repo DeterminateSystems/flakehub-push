@@ -28,7 +28,7 @@ pub(crate) struct FlakeHubPushCli {
     pub(crate) host: url::Url,
 
     #[clap(long, env = "FLAKEHUB_PUSH_VISIBILITY")]
-    pub(crate) visibility: crate::Visibility,
+    pub(crate) visibility: Option<crate::Visibility>,
     // This was the original env var to set this value. As you can see, we previously misspelled it.
     // We need to continue to support it just in case.
     #[clap(long, env = "FLAKEHUB_PUSH_VISIBLITY")]
@@ -287,6 +287,7 @@ impl FlakeHubPushCli {
         fields(
             host = %self.host,
             visibility = ?self.visibility,
+            visibility_alt = ?self.visibility_alt,
             name = self.name.0,
             tag = tracing::field::Empty,
             rolling_minor = tracing::field::Empty,
@@ -338,7 +339,14 @@ impl FlakeHubPushCli {
 
         // Check for the misspelled env var value first (FLAKEHUB_PUSH_VISIBLITY) and use the properly
         // spelled env var value (FLAKEHUB_PUSH_VISIBILITY) if not.
-        let visibility = visibility_alt.unwrap_or(visibility);
+        let visibility =
+            match (visibility_alt, visibility) {
+                (Some(v), _) => v,
+                (None, Some(v)) => v,
+                (None, None) => return Err(eyre!(
+                    "Could not determine the flake's desired visibility. Use `--visibility` to set this to one of the following: public, unlisted, private",
+                )),
+            };
 
         let mut labels: HashSet<_> = extra_labels.into_iter().filter(|v| !v.is_empty()).collect();
         let extra_tags: HashSet<_> = extra_tags.into_iter().filter(|v| !v.is_empty()).collect();
