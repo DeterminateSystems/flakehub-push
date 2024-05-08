@@ -95,10 +95,11 @@ impl PushContext {
             Err(eyre!("Could not determine the owner/project, pass `--repository` formatted like `determinatesystems/flakehub-push`. The passed value has too many slashes (/) to be a valid repository"))?;
         }
 
-        let local_git_root = (match &cli.git_root.0 {
+        let maybe_git_root = match &cli.git_root.0 {
             Some(gr) => Ok(gr.to_owned()),
             None => std::env::current_dir().map(PathBuf::from)
-        }).wrap_err("Could not determine current `git_root`. Pass `--git-root` or set `FLAKEHUB_PUSH_GIT_ROOT`, or run `flakehub-push` with the git root as the current working directory")?;
+        };
+        let local_git_root = maybe_git_root.wrap_err("Could not determine current `git_root`. Pass `--git-root` or set `FLAKEHUB_PUSH_GIT_ROOT`, or run `flakehub-push` with the git root as the current working directory")?;
 
         let local_git_root = local_git_root
             .canonicalize()
@@ -166,7 +167,7 @@ impl PushContext {
                 let token = flakehub_auth_fake::get_fake_bearer_token(
                     u,
                     &project_owner,
-                    &project_name,
+                    &format!("{}/{}", project_owner, project_name),
                     github_graphql_data_result,
                 )
                 .await?;

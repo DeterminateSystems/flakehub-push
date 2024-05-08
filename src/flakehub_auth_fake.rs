@@ -19,7 +19,7 @@ pub async fn get_fake_bearer_token(
     // this would remove the entire need for the fake JWT server, since we are ourselves a JWT issuer
     claims.aud = "flakehub-localhost".to_string();
     claims.iss = jwt_issuer_uri.to_string();
-    claims.repository = format!("{project_owner}/{repository}");
+    claims.repository = repository.to_string();
     claims.repository_owner = project_owner.to_string();
 
     claims.repository_id = github_graphql_data_result.project_id.to_string();
