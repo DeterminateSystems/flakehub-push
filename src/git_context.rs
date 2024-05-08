@@ -1,14 +1,8 @@
-
-
 use color_eyre::eyre::{Context, Result};
 use spdx::Expression;
 
 use crate::{
-    cli::FlakeHubPushCli,
-    github::graphql::{
-        GithubGraphqlDataResult,
-    },
-    revision_info::RevisionInfo,
+    cli::FlakeHubPushCli, github::graphql::GithubGraphqlDataResult, revision_info::RevisionInfo,
 };
 
 pub struct GitContext {

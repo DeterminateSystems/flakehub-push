@@ -25,8 +25,6 @@ pub async fn get_fake_bearer_token(
     claims.repository_id = github_graphql_data_result.project_id.to_string();
     claims.repository_owner_id = github_graphql_data_result.owner_id.to_string();
 
-    tracing::debug!(?claims);
-
     let issuer_url = url::Url::parse(jwt_issuer_uri)?;
     let token_gen_endpoint = issuer_url.join("/token")?;
 

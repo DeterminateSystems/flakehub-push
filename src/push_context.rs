@@ -7,9 +7,15 @@ use std::{
 use color_eyre::eyre::{eyre, Context, Result};
 
 use crate::{
-    build_http_client, cli::FlakeHubPushCli, flake_info, flakehub_auth_fake, flakehub_client::Tarball, git_context::GitContext, github::graphql::{
-        GithubGraphqlDataQuery, MAX_LABEL_LENGTH, MAX_NUM_TOTAL_LABELS,
-    }, release_metadata::ReleaseMetadata, revision_info::RevisionInfo, DEFAULT_ROLLING_PREFIX
+    build_http_client,
+    cli::FlakeHubPushCli,
+    flake_info, flakehub_auth_fake,
+    flakehub_client::Tarball,
+    git_context::GitContext,
+    github::graphql::{GithubGraphqlDataQuery, MAX_LABEL_LENGTH, MAX_NUM_TOTAL_LABELS},
+    release_metadata::ReleaseMetadata,
+    revision_info::RevisionInfo,
+    DEFAULT_ROLLING_PREFIX,
 };
 
 #[derive(Clone)]
@@ -54,11 +60,11 @@ impl PushContext {
             ExecutionEnvironment::GitHub => {
                 // TODO(colemickens): we were back-filling from github, in local paths before, check
                 cli.backfill_from_github_env();
-            },
+            }
             ExecutionEnvironment::GitLab => {
                 cli.backfill_from_gitlab_env();
-            },
-            _ => {},
+            }
+            _ => {}
         };
 
         let visibility = match (cli.visibility_alt, cli.visibility) {
@@ -112,7 +118,7 @@ impl PushContext {
 
         let maybe_git_root = match &cli.git_root.0 {
             Some(gr) => Ok(gr.to_owned()),
-            None => std::env::current_dir().map(PathBuf::from)
+            None => std::env::current_dir().map(PathBuf::from),
         };
         let local_git_root = maybe_git_root.wrap_err("Could not determine current `git_root`. Pass `--git-root` or set `FLAKEHUB_PUSH_GIT_ROOT`, or run `flakehub-push` with the git root as the current working directory")?;
 

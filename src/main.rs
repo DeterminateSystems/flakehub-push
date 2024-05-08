@@ -14,9 +14,9 @@ mod error;
 mod flake_info;
 mod flakehub_auth_fake;
 mod flakehub_client;
+mod git_context;
 mod github;
 mod gitlab;
-mod git_context;
 mod push_context;
 mod release_metadata;
 mod revision_info;
@@ -83,7 +83,9 @@ async fn execute() -> Result<std::process::ExitCode> {
         .await;
 
     let stage_result: StageResult = match stage_result {
-        Err(e) => { return Err(e)?; },
+        Err(e) => {
+            return Err(e)?;
+        }
         Ok(response) => {
             let response_status = response.status();
             let stage_result = match response_status {
@@ -92,9 +94,9 @@ async fn execute() -> Result<std::process::ExitCode> {
                         .json()
                         .await
                         .map_err(|_| eyre!("Decoding release metadata POST response"))?;
-                    
+
                     stage_result
-                },
+                }
                 StatusCode::CONFLICT => {
                     tracing::info!(
                         "Release for revision `{revision}` of {upload_name}/{release_version} already exists; flakehub-push will not upload it again",
@@ -132,7 +134,7 @@ async fn execute() -> Result<std::process::ExitCode> {
                 }
             };
             stage_result
-        },
+        }
     };
 
     // upload tarball to s3
