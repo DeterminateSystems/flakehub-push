@@ -27,7 +27,7 @@ pub async fn get_fake_bearer_token(
 
     tracing::debug!(?claims);
 
-    let issuer_url = url::Url::parse(&jwt_issuer_uri)?;
+    let issuer_url = url::Url::parse(jwt_issuer_uri)?;
     let token_gen_endpoint = issuer_url.join("/token")?;
 
     let response = client

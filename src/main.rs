@@ -15,6 +15,7 @@ mod flakehub_auth_fake;
 mod flakehub_client;
 mod github;
 mod gitlab;
+mod git_context;
 mod push_context;
 mod release_metadata;
 mod revision_info;
