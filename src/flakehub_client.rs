@@ -1,10 +1,10 @@
 use color_eyre::eyre::{eyre, Context, Result};
 use http::StatusCode;
 use reqwest::header::HeaderMap;
+use reqwest::Response;
 use uuid::Uuid;
 
 use crate::release_metadata::ReleaseMetadata;
-use crate::Error;
 
 pub struct FlakeHubClient {
     host: url::Url,
@@ -59,8 +59,7 @@ impl FlakeHubClient {
         release_version: &str,
         release_metadata: &ReleaseMetadata,
         tarball: &Tarball,
-        error_if_release_conflicts: bool,
-    ) -> Result<Option<StageResult>> {
+    ) -> Result<Response> {
         let flake_tarball_len = tarball.bytes.len();
         let flake_tarball_hash_base64 = &tarball.hash_base64;
         let relative_url: &String = &format!("upload/{upload_name}/{release_version}/{flake_tarball_len}/{flake_tarball_hash_base64}");
@@ -76,7 +75,7 @@ impl FlakeHubClient {
         tracing::debug!("repo={}", release_metadata.repo);
         tracing::debug!("upload_name={}", upload_name);
 
-        let response = self
+        self
             .client
             .post(release_metadata_post_url)
             .bearer_auth(&self.bearer_token)
@@ -84,58 +83,7 @@ impl FlakeHubClient {
             .json(&release_metadata)
             .send()
             .await
-            .unwrap();
-
-        let release_metadata_post_response_status = response.status();
-        tracing::trace!(
-            status = tracing::field::display(release_metadata_post_response_status),
-            "Got release metadata POST response"
-        );
-
-        match release_metadata_post_response_status {
-            StatusCode::OK => (),
-            StatusCode::CONFLICT => {
-                tracing::info!(
-                    "Release for revision `{revision}` of {upload_name}/{release_version} already exists; flakehub-push will not upload it again",
-                    revision = &release_metadata.revision,
-                    upload_name = upload_name,
-                    release_version = &release_version,
-                );
-                if error_if_release_conflicts {
-                    return Err(Error::Conflict {
-                        upload_name: upload_name.to_string(),
-                        release_version: release_version.to_string(),
-                    })?;
-                } else {
-                    // we're just done, and happy about it:
-                    return Ok(None);
-                }
-            }
-            StatusCode::UNAUTHORIZED => {
-                let body = response.bytes().await?;
-                let message = serde_json::from_slice::<String>(&body)?;
-
-                return Err(Error::Unauthorized(message))?;
-            }
-            _ => {
-                let body = response.bytes().await?;
-                let message = serde_json::from_slice::<String>(&body)?;
-                return Err(eyre!(
-                    "\
-                    Status {release_metadata_post_response_status} from metadata POST\n\
-                    {}\
-                ",
-                    message
-                ));
-            }
-        }
-
-        let stage_result: StageResult = response
-            .json()
-            .await
-            .wrap_err("Decoding release metadata POST response")?;
-
-        Ok(Some(stage_result))
+            .wrap_err("Publishing release")
     }
 
     pub async fn release_publish(&self, release_uuidv7: Uuid) -> Result<()> {

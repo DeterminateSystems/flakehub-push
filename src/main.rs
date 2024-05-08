@@ -1,8 +1,9 @@
 use std::{fmt::Display, io::IsTerminal, process::ExitCode};
 
 use clap::Parser;
-use color_eyre::eyre::Result;
+use color_eyre::eyre::{eyre, Result};
 use error::Error;
+use http::StatusCode;
 
 use crate::{
     flakehub_client::{FlakeHubClient, StageResult},
@@ -72,19 +73,66 @@ async fn execute() -> Result<std::process::ExitCode> {
     let fhclient = FlakeHubClient::new(ctx.flakehub_host, ctx.auth_token)?;
 
     // "upload.rs" - stage the release
-    let stage_result: Option<StageResult> = fhclient
+    let stage_result = fhclient
         .release_stage(
             &ctx.upload_name,
             &ctx.release_version,
             &ctx.metadata,
             &ctx.tarball,
-            ctx.error_if_release_conflicts,
         )
-        .await?;
+        .await;
 
-    let stage_result = match stage_result {
-        Some(stage_result) => stage_result,
-        None => return Ok(ExitCode::SUCCESS),
+    let stage_result: StageResult = match stage_result {
+        Err(e) => { return Err(e)?; },
+        Ok(response) => {
+            let response_status = response.status();
+            let stage_result = match response_status {
+                StatusCode::OK => {
+                    let stage_result: StageResult = response
+                        .json()
+                        .await
+                        .map_err(|_| eyre!("Decoding release metadata POST response"))?;
+                    
+                    stage_result
+                },
+                StatusCode::CONFLICT => {
+                    tracing::info!(
+                        "Release for revision `{revision}` of {upload_name}/{release_version} already exists; flakehub-push will not upload it again",
+                        revision = &ctx.metadata.revision,
+                        upload_name = ctx.upload_name,
+                        release_version = &ctx.release_version,
+                    );
+                    if ctx.error_if_release_conflicts {
+                        return Err(Error::Conflict {
+                            upload_name: ctx.upload_name.to_string(),
+                            release_version: ctx.release_version.to_string(),
+                        })?;
+                    } else {
+                        // we're just done, and happy about it:
+                        return Ok(ExitCode::SUCCESS);
+                    }
+                }
+                StatusCode::UNAUTHORIZED => {
+                    let body = response.bytes().await?;
+                    let message = serde_json::from_slice::<String>(&body)?;
+
+                    return Err(Error::Unauthorized(message))?;
+                }
+                _ => {
+                    let body = response.bytes().await?;
+                    let message = serde_json::from_slice::<String>(&body)?;
+                    return Err(eyre!(
+                        "\
+                        Status {} from metadata POST\n\
+                        {}\
+                    ",
+                        response_status,
+                        message
+                    ));
+                }
+            };
+            stage_result
+        },
     };
 
     // upload tarball to s3
