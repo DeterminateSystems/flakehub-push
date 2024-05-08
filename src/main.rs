@@ -88,7 +88,7 @@ async fn execute() -> Result<std::process::ExitCode> {
         }
         Ok(response) => {
             let response_status = response.status();
-            let stage_result = match response_status {
+            match response_status {
                 StatusCode::OK => {
                     let stage_result: StageResult = response
                         .json()
@@ -132,8 +132,7 @@ async fn execute() -> Result<std::process::ExitCode> {
                         message
                     ));
                 }
-            };
-            stage_result
+            }
         }
     };
 
