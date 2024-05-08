@@ -44,7 +44,6 @@ impl GitContext {
             spdx_expression,
             repo_topics: github_graphql_data_result.topics.clone(),
             revision_info: RevisionInfo {
-                // TODO(colemickens): type coherency here... :/ (as is bad)
                 commit_count: Some(github_graphql_data_result.rev_count as usize),
                 revision: github_graphql_data_result.revision.clone(),
             },

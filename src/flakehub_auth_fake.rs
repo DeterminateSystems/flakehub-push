@@ -13,10 +13,6 @@ pub async fn get_fake_bearer_token(
     let client = reqwest::Client::new();
 
     let mut claims = github_actions_oidc_claims::Claims::make_dummy();
-    // FIXME: we should probably fill in more of these claims.
-
-    // TODO(review): on the contrary, I think we should ditch this, and we should basically use forge_login-esque functionality for this going forward
-    // this would remove the entire need for the fake JWT server, since we are ourselves a JWT issuer
     claims.aud = "flakehub-localhost".to_string();
     claims.iss = jwt_issuer_uri.to_string();
     claims.repository = repository.to_string();
