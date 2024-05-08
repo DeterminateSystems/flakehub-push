@@ -12,6 +12,13 @@ use crate::{
     }, release_metadata::ReleaseMetadata, revision_info::RevisionInfo, DEFAULT_ROLLING_PREFIX
 };
 
+#[derive(Clone)]
+pub enum ExecutionEnvironment {
+    GitHub,
+    GitLab,
+    Local,
+}
+
 pub(crate) struct PushContext {
     pub(crate) flakehub_host: url::Url,
     pub(crate) auth_token: String,
@@ -35,16 +42,24 @@ impl PushContext {
 
         let client = build_http_client().build()?;
 
-        let is_github = std::env::var("GITHUB_ACTION").ok().is_some();
-        let is_gitlab = std::env::var("GITLAB_CI").ok().is_some();
+        let exec_env = if std::env::var("GITHUB_ACTION").ok().is_some() {
+            ExecutionEnvironment::GitHub
+        } else if std::env::var("GITLAB_CI").ok().is_some() {
+            ExecutionEnvironment::GitLab
+        } else {
+            ExecutionEnvironment::Local
+        };
 
-        // "backfill" env vars from the environment
-        if is_github {
-            cli.backfill_from_github_env();
-        }
-        if is_gitlab {
-            cli.backfill_from_gitlab_env();
-        }
+        match exec_env.clone() {
+            ExecutionEnvironment::GitHub => {
+                // TODO(colemickens): we were back-filling from github, in local paths before, check
+                cli.backfill_from_github_env();
+            },
+            ExecutionEnvironment::GitLab => {
+                cli.backfill_from_gitlab_env();
+            },
+            _ => {},
+        };
 
         let visibility = match (cli.visibility_alt, cli.visibility) {
             (Some(v), _) => v,
@@ -108,8 +123,8 @@ impl PushContext {
 
         // "cli" and "git_ctx" are the user/env supplied info, augmented with data we might have fetched from github/gitlab apis
 
-        let (token, git_ctx) = match (is_github, is_gitlab, &cli.jwt_issuer_uri) {
-            (true, false, None) => {
+        let (token, git_ctx) = match (exec_env.clone(), &cli.jwt_issuer_uri) {
+            (ExecutionEnvironment::GitHub, None) => {
                 // GITHUB CI
                 let github_token = cli
                     .github_token
@@ -134,7 +149,7 @@ impl PushContext {
 
                 (token, git_ctx)
             }
-            (false, true, None) => {
+            (ExecutionEnvironment::GitLab, None) => {
                 // GITLAB CI
                 let token = crate::gitlab::get_runner_bearer_token()
                     .await
@@ -144,7 +159,7 @@ impl PushContext {
 
                 (token, git_ctx)
             }
-            (false, false, Some(u)) => {
+            (ExecutionEnvironment::Local, Some(u)) => {
                 // LOCAL, DEV (aka emulating GITHUB)
                 let github_token = cli
                     .github_token
@@ -173,7 +188,7 @@ impl PushContext {
                 .await?;
                 (token, git_ctx)
             }
-            (_, _, Some(_)) => {
+            (_, Some(_)) => {
                 // we're in (GitHub|GitLab) and jwt_issuer_uri was specified, invalid
                 return Err(eyre!(
                     "specifying the jwt_issuer_uri when running in GitHub or GitLab is invalid"
@@ -261,7 +276,7 @@ impl PushContext {
                 let message = "`extra-tags` is deprecated and will be removed in the future. Please use `extra-labels` instead.";
                 tracing::warn!("{message}");
 
-                if is_github {
+                if matches!(&exec_env, ExecutionEnvironment::GitHub) {
                     println!("::warning::{message}");
                 }
 
@@ -272,7 +287,7 @@ impl PushContext {
                         "Both `extra-tags` and `extra-labels` were set; `extra-tags` will be ignored.";
                     tracing::warn!("{message}");
 
-                    if is_github {
+                    if matches!(exec_env, ExecutionEnvironment::GitHub) {
                         println!("::warning::{message}");
                     }
                 }
