@@ -58,7 +58,6 @@ impl PushContext {
 
         match exec_env.clone() {
             ExecutionEnvironment::GitHub => {
-                // TODO(colemickens): we were back-filling from github, in local paths before, check
                 cli.backfill_from_github_env();
             }
             ExecutionEnvironment::GitLab => {
@@ -188,7 +187,7 @@ impl PushContext {
                 let token = flakehub_auth_fake::get_fake_bearer_token(
                     u,
                     &project_owner,
-                    &format!("{}/{}", project_owner, project_name),
+                    repository,
                     github_graphql_data_result,
                 )
                 .await?;
@@ -248,8 +247,7 @@ impl PushContext {
             }
         };
 
-        // TODO(review): shouldn't this maybe only be fatal whenever we are rolling_minor||rolling?
-        // TODO!!! doubly so since we're not going to be able to get commit_count from the gitlab api?
+        // TODO(future): (FH-282): change this so commit_count is only set authoritatively, is an explicit error if not set, when rolling, for gitlab
         let Some(commit_count) = git_ctx.revision_info.commit_count else {
             return Err(eyre!("Could not determine commit count, this is normally determined via the `--git-root` argument or via the GitHub API"));
         };
@@ -325,7 +323,6 @@ impl PushContext {
 
         // flake_dir is an absolute path of flake_root(aka git_root)/subdir
         let flake_dir = local_git_root.join(&subdir);
-        // TODO(review): depending on what the user called us with, this flake_dir isn't even necessarily canonicalized, is this a sec/traversal issue?
 
         // FIXME: bail out if flake_metadata denotes a dirty tree.
         let flake_metadata = flake_info::FlakeMetadata::from_dir(&flake_dir)
