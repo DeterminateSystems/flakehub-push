@@ -31,11 +31,6 @@ pub fn flakehub_headers() -> HeaderMap {
         reqwest::header::CONTENT_TYPE,
         reqwest::header::HeaderValue::from_str("application/json").unwrap(),
     );
-    // TODO(colemickens): tube > ngrok, remove
-    header_map.insert(
-        reqwest::header::HeaderName::from_static("ngrok-skip-browser-warning"),
-        reqwest::header::HeaderValue::from_str("please").unwrap(),
-    );
     header_map
 }
 
