@@ -5,7 +5,6 @@ use std::{
 };
 
 use color_eyre::eyre::{eyre, Context, Result};
-use gitlab::api::Query;
 use spdx::Expression;
 
 use crate::{
@@ -69,45 +68,16 @@ impl GitContext {
         Ok(ctx)
     }
 
-    pub fn from_cli_and_gitlab(
+    pub async fn from_cli_and_gitlab(
         cli: &FlakeHubPushCli,
         local_revision_info: RevisionInfo,
     ) -> Result<Self> {
-        // Gitlab token during jobs for calling api: `CI_JOB_TOKEN`
-        let gitlab_host =
-            std::env::var("CI_SERVER_FQDN").wrap_err("couldn't determinte CI_SERVER_FQDN")?;
-        let gitlab_token =
-            std::env::var("CI_JOB_TOKEN").wrap_err("couldn't determinte CI_JOB_TOKEN")?;
-
-        let gitlab_client = gitlab::Gitlab::new(gitlab_host, gitlab_token)?;
-
-        // gitlab -> repo labels
-        let labels_endpoint = gitlab::api::projects::labels::Labels::builder()
-            .build()
-            .unwrap();
-        let repo_labels = gitlab::api::paged(
-            labels_endpoint,
-            gitlab::api::Pagination::Limit(MAX_LABEL_LENGTH),
-        )
-        .query(&gitlab_client)?;
-
-        // revision_info: GET /projects/:id/repository/commits
-        // https://docs.gitlab.com/ee/api/commits.html
-        // not sure this has what we need:
-        // - hitting projects endpoint with ?statistics=true gives a commit_count but it's unclear what that is
-        // -- https://gitlab.com/api/v4/projects/54746217?statistics=true
-        // -- https://gitlab.com/api/v4/projects/54746217/repository/commits/171d5b1d13b326e6870df1c38575c39c58acfcd4 (?stats does nothing)
-        // ---- unclear: https://forum.gitlab.com/t/gitlab-api-projects-statistics-true-commit-count/10435/3
-        // ---- another user wondering: https://forum.gitlab.com/t/api-to-get-total-commits-count/93118
-        // - also checked the graphql api pretty extensively
-        //  -- not finding anything obvious, not seeing the equivalent of the related github graphql query
-
         // spdx_expression: can't find any evidence GitLab tries to surface this info
         let spdx_expression = &cli.spdx_expression.0;
 
         let ctx = GitContext {
             spdx_expression: spdx_expression.clone(),
-            repo_topics: repo_labels,
+            repo_topics: vec![],
             revision_info: local_revision_info,
         };
         Ok(ctx)
@@ -240,7 +210,9 @@ impl PushContext {
                 let token = crate::gitlab::get_runner_bearer_token()
                     .await
                     .wrap_err("Getting upload bearer token from GitLab")?;
-                let git_ctx = GitContext::from_cli_and_gitlab(cli, local_rev_info)?;
+
+                let git_ctx = GitContext::from_cli_and_gitlab(cli, local_rev_info).await?;
+
                 (token, git_ctx)
             }
             (false, false, Some(u)) => {
@@ -469,6 +441,7 @@ impl PushContext {
             metadata: release_metadata,
             tarball: flake_tarball,
         };
+
         Ok(ctx)
     }
 }
