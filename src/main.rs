@@ -62,11 +62,11 @@ async fn main() -> Result<std::process::ExitCode> {
 }
 
 async fn execute() -> Result<std::process::ExitCode> {
-    let mut cli = cli::FlakeHubPushCli::parse();
-    cli.instrumentation.setup()?;
-
-    let ctx: PushContext = PushContext::from_cli_and_env(&mut cli).await?;
-    drop(cli); // drop cli so we force ourselves to use ctx
+    let ctx = {
+        let mut cli = cli::FlakeHubPushCli::parse();
+        cli.instrumentation.setup()?;
+        PushContext::from_cli_and_env(&mut cli).await?
+    };
 
     let fhclient = FlakeHubClient::new(ctx.flakehub_host, ctx.auth_token)?;
 

@@ -47,7 +47,8 @@ pub(crate) struct FlakeHubPushCli {
     pub(crate) mirror: bool,
 
     /// URL of a JWT mock server (like https://github.com/spectare/fakeidp) which can issue tokens.
-    pub(crate) jwt_issuer_uri: Option<url::Url>,
+    #[clap(long)]
+    pub(crate) jwt_issuer_uri: Option<String>,
 
     /// User-supplied labels, merged with any associated with GitHub repository (if possible)
     #[clap(

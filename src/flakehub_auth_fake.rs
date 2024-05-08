@@ -3,7 +3,7 @@ use color_eyre::eyre::{Context, Result};
 use crate::github::graphql::GithubGraphqlDataResult;
 
 pub async fn get_fake_bearer_token(
-    jwt_issuer_uri: &url::Url,
+    jwt_issuer_uri: &str,
     project_owner: &str,
     repository: &str,
     github_graphql_data_result: GithubGraphqlDataResult,
@@ -18,8 +18,8 @@ pub async fn get_fake_bearer_token(
     // TODO(review): on the contrary, I think we should ditch this, and we should basically use forge_login-esque functionality for this going forward
     // this would remove the entire need for the fake JWT server, since we are ourselves a JWT issuer
     claims.aud = "flakehub-localhost".to_string();
-    claims.iss = "flakehub-push-dev".to_string();
-    claims.repository = repository.to_string();
+    claims.iss = jwt_issuer_uri.to_string();
+    claims.repository = format!("{project_owner}/{repository}");
     claims.repository_owner = project_owner.to_string();
 
     claims.repository_id = github_graphql_data_result.project_id.to_string();
@@ -27,7 +27,8 @@ pub async fn get_fake_bearer_token(
 
     tracing::debug!(?claims);
 
-    let token_gen_endpoint = jwt_issuer_uri.join("/token")?;
+    let issuer_url = url::Url::parse(&jwt_issuer_uri)?;
+    let token_gen_endpoint = issuer_url.join("/token")?;
 
     let response = client
         .post(token_gen_endpoint)

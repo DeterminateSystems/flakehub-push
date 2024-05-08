@@ -72,6 +72,7 @@ impl GitContext {
         cli: &FlakeHubPushCli,
         local_revision_info: RevisionInfo,
     ) -> Result<Self> {
+        // TODO(future): investigate library to sniff out SPDX expression based on repo contents
         // spdx_expression: can't find any evidence GitLab tries to surface this info
         let spdx_expression = &cli.spdx_expression.0;
 

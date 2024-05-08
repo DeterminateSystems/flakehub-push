@@ -159,7 +159,7 @@ impl FlakeHubClient {
             "Got publish POST response"
         );
 
-        if publish_response_status != 200 {
+        if publish_response_status != StatusCode::OK {
             return Err(eyre!(
                 "\
                     Status {publish_response_status} from publish POST\n\
