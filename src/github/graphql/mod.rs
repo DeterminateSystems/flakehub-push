@@ -38,6 +38,9 @@ impl GithubGraphqlDataQuery {
                 revision: revision.to_string(),
                 max_num_topics: MAX_NUM_EXTRA_TOPICS,
             };
+
+            tracing::debug!(?variables); // TODO remove
+
             let query = GithubGraphqlDataQuery::build_query(variables);
             let reqwest_response = reqwest_client
                 .post(GITHUB_ENDPOINT)
@@ -130,6 +133,7 @@ impl GithubGraphqlDataQuery {
             .collect();
 
         Ok(GithubGraphqlDataResult {
+            revision: revision.to_string(),
             rev_count,
             spdx_identifier,
             project_id,
@@ -141,6 +145,7 @@ impl GithubGraphqlDataQuery {
 
 #[derive(Debug)]
 pub(crate) struct GithubGraphqlDataResult {
+    pub(crate) revision: String,
     pub(crate) rev_count: i64,
     pub(crate) spdx_identifier: Option<String>,
     pub(crate) project_id: i64,

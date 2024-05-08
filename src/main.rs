@@ -1,16 +1,35 @@
-use std::{fmt::Display, io::IsTerminal};
+use std::{fmt::Display, io::IsTerminal, process::ExitCode};
 
 use clap::Parser;
+use color_eyre::eyre::{eyre, Result};
 use error::Error;
+use http::StatusCode;
+
+use crate::{
+    flakehub_client::{FlakeHubClient, StageResult},
+    push_context::PushContext,
+};
 mod cli;
 mod error;
 mod flake_info;
+mod flakehub_auth_fake;
+mod flakehub_client;
+mod git_context;
 mod github;
-mod push;
+mod gitlab;
+mod push_context;
 mod release_metadata;
+mod revision_info;
+mod s3;
+
+const DEFAULT_ROLLING_PREFIX: &str = "0.1";
+
+pub(crate) fn build_http_client() -> reqwest::ClientBuilder {
+    reqwest::Client::builder().user_agent("flakehub-push")
+}
 
 #[tokio::main]
-async fn main() -> color_eyre::Result<std::process::ExitCode> {
+async fn main() -> Result<std::process::ExitCode> {
     color_eyre::config::HookBuilder::default()
         .issue_url(concat!(env!("CARGO_PKG_REPOSITORY"), "/issues/new"))
         .add_issue_metadata("version", env!("CARGO_PKG_VERSION"))
@@ -33,10 +52,7 @@ async fn main() -> color_eyre::Result<std::process::ExitCode> {
         })
         .install()?;
 
-    let cli = cli::FlakeHubPushCli::parse();
-    cli.instrumentation.setup()?;
-
-    match cli.execute().await {
+    match execute().await {
         Ok(exit) => Ok(exit),
         Err(error) => {
             if let Some(known_error) = error.downcast_ref::<Error>() {
@@ -45,6 +61,94 @@ async fn main() -> color_eyre::Result<std::process::ExitCode> {
             Err(error)
         }
     }
+}
+
+async fn execute() -> Result<std::process::ExitCode> {
+    let ctx = {
+        let mut cli = cli::FlakeHubPushCli::parse();
+        cli.instrumentation.setup()?;
+        PushContext::from_cli_and_env(&mut cli).await?
+    };
+
+    let fhclient = FlakeHubClient::new(ctx.flakehub_host, ctx.auth_token)?;
+
+    // "upload.rs" - stage the release
+    let stage_result = fhclient
+        .release_stage(
+            &ctx.upload_name,
+            &ctx.release_version,
+            &ctx.metadata,
+            &ctx.tarball,
+        )
+        .await;
+
+    let stage_result: StageResult = match stage_result {
+        Err(e) => {
+            return Err(e)?;
+        }
+        Ok(response) => {
+            let response_status = response.status();
+            match response_status {
+                StatusCode::OK => {
+                    let stage_result: StageResult = response
+                        .json()
+                        .await
+                        .map_err(|_| eyre!("Decoding release metadata POST response"))?;
+
+                    stage_result
+                }
+                StatusCode::CONFLICT => {
+                    tracing::info!(
+                        "Release for revision `{revision}` of {upload_name}/{release_version} already exists; flakehub-push will not upload it again",
+                        revision = &ctx.metadata.revision,
+                        upload_name = ctx.upload_name,
+                        release_version = &ctx.release_version,
+                    );
+                    if ctx.error_if_release_conflicts {
+                        return Err(Error::Conflict {
+                            upload_name: ctx.upload_name.to_string(),
+                            release_version: ctx.release_version.to_string(),
+                        })?;
+                    } else {
+                        // we're just done, and happy about it:
+                        return Ok(ExitCode::SUCCESS);
+                    }
+                }
+                StatusCode::UNAUTHORIZED => {
+                    let body = response.bytes().await?;
+                    let message = serde_json::from_slice::<String>(&body)?;
+
+                    return Err(Error::Unauthorized(message))?;
+                }
+                _ => {
+                    let body = response.bytes().await?;
+                    let message = serde_json::from_slice::<String>(&body)?;
+                    return Err(eyre!(
+                        "\
+                        Status {} from metadata POST\n\
+                        {}\
+                    ",
+                        response_status,
+                        message
+                    ));
+                }
+            }
+        }
+    };
+
+    // upload tarball to s3
+    s3::upload_release_to_s3(stage_result.s3_upload_url, ctx.tarball).await?;
+
+    // "publish.rs" - publish the release after upload
+    fhclient.release_publish(stage_result.uuid).await?;
+
+    tracing::info!(
+        "Successfully released new version of {}/{}",
+        ctx.upload_name,
+        ctx.release_version
+    );
+
+    Ok(ExitCode::SUCCESS)
 }
 
 #[derive(Debug, Clone, Copy, clap::ValueEnum, serde::Serialize, serde::Deserialize)]
@@ -66,8 +170,4 @@ impl Display for Visibility {
             Visibility::Private => f.write_str("private"),
         }
     }
-}
-
-pub(crate) fn build_http_client() -> reqwest::ClientBuilder {
-    reqwest::Client::builder().user_agent("flakehub-push")
 }
