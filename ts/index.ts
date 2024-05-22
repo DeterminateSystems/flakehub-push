@@ -1,6 +1,6 @@
 import * as actionsCore from "@actions/core";
 import * as actionsExec from "@actions/exec";
-import { ActionOptions, IdsToolbox, inputs } from "detsys-ts";
+import { DetSysAction, inputs } from "detsys-ts";
 
 const EVENT_EXECUTION_FAILURE = "execution_failure";
 
@@ -24,9 +24,7 @@ type ExecutionEnvironment = {
   FLAKEHUB_PUSH_ROLLING_MINOR?: string;
 };
 
-class FlakeHubPushAction {
-  idslib: IdsToolbox;
-
+class FlakeHubPushAction extends DetSysAction {
   // Action inputs translated into environment variables to pass to flakehub-push
   private visibility: string;
   private tag: string;
@@ -46,7 +44,7 @@ class FlakeHubPushAction {
   private rollingMinor: number | null;
 
   constructor() {
-    const options: ActionOptions = {
+    super({
       name: "flakehub-push",
       fetchStyle: "gh-env-style",
       diagnosticsUrl: new URL(
@@ -54,9 +52,7 @@ class FlakeHubPushAction {
       ),
       legacySourcePrefix: "flakehub-push",
       requireNix: "fail",
-    };
-
-    this.idslib = new IdsToolbox(options);
+    });
 
     // Inputs translated into environment variables for flakehub-push
     this.visibility = inputs.getString("visibility");
@@ -76,6 +72,13 @@ class FlakeHubPushAction {
     this.name = inputs.getStringOrNull("name");
     this.rollingMinor = inputs.getNumberOrNull("rolling-minor");
   }
+
+  async main(): Promise<void> {
+    await this.pushFlakeToFlakeHub();
+  }
+
+  // No post step
+  async post(): Promise<void> {}
 
   // extra-tags is deprecated but we still honor it
   private get extraLabels(): string {
@@ -132,19 +135,19 @@ class FlakeHubPushAction {
     return env;
   }
 
-  async push(): Promise<void> {
+  async pushFlakeToFlakeHub(): Promise<void> {
     const executionEnv = this.executionEnvironment();
 
-    const binary =
+    const flakeHubPushBinary =
       this.sourceBinary !== null
         ? this.sourceBinary
-        : await this.idslib.fetchExecutable();
+        : await this.fetchExecutable();
 
     actionsCore.debug(
       `execution environment: ${JSON.stringify(executionEnv, null, 2)}`,
     );
 
-    const exitCode = await actionsExec.exec(binary, [], {
+    const exitCode = await actionsExec.exec(flakeHubPushBinary, [], {
       env: {
         ...executionEnv,
         ...process.env, // To get PATH, etc.
@@ -152,7 +155,7 @@ class FlakeHubPushAction {
     });
 
     if (exitCode !== 0) {
-      this.idslib.recordEvent(EVENT_EXECUTION_FAILURE, {
+      this.recordEvent(EVENT_EXECUTION_FAILURE, {
         exitCode,
       });
       actionsCore.setFailed(`non-zero exit code of ${exitCode} detected`);
@@ -163,13 +166,7 @@ class FlakeHubPushAction {
 }
 
 function main(): void {
-  const flakeHubPush = new FlakeHubPushAction();
-
-  flakeHubPush.idslib.onMain(async () => {
-    await flakeHubPush.push();
-  });
-
-  flakeHubPush.idslib.execute();
+  new FlakeHubPushAction().execute();
 }
 
 main();
