@@ -136,8 +136,7 @@ class FlakeHubPushAction extends DetSysAction {
   }
 
   async pushFlakeToFlakeHub(): Promise<void> {
-    try {
-      const executionEnv = this.executionEnvironment();
+    const executionEnv = this.executionEnvironment();
 
     const flakeHubPushBinary =
       this.sourceBinary !== null
@@ -163,14 +162,7 @@ class FlakeHubPushAction extends DetSysAction {
     } else {
       actionsCore.info(`Flake release was successfully published`);
     }
-    }
   }
-}
-
-function stringifyError(error: unknown): string {
-  return error instanceof Error || typeof error == "string"
-    ? error.toString()
-    : JSON.stringify(error);
 }
 
 function main(): void {
