@@ -49,3 +49,4 @@ jobs:
           log-directives: "flakehub_push=trace"
           logger: "pretty"
           flakehub-push-binary: ./flakehub-push-X64-Linux/flakehub-push
+          _internal-strict-mode: true
