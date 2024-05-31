@@ -47,9 +47,7 @@ class FlakeHubPushAction extends DetSysAction {
     super({
       name: "flakehub-push",
       fetchStyle: "gh-env-style",
-      diagnosticsUrl: new URL(
-        "https://install.determinate.systems/flakehub-push/telemetry",
-      ),
+      diagnosticsSuffix: "diagnostic",
       legacySourcePrefix: "flakehub-push",
       requireNix: "fail",
     });
