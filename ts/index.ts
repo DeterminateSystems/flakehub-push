@@ -47,7 +47,7 @@ class FlakeHubPushAction extends DetSysAction {
     super({
       name: "flakehub-push",
       fetchStyle: "gh-env-style",
-      diagnosticsSuffix: "telemetry",
+      diagnosticsSuffix: "diagnostic",
       legacySourcePrefix: "flakehub-push",
       requireNix: "fail",
     });
