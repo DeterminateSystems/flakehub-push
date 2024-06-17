@@ -325,9 +325,10 @@ impl PushContext {
         let flake_dir = local_git_root.join(&subdir);
 
         // FIXME: bail out if flake_metadata denotes a dirty tree.
-        let flake_metadata = flake_info::FlakeMetadata::from_dir(&flake_dir)
-            .await
-            .wrap_err("Getting flake metadata")?;
+        let flake_metadata =
+            flake_info::FlakeMetadata::from_dir(&flake_dir, cli.single_system_evaluation)
+                .await
+                .wrap_err("Getting flake metadata")?;
         tracing::debug!("Got flake metadata: {:?}", flake_metadata);
 
         // sanity checks

@@ -15,6 +15,7 @@ type ExecutionEnvironment = {
   FLAKEHUB_PUSH_REPOSITORY?: string;
   FLAKEHUB_PUSH_DIRECTORY?: string;
   FLAKEHUB_PUSH_GIT_ROOT?: string;
+  FLAKEHUB_PUSH_SINGLE_SYSTEM_EVALUATION?: string;
   FLAKEHUB_PUSH_EXTRA_LABELS?: string;
   FLAKEHUB_PUSH_SPDX_EXPRESSION?: string;
   FLAKEHUB_PUSH_ERROR_ON_CONFLICT?: string;
@@ -35,6 +36,7 @@ class FlakeHubPushAction extends DetSysAction {
   private repository: string;
   private directory: string;
   private gitRoot: string;
+  private singleSystemEvaluation: boolean;
   private spdxExpression: string;
   private errorOnConflict: boolean;
   private includeOutputPaths: boolean;
@@ -62,6 +64,7 @@ class FlakeHubPushAction extends DetSysAction {
     this.repository = inputs.getString("repository");
     this.directory = inputs.getString("directory");
     this.gitRoot = inputs.getString("git-root");
+    this.singleSystemEvaluation = inputs.getBool("single-system-evaluation");
     this.spdxExpression = inputs.getString("spdx-expression");
     this.errorOnConflict = inputs.getBool("error-on-conflict");
     this.includeOutputPaths = inputs.getBool("include-output-paths");
@@ -114,6 +117,8 @@ class FlakeHubPushAction extends DetSysAction {
     env.FLAKEHUB_PUSH_REPOSITORY = this.repository;
     env.FLAKEHUB_PUSH_DIRECTORY = this.directory;
     env.FLAKEHUB_PUSH_GIT_ROOT = this.gitRoot;
+    env.FLAKEHUB_PUSH_SINGLE_SYSTEM_EVALUATION =
+      this.singleSystemEvaluation.toString();
     // not included: the now-deprecated FLAKEHUB_PUSH_EXTRA_TAGS
     env.FLAKEHUB_PUSH_EXTRA_LABELS = this.extraLabels;
     env.FLAKEHUB_PUSH_SPDX_EXPRESSION = this.spdxExpression;

@@ -87,6 +87,20 @@ pub(crate) struct FlakeHubPushCli {
     )]
     pub(crate) error_on_conflict: bool,
 
+    /// Single-system evaluation.
+    ///
+    /// This flag is intended to limit the scope of evaluations which are too large to complete on one machine.
+    /// This flag should NOT be used to paper over evaluation errors across different architectures.
+    ///
+    /// Please do not turn this flag on without opening an issue to decide if it applies to your scenario.
+    #[clap(
+      long,
+      env = "FLAKEHUB_PUSH_SINGLE_SYSTEM_EVALUATION",
+      value_parser = EmptyBoolParser,
+      default_value_t = false
+  )]
+    pub(crate) single_system_evaluation: bool,
+
     #[clap(flatten)]
     pub instrumentation: instrumentation::Instrumentation,
 
