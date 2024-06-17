@@ -79,7 +79,7 @@ inputs:
     description: Whether to register the output paths of each flake output with FlakeHub.
     required: false
     default: false
-    
+
   my-flake-is-too-big:
     description: Please read the source code of flakehub-push before using this.
     required: false
