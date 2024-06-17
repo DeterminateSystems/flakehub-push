@@ -7,8 +7,8 @@
       url = "https://flakehub.com/f/ipetkov/crane/0.14.1.tar.gz";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    fenix = {
-      url = "https://flakehub.com/f/nix-community/fenix/0.1.1885.tar.gz";
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -24,50 +24,42 @@
         inherit system;
         pkgs = import inputs.nixpkgs {
           inherit system;
-          overlays = [ inputs.self.overlays.default ];
+          overlays = [
+            inputs.self.overlays.default
+            inputs.rust-overlay.overlays.default
+          ];
         };
+        lib = pkgs.lib;
       });
     in
     {
-      overlays.default = final: prev: rec {
-        system = final.stdenv.hostPlatform.system;
-
-        rustToolchain = with inputs.fenix.packages.${system};
-          combine ([
-            stable.clippy
-            stable.rustc
-            stable.cargo
-            stable.rustfmt
-            stable.rust-src
-          ] ++ final.lib.optionals (system == "x86_64-linux") [
-            targets.x86_64-unknown-linux-musl.stable.rust-std
-          ] ++ final.lib.optionals (system == "aarch64-linux") [
-            targets.aarch64-unknown-linux-musl.stable.rust-std
-          ]);
-
-        craneLib = (inputs.crane.mkLib final).overrideToolchain rustToolchain;
-
+      overlays.default = final: prev: {
         flakehub-push = inputs.self.packages.${final.stdenv.system}.flakehub-push;
       };
 
-      packages = forAllSystems ({ system, pkgs, ... }: rec {
-        default = flakehub-push;
+      packages = forAllSystems ({ system, pkgs, lib, ... }:
+        let
+          craneLib = (inputs.crane.mkLib pkgs).overrideToolchain rustToolchain;
+          rustToolchain = pkgs.rust-bin.stable.latest.default.override {
+            targets = [ "x86_64-unknown-linux-musl" ];
+          };
+        in
+        rec {
+          default = flakehub-push;
 
-        flakehub-push = pkgs.craneLib.buildPackage
-          {
+          flakehub-push = craneLib.buildPackage {
             pname = "flakehub-push";
             version = "0.1.0";
-            src = pkgs.craneLib.path ./.;
+            src = craneLib.path ./.;
 
-            buildInputs = pkgs.lib.optionals (pkgs.stdenv.isDarwin) (with pkgs; [
-              libiconv
+            CARGO_BUILD_TARGET = "x86_64-unknown-linux-musl";
+            CARGO_BUILD_RUSTFLAGS = "-C target-feature=+crt-static";
+
+            buildInputs = lib.optionals (pkgs.stdenv.isDarwin) (with pkgs; [
               darwin.apple_sdk.frameworks.SystemConfiguration
             ]);
-          } // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
-          CARGO_BUILD_TARGET = "x86_64-unknown-linux-musl";
-          CARGO_BUILD_RUSTFLAGS = "-C target-feature=+crt-static";
-        };
-      });
+          };
+        });
 
       devShells = forAllSystems ({ system, pkgs, ... }: {
         default = pkgs.mkShell {
