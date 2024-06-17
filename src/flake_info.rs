@@ -19,14 +19,14 @@ pub struct FlakeMetadata {
     pub(crate) source_dir: std::path::PathBuf,
     pub(crate) flake_locked_url: String,
     pub(crate) metadata_json: serde_json::Value,
-    single_system_evaluation: bool,
+    my_flake_is_too_big: bool,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct FlakeOutputs(pub serde_json::Value);
 
 impl FlakeMetadata {
-    pub async fn from_dir(directory: &Path, single_system_evaluation: bool) -> Result<Self> {
+    pub async fn from_dir(directory: &Path, my_flake_is_too_big: bool) -> Result<Self> {
         let output = tokio::process::Command::new("nix")
             .arg("flake")
             .arg("metadata")
@@ -78,7 +78,7 @@ impl FlakeMetadata {
             source_dir: source,
             flake_locked_url: flake_locked_url.to_string(),
             metadata_json,
-            single_system_evaluation,
+            my_flake_is_too_big,
         })
     }
 
@@ -89,7 +89,7 @@ impl FlakeMetadata {
         command.arg("flake");
         command.arg("show");
 
-        if !self.single_system_evaluation {
+        if !self.my_flake_is_too_big {
             command.arg("--all-systems");
         }
 
@@ -241,7 +241,7 @@ impl FlakeMetadata {
     }
 
     pub async fn outputs(&self, include_output_paths: bool) -> Result<FlakeOutputs> {
-        if self.single_system_evaluation {
+        if self.my_flake_is_too_big {
             return Ok(FlakeOutputs(serde_json::json!({})));
         }
 

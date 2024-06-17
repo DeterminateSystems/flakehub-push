@@ -95,11 +95,11 @@ pub(crate) struct FlakeHubPushCli {
     /// Please do not turn this flag on without opening an issue to decide if it applies to your scenario.
     #[clap(
       long,
-      env = "FLAKEHUB_PUSH_SINGLE_SYSTEM_EVALUATION",
+      env = "FLAKEHUB_PUSH_MY_FLAKE_IS_TOO_BIG",
       value_parser = EmptyBoolParser,
       default_value_t = false
     )]
-    pub(crate) single_system_evaluation: bool,
+    pub(crate) my_flake_is_too_big: bool,
 
     #[clap(flatten)]
     pub instrumentation: instrumentation::Instrumentation,
