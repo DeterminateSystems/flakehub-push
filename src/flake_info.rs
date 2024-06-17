@@ -241,6 +241,10 @@ impl FlakeMetadata {
     }
 
     pub async fn outputs(&self, include_output_paths: bool) -> Result<FlakeOutputs> {
+        if self.single_system_evaluation {
+            return Ok(FlakeOutputs(serde_json::json!({})));
+        }
+
         let tempdir = tempfile::Builder::new()
             .prefix("flakehub_push_outputs")
             .tempdir()
