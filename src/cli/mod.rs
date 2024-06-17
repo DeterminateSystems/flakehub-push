@@ -98,7 +98,7 @@ pub(crate) struct FlakeHubPushCli {
       env = "FLAKEHUB_PUSH_SINGLE_SYSTEM_EVALUATION",
       value_parser = EmptyBoolParser,
       default_value_t = false
-  )]
+    )]
     pub(crate) single_system_evaluation: bool,
 
     #[clap(flatten)]
