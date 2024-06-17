@@ -19,13 +19,14 @@ pub struct FlakeMetadata {
     pub(crate) source_dir: std::path::PathBuf,
     pub(crate) flake_locked_url: String,
     pub(crate) metadata_json: serde_json::Value,
+    my_flake_is_too_big: bool,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct FlakeOutputs(pub serde_json::Value);
 
 impl FlakeMetadata {
-    pub async fn from_dir(directory: &Path) -> Result<Self> {
+    pub async fn from_dir(directory: &Path, my_flake_is_too_big: bool) -> Result<Self> {
         let output = tokio::process::Command::new("nix")
             .arg("flake")
             .arg("metadata")
@@ -77,27 +78,31 @@ impl FlakeMetadata {
             source_dir: source,
             flake_locked_url: flake_locked_url.to_string(),
             metadata_json,
+            my_flake_is_too_big,
         })
     }
 
     /// check_evalutes checks that the flake evaluates
     /// (note it is not necessary for the target to have a flake.lock)
     pub async fn check_evaluates(&self) -> Result<()> {
-        let output = tokio::process::Command::new("nix")
-                .arg("flake")
-                .arg("show")
-                .arg("--all-systems")
-                .arg("--json")
-                .arg("--no-write-lock-file")
-                .arg(&self.source_dir)
-                .output()
-                .await
-                .wrap_err_with(|| {
-                    eyre!(
-                        "Failed to execute `nix flake show --all-systems --json --no-write-lock-file {}`",
-                        self.source_dir.display()
-                    )
-                })?;
+        let mut command = tokio::process::Command::new("nix");
+        command.arg("flake");
+        command.arg("show");
+
+        if !self.my_flake_is_too_big {
+            command.arg("--all-systems");
+        }
+
+        command.arg("--json");
+        command.arg("--no-write-lock-file");
+        command.arg(&self.source_dir);
+
+        let output = command.output().await.wrap_err_with(|| {
+            eyre!(
+                "Failed to execute `nix flake show --all-systems --json --no-write-lock-file {}`",
+                self.source_dir.display()
+            )
+        })?;
 
         if !output.status.success() {
             let command = format!(
@@ -236,6 +241,10 @@ impl FlakeMetadata {
     }
 
     pub async fn outputs(&self, include_output_paths: bool) -> Result<FlakeOutputs> {
+        if self.my_flake_is_too_big {
+            return Ok(FlakeOutputs(serde_json::json!({})));
+        }
+
         let tempdir = tempfile::Builder::new()
             .prefix("flakehub_push_outputs")
             .tempdir()
