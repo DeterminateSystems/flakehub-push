@@ -87,12 +87,14 @@ pub(crate) struct FlakeHubPushCli {
     )]
     pub(crate) error_on_conflict: bool,
 
-    /// Single-system evaluation.
+    /// Do less work on extremely large flakes.
     ///
     /// This flag is intended to limit the scope of evaluations which are too large to complete on one machine.
     /// This flag should NOT be used to paper over evaluation errors across different architectures.
     ///
     /// Please do not turn this flag on without opening an issue to decide if it applies to your scenario.
+    ///
+    /// Note: the behavior of this flag could change at any time, please don't count on it for anything specific.
     #[clap(
       long,
       env = "FLAKEHUB_PUSH_MY_FLAKE_IS_TOO_BIG",
