@@ -389,16 +389,20 @@ impl PushContext {
 fn get_project_owner_and_name(
     repository: &str,
     exec_env: ExecutionEnvironment,
-    disable_subgroups: bool,
+    subgroups_explicitly_disabled: bool,
 ) -> Result<(String, String)> {
+    let subgroups_enabled =
+        !subgroups_explicitly_disabled && matches!(exec_env, ExecutionEnvironment::GitLab);
+
     let mut repository_split = repository.split('/');
 
-    let error_msg = match exec_env {
-        ExecutionEnvironment::GitLab => "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push` or `determinatesystems/my-subgroup/flakehub-push`",
-        _ => "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push`"
+    let error_msg = if subgroups_enabled {
+        "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push` or `determinatesystems/my-subgroup/flakehub-push`"
+    } else {
+        "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push`"
     };
 
-    if !matches!(exec_env, ExecutionEnvironment::GitLab) && repository_split.clone().count() > 3 {
+    if !subgroups_enabled && repository_split.clone().count() > 3 {
         return Err(eyre!(error_msg));
     };
 
@@ -407,9 +411,7 @@ fn get_project_owner_and_name(
         repository_split.next(),
         repository_split.next(),
     ) {
-        (Some(owner), Some(subgroup), Some(name))
-            if !disable_subgroups && matches!(exec_env, ExecutionEnvironment::GitLab) =>
-        {
+        (Some(owner), Some(subgroup), Some(name)) if subgroups_enabled => {
             // Gitlab subgroups can be nested quite deeply. This logic supports any level of nesting
             // by appending `-{segment}` for each additional segment.
             let name_from_segments =
@@ -507,8 +509,8 @@ mod tests {
             ("a/b/c/d", ExecutionEnvironment::GitHub, "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push`", false),
             // In these cases, --disable-subgroups is set, which makes this Gitlab repo name work like GitHub and local,
             // that is, names of the form `owner/name` are required.
-            ("a/b/c/d/e/f/g", ExecutionEnvironment::GitLab, "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push` or `determinatesystems/my-subgroup/flakehub-push`", true),
-            ("a/b/c", ExecutionEnvironment::GitLab, "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push` or `determinatesystems/my-subgroup/flakehub-push`", true),
+            ("a/b/c/d/e/f/g", ExecutionEnvironment::GitLab, "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push`", true),
+            ("a/b/c", ExecutionEnvironment::GitLab, "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push`", true),
         ];
 
         for (repo, env, expected_error, disable_subgroups) in failure_cases {
