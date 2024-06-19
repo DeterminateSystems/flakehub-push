@@ -103,17 +103,9 @@ impl PushContext {
         } else {
             repository.clone()
         };
-        let mut repository_split = repository.split('/');
-        let project_owner = repository_split
-            .next()
-            .ok_or_else(|| eyre!("Could not determine owner, pass `--repository` formatted like `determinatesystems/flakehub-push`"))?
-            .to_string();
-        let project_name = repository_split.next()
-            .ok_or_else(|| eyre!("Could not determine project, pass `--repository` formatted like `determinatesystems/flakehub-push`"))?
-            .to_string();
-        if repository_split.next().is_some() {
-            Err(eyre!("Could not determine the owner/project, pass `--repository` formatted like `determinatesystems/flakehub-push`. The passed value has too many slashes (/) to be a valid repository"))?;
-        }
+
+        let (project_owner, project_name) =
+            get_project_owner_and_name(repository, exec_env.clone())?;
 
         let maybe_git_root = match &cli.git_root.0 {
             Some(gr) => Ok(gr.to_owned()),
@@ -391,5 +383,127 @@ impl PushContext {
         };
 
         Ok(ctx)
+    }
+}
+
+fn get_project_owner_and_name(
+    repository: &String,
+    exec_env: ExecutionEnvironment,
+) -> Result<(String, String)> {
+    let mut repository_split = repository.split('/');
+
+    Ok(match repository_split.clone().count() {
+        // Gitlab supports subgroups (repos of the form `org/subgroup/repo`). In that environment, we
+        // automatically "flatten" this to `org/subgroup-repo`
+        3 => match exec_env {
+            ExecutionEnvironment::GitLab => (
+                String::from(
+                    repository_split
+                        .next()
+                        .expect("failed to get expected first string segment; this should never happen"),
+                ),
+                format!("{}-{}", repository_split.next().expect(
+                    "failed to get expected second string segment; this should never happen",
+                ), repository_split.next().expect(
+                    "failed to get expected third string segment; this should never happen",
+                ),)
+            ),
+            _ => return Err(eyre!("Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push`")),
+        },
+        // Outside of Gitlab subgroups we require `owner/repo` in all cases
+        2 => (
+            String::from(
+                repository_split
+                    .next()
+                    .expect("failed to get expected first string segment; this should never happen"),
+            ),
+            String::from(
+                repository_split
+                    .next()
+                    .expect("failed to get expected second string segment; this should never happen"),
+            ),
+        ),
+        // Anything that isn't of the form `owner/repo` is malformed and we tailor the suggestion to
+        // the environment
+        _ => return Err(eyre!(match exec_env {
+            ExecutionEnvironment::GitLab => "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push` or `determinatesystems/my-subgroup/flakehub-push`",
+            _ => "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push`"
+        })),
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::push_context::get_project_owner_and_name;
+
+    use super::ExecutionEnvironment;
+
+    #[test]
+    fn project_owner_and_name() {
+        let success_cases: Vec<(&str, ExecutionEnvironment, (&str, &str))> = vec![
+            (
+                "DeterminateSystems/flakehub",
+                ExecutionEnvironment::GitHub,
+                ("DeterminateSystems", "flakehub"),
+            ),
+            (
+                "DeterminateSystems/flakehub",
+                ExecutionEnvironment::Local,
+                ("DeterminateSystems", "flakehub"),
+            ),
+            ("a/b/c", ExecutionEnvironment::GitLab, ("a", "b-c")),
+            (
+                "DeterminateSystems/subgroup/flakehub",
+                ExecutionEnvironment::GitLab,
+                ("DeterminateSystems", "subgroup-flakehub"),
+            ),
+        ];
+
+        for (repo, env, (expected_owner, expected_name)) in success_cases {
+            assert_eq!(
+                (String::from(expected_owner), String::from(expected_name)),
+                get_project_owner_and_name(&String::from(repo), env).unwrap()
+            );
+        }
+
+        let failure_cases: Vec<(&str, ExecutionEnvironment, &str)> = vec![
+            (
+                "just-an-owner",
+                ExecutionEnvironment::GitHub,
+                "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push`",
+            ),
+            (
+                "just-an-owner",
+                ExecutionEnvironment::Local,
+                "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push`",
+            ),
+            (
+                "just-an-owner",
+                ExecutionEnvironment::GitLab,
+                "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push` or `determinatesystems/my-subgroup/flakehub-push`",
+            ),
+            (
+                "DeterminateSystems/subgroup/flakehub",
+                ExecutionEnvironment::GitHub,
+                "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push`",
+            ),
+            ("a/b/c/d", ExecutionEnvironment::GitHub, "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push`"),
+            (
+                "DeterminateSystems/subgroup/subsubgroup/flakehub",
+                ExecutionEnvironment::GitLab,
+                "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push` or `determinatesystems/my-subgroup/flakehub-push`",
+            ),
+            ("a/b/c/d", ExecutionEnvironment::GitLab, "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push` or `determinatesystems/my-subgroup/flakehub-push`"),
+        ];
+
+        for (repo, env, expected_error) in failure_cases {
+            assert_eq!(
+                String::from(expected_error),
+                get_project_owner_and_name(&String::from(repo), env)
+                    .err()
+                    .unwrap()
+                    .to_string(),
+            );
+        }
     }
 }
