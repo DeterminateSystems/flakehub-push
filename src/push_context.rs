@@ -415,7 +415,7 @@ fn get_project_owner_and_name(
                 let mut s = String::from(subgroup);
                 s.push('-');
                 s.push_str(name);
-                while let Some(segment) = repository_split.next() {
+                for segment in repository_split {
                     s.push('-');
                     s.push_str(segment);
                 }
