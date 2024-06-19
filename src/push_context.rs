@@ -415,6 +415,10 @@ fn determine_names(
     if subgroup_renaming_explicitly_disabled && repository_split.next().is_some() {
         Err(eyre!(error_msg))?;
     }
+    // If subgroup renaming is disabled, the project name is just the originally provided
+    // name (and we've already determined that the name is of the form `{owner}/{project}`.
+    // But if subgroup renaming is disabled, then a repo name like `a/b/c/d/e` is converted
+    // to `a/b-c-d-e`.
     let project_name = if subgroup_renaming_explicitly_disabled {
         project_name
     } else {
