@@ -393,8 +393,8 @@ fn get_project_owner_and_name(
     let mut repository_split = repository.split('/');
 
     Ok(match repository_split.clone().count() {
-        // Gitlab supports subgroups (repos of the form `org/subgroup/repo`). In that environment, we
-        // automatically "flatten" this to `org/subgroup-repo`
+        // Gitlab supports subgroups (repos of the form `owner/subgroup/repo`). In that environment, we
+        // automatically "flatten" this to `owner/subgroup-repo`
         3 => match exec_env {
             ExecutionEnvironment::GitLab => (
                 String::from(
