@@ -387,7 +387,7 @@ impl PushContext {
 }
 
 fn get_project_owner_and_name(
-    repository: &String,
+    repository: &str,
     exec_env: ExecutionEnvironment,
 ) -> Result<(String, String)> {
     let mut repository_split = repository.split('/');
