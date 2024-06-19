@@ -105,7 +105,7 @@ impl PushContext {
         };
 
         let (project_owner, project_name) =
-            get_project_owner_and_name(repository, exec_env.clone())?;
+            get_project_owner_and_name(repository, exec_env.clone(), cli.disable_subgroups)?;
 
         let maybe_git_root = match &cli.git_root.0 {
             Some(gr) => Ok(gr.to_owned()),
@@ -389,6 +389,7 @@ impl PushContext {
 fn get_project_owner_and_name(
     repository: &str,
     exec_env: ExecutionEnvironment,
+    disable_subgroups: bool,
 ) -> Result<(String, String)> {
     let mut repository_split = repository.split('/');
 
@@ -407,7 +408,7 @@ fn get_project_owner_and_name(
         repository_split.next(),
     ) {
         (Some(owner), Some(subgroup), Some(name))
-            if matches!(exec_env, ExecutionEnvironment::GitLab) =>
+            if !disable_subgroups && matches!(exec_env, ExecutionEnvironment::GitLab) =>
         {
             // Gitlab subgroups can be nested quite deeply. This logic supports any level of nesting
             // by appending `-{segment}` for each additional segment.
@@ -469,7 +470,8 @@ mod tests {
         ];
 
         for (repo, env, (expected_owner, expected_name)) in success_cases {
-            let (owner, name) = get_project_owner_and_name(&String::from(repo), env).unwrap();
+            let (owner, name) =
+                get_project_owner_and_name(&String::from(repo), env, false).unwrap();
             assert_eq!(
                 (String::from(expected_owner), String::from(expected_name)),
                 (owner.clone(), name.clone()),
@@ -477,32 +479,40 @@ mod tests {
             );
         }
 
-        let failure_cases: Vec<(&str, ExecutionEnvironment, &str)> = vec![
+        let failure_cases: Vec<(&str, ExecutionEnvironment, &str, bool)> = vec![
             (
                 "just-an-owner",
                 ExecutionEnvironment::GitHub,
                 "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push`",
+                false,
             ),
             (
                 "just-an-owner",
                 ExecutionEnvironment::Local,
                 "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push`",
+                false,
             ),
             (
                 "just-an-owner",
                 ExecutionEnvironment::GitLab,
                 "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push` or `determinatesystems/my-subgroup/flakehub-push`",
+                false,
             ),
             (
                 "DeterminateSystems/subgroup/flakehub",
                 ExecutionEnvironment::GitHub,
                 "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push`",
+                false,
             ),
-            ("a/b/c/d", ExecutionEnvironment::GitHub, "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push`"),
+            ("a/b/c/d", ExecutionEnvironment::GitHub, "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push`", false),
+            // In these cases, --disable-subgroups is set, which makes this Gitlab repo name work like GitHub and local,
+            // that is, names of the form `owner/name` are required.
+            ("a/b/c/d/e/f/g", ExecutionEnvironment::GitLab, "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push` or `determinatesystems/my-subgroup/flakehub-push`", true),
+            ("a/b/c", ExecutionEnvironment::GitLab, "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push` or `determinatesystems/my-subgroup/flakehub-push`", true),
         ];
 
-        for (repo, env, expected_error) in failure_cases {
-            let result = get_project_owner_and_name(&String::from(repo), env);
+        for (repo, env, expected_error, disable_subgroups) in failure_cases {
+            let result = get_project_owner_and_name(&String::from(repo), env, disable_subgroups);
             assert_eq!(
                 String::from(expected_error),
                 result.err().unwrap().to_string(),
