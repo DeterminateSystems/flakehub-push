@@ -409,18 +409,17 @@ fn get_project_owner_and_name(
         (Some(owner), Some(subgroup), Some(name))
             if matches!(exec_env, ExecutionEnvironment::GitLab) =>
         {
-            Ok((String::from(owner), {
-                // Gitlab subgroups can be nested quite deeply. This logic supports any level of nesting
-                // by appending `-{segment}` for each additional segment.
-                let mut s = String::from(subgroup);
-                s.push('-');
-                s.push_str(name);
-                for segment in repository_split {
-                    s.push('-');
-                    s.push_str(segment);
-                }
-                s
-            }))
+            // Gitlab subgroups can be nested quite deeply. This logic supports any level of nesting
+            // by appending `-{segment}` for each additional segment.
+            let name_from_segments =
+                repository_split.fold(String::from(name), |mut acc, segment| {
+                    acc.push_str(&format!("-{segment}"));
+                    acc
+                });
+            Ok((
+                String::from(owner),
+                format!("{}-{}", subgroup, name_from_segments),
+            ))
         }
         (Some(owner), Some(name), None) => Ok((String::from(owner), String::from(name))),
         _ => Err(eyre!(error_msg)),
