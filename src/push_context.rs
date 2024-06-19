@@ -397,7 +397,7 @@ fn get_project_owner_and_name(
         _ => "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push`"
     };
 
-    if repository_split.clone().count() > 3 {
+    if !matches!(exec_env, ExecutionEnvironment::GitLab) && repository_split.clone().count() > 3 {
         return Err(eyre!(error_msg));
     };
 
@@ -409,7 +409,18 @@ fn get_project_owner_and_name(
         (Some(owner), Some(subgroup), Some(name))
             if matches!(exec_env, ExecutionEnvironment::GitLab) =>
         {
-            Ok((String::from(owner), format!("{}-{}", subgroup, name)))
+            Ok((String::from(owner), {
+                // Gitlab subgroups can be nested quite deeply. This logic supports any level of nesting
+                // by appending `-{segment}` for each additional segment.
+                let mut s = String::from(subgroup);
+                s.push('-');
+                s.push_str(name);
+                while let Some(segment) = repository_split.next() {
+                    s.push('-');
+                    s.push_str(segment);
+                }
+                s
+            }))
         }
         (Some(owner), Some(name), None) => Ok((String::from(owner), String::from(name))),
         _ => Err(eyre!(error_msg)),
@@ -437,16 +448,33 @@ mod tests {
             ),
             ("a/b/c", ExecutionEnvironment::GitLab, ("a", "b-c")),
             (
+                "a/b/c/d/e/f/g/h",
+                ExecutionEnvironment::GitLab,
+                ("a", "b-c-d-e-f-g-h"),
+            ),
+            (
+                "a/b/c/d/e/f/g/h/i/j/k/l",
+                ExecutionEnvironment::GitLab,
+                ("a", "b-c-d-e-f-g-h-i-j-k-l"),
+            ),
+            (
                 "DeterminateSystems/subgroup/flakehub",
                 ExecutionEnvironment::GitLab,
                 ("DeterminateSystems", "subgroup-flakehub"),
             ),
+            (
+                "DeterminateSystems/subgroup/subsubgroup/flakehub",
+                ExecutionEnvironment::GitLab,
+                ("DeterminateSystems", "subgroup-subsubgroup-flakehub"),
+            ),
         ];
 
         for (repo, env, (expected_owner, expected_name)) in success_cases {
+            let (owner, name) = get_project_owner_and_name(&String::from(repo), env).unwrap();
             assert_eq!(
                 (String::from(expected_owner), String::from(expected_name)),
-                get_project_owner_and_name(&String::from(repo), env).unwrap()
+                (owner.clone(), name.clone()),
+                "expected {expected_owner}/{expected_name} from repository {repo} but got {owner}/{name}"
             );
         }
 
@@ -472,21 +500,13 @@ mod tests {
                 "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push`",
             ),
             ("a/b/c/d", ExecutionEnvironment::GitHub, "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push`"),
-            (
-                "DeterminateSystems/subgroup/subsubgroup/flakehub",
-                ExecutionEnvironment::GitLab,
-                "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push` or `determinatesystems/my-subgroup/flakehub-push`",
-            ),
-            ("a/b/c/d", ExecutionEnvironment::GitLab, "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push` or `determinatesystems/my-subgroup/flakehub-push`"),
         ];
 
         for (repo, env, expected_error) in failure_cases {
+            let result = get_project_owner_and_name(&String::from(repo), env);
             assert_eq!(
                 String::from(expected_error),
-                get_project_owner_and_name(&String::from(repo), env)
-                    .err()
-                    .unwrap()
-                    .to_string(),
+                result.err().unwrap().to_string(),
             );
         }
     }
