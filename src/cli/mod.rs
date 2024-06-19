@@ -112,8 +112,12 @@ pub(crate) struct FlakeHubPushCli {
     // Gitlab has a concept of subgroups, which enables repo names like https://gitlab.com/a/b/c/d/e/f/g. By default,
     // flakehub-push would parse that to flake name `a/b-c-d-e-f-g`. This flag/environment variable provides a
     // mechanism to disable this behavior.
-    #[clap(long, env = "FLAKEHUB_PUSH_DISABLE_SUBGROUPS", default_value_t = false)]
-    pub(crate) disable_subgroups: bool,
+    #[clap(
+        long,
+        env = "FLAKEHUB_PUSH_DISABLE_RENAME_SUBGROUPS",
+        default_value_t = true
+    )]
+    pub(crate) disable_rename_subgroups: bool,
 }
 
 #[derive(Clone, Debug)]

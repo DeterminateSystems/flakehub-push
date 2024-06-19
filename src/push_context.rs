@@ -105,7 +105,7 @@ impl PushContext {
         };
 
         let (project_owner, project_name) =
-            get_project_owner_and_name(repository, exec_env.clone(), cli.disable_subgroups)?;
+            get_project_owner_and_name(repository, exec_env.clone(), cli.disable_rename_subgroups)?;
 
         let maybe_git_root = match &cli.git_root.0 {
             Some(gr) => Ok(gr.to_owned()),
@@ -389,10 +389,10 @@ impl PushContext {
 fn get_project_owner_and_name(
     repository: &str,
     exec_env: ExecutionEnvironment,
-    subgroups_explicitly_disabled: bool,
+    renaming_subgroups_explicitly_disabled: bool,
 ) -> Result<(String, String)> {
     let subgroups_enabled =
-        !subgroups_explicitly_disabled && matches!(exec_env, ExecutionEnvironment::GitLab);
+        !renaming_subgroups_explicitly_disabled && matches!(exec_env, ExecutionEnvironment::GitLab);
 
     let mut repository_split = repository.split('/');
 
