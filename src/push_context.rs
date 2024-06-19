@@ -407,21 +407,19 @@ fn get_project_owner_and_name(
     };
 
     match (repository_split.next(), repository_split.next()) {
-        (Some(owner), Some(name)) => {
+        (Some(owner), Some(name)) => Ok((
+            String::from(owner),
+            // If subgroup renaming is enabled, all segments past the first are treated
+            // equally and joined by dashes
             if subgroup_renaming_enabled {
-                Ok((
-                    String::from(owner),
-                    // If subgroup renaming is enabled, all segments past the first are treated
-                    // equally and joined by dashes
-                    repository_split.fold(String::from(name), |mut acc, segment| {
-                        acc.push_str(&format!("-{segment}"));
-                        acc
-                    }),
-                ))
+                repository_split.fold(String::from(name), |mut acc, segment| {
+                    acc.push_str(&format!("-{segment}"));
+                    acc
+                })
             } else {
-                Ok((String::from(owner), String::from(name)))
-            }
-        }
+                String::from(name)
+            },
+        )),
         _ => Err(eyre!(error_msg)),
     }
 }
