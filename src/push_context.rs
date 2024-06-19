@@ -391,21 +391,41 @@ fn get_project_owner_and_name(
     exec_env: ExecutionEnvironment,
     renaming_subgroups_explicitly_disabled: bool,
 ) -> Result<(String, String)> {
-    let subgroups_enabled =
+    let subgroup_renaming_enabled =
         !renaming_subgroups_explicitly_disabled && matches!(exec_env, ExecutionEnvironment::GitLab);
 
     let mut repository_split = repository.split('/');
 
-    let error_msg = if subgroups_enabled {
+    let error_msg = if subgroup_renaming_enabled {
         "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push` or `determinatesystems/my-subgroup/flakehub-push`"
     } else {
         "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push`"
     };
 
-    if !subgroups_enabled && repository_split.clone().count() > 3 {
+    if !subgroup_renaming_enabled && repository_split.clone().count() > 2 {
         return Err(eyre!(error_msg));
     };
 
+    match (repository_split.next(), repository_split.next()) {
+        (Some(owner), Some(name)) => {
+            if subgroup_renaming_enabled {
+                Ok((
+                    String::from(owner),
+                    // If subgroup renaming is enabled, all segments past the first are treated
+                    // equally and joined by dashes
+                    repository_split.fold(String::from(name), |mut acc, segment| {
+                        acc.push_str(&format!("-{segment}"));
+                        acc
+                    }),
+                ))
+            } else {
+                Ok((String::from(owner), String::from(name)))
+            }
+        }
+        _ => Err(eyre!(error_msg)),
+    }
+
+    /*
     match (
         repository_split.next(),
         repository_split.next(),
@@ -427,6 +447,7 @@ fn get_project_owner_and_name(
         (Some(owner), Some(name), None) => Ok((String::from(owner), String::from(name))),
         _ => Err(eyre!(error_msg)),
     }
+    */
 }
 
 #[cfg(test)]
