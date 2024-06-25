@@ -115,7 +115,7 @@ pub(crate) struct FlakeHubPushCli {
     #[clap(
         long,
         env = "FLAKEHUB_PUSH_DISABLE_RENAME_SUBGROUPS",
-        default_value_t = true
+        default_value_t = false
     )]
     pub(crate) disable_rename_subgroups: bool,
 }
