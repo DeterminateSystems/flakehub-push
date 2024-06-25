@@ -86,34 +86,8 @@ impl PushContext {
             return Err(eyre!("Could not determine repository name, pass `--repository` formatted like `determinatesystems/flakehub-push`"));
         };
 
-        // If the upload name is supplied by the user, ensure that it contains exactly
-        // one slash and no whitespace. Default to the repository name.
-        let upload_name = if let Some(ref name) = cli.name.0 {
-            let num_slashes = name.matches('/').count();
-
-            if num_slashes == 0
-                || num_slashes > 1
-                || !name.is_ascii()
-                || name.contains(char::is_whitespace)
-            {
-                return Err(eyre!("The argument `--name` must be in the format of `owner-name/repo-name` and cannot contain whitespace or other special characters"));
-            } else {
-                name.to_string()
-            }
-        } else {
-            repository.clone()
-        };
-        let mut repository_split = repository.split('/');
-        let project_owner = repository_split
-            .next()
-            .ok_or_else(|| eyre!("Could not determine owner, pass `--repository` formatted like `determinatesystems/flakehub-push`"))?
-            .to_string();
-        let project_name = repository_split.next()
-            .ok_or_else(|| eyre!("Could not determine project, pass `--repository` formatted like `determinatesystems/flakehub-push`"))?
-            .to_string();
-        if repository_split.next().is_some() {
-            Err(eyre!("Could not determine the owner/project, pass `--repository` formatted like `determinatesystems/flakehub-push`. The passed value has too many slashes (/) to be a valid repository"))?;
-        }
+        let (upload_name, project_owner, project_name) =
+            determine_names(&cli.name.0, repository, cli.disable_rename_subgroups)?;
 
         let maybe_git_root = match &cli.git_root.0 {
             Some(gr) => Ok(gr.to_owned()),
@@ -391,5 +365,255 @@ impl PushContext {
         };
 
         Ok(ctx)
+    }
+}
+
+fn determine_names(
+    explicitly_provided_name: &Option<String>,
+    repository: &str,
+    subgroup_renaming_explicitly_disabled: bool,
+) -> Result<(String, String, String)> {
+    // If a flake name is explicitly provided, validate that name, otherwise use the
+    // inferred repository name
+    let upload_name = if let Some(name) = explicitly_provided_name {
+        let num_slashes = name.matches('/').count();
+
+        if num_slashes == 0
+            || !name.is_ascii()
+            || name.contains(char::is_whitespace)
+            // Prohibit more than one slash only if subgroup renaming is disabled
+            || (subgroup_renaming_explicitly_disabled && num_slashes > 1)
+        {
+            let error_msg = if subgroup_renaming_explicitly_disabled {
+                "The argument `--name` must be in the format of `owner-name/repo-name` and cannot contain whitespace or other special characters"
+            } else {
+                "The argument `--name` must be in the format of `owner-name/subgroup/repo-name` and cannot contain whitespace or other special characters"
+            };
+            return Err(eyre!(error_msg));
+        } else {
+            name.to_string()
+        }
+    } else {
+        String::from(repository)
+    };
+
+    let error_msg = if subgroup_renaming_explicitly_disabled {
+        "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push`"
+    } else {
+        "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push` or `determinatesystems/subgroup-segments.../flakehub-push`)"
+    };
+
+    let mut repository_split = repository.split('/');
+    let project_owner = repository_split
+        .next()
+        .ok_or_else(|| eyre!(error_msg))?
+        .to_string();
+    let project_name = repository_split
+        .next()
+        .ok_or_else(|| eyre!(error_msg))?
+        .to_string();
+    if subgroup_renaming_explicitly_disabled && repository_split.next().is_some() {
+        Err(eyre!(error_msg))?;
+    }
+    // If subgroup renaming is disabled, the project name is just the originally provided
+    // name (and we've already determined that the name is of the form `{owner}/{project}`.
+    // But if subgroup renaming is disabled, then a repo name like `a/b/c/d/e` is converted
+    // to `a/b-c-d-e`.
+    let project_name = if subgroup_renaming_explicitly_disabled {
+        project_name
+    } else {
+        repository_split.fold(project_name, |mut acc, segment| {
+            acc.push_str(&format!("-{segment}"));
+            acc
+        })
+    };
+
+    Ok((upload_name, project_owner, project_name))
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::push_context::determine_names;
+
+    #[test]
+    fn project_owner_and_name() {
+        struct Expected {
+            upload_name: &'static str,
+            project_owner: &'static str,
+            project_name: &'static str,
+        }
+
+        struct SuccessTestCase {
+            explicit_upload_name: Option<&'static str>,
+            repository: &'static str,
+            disable_subgroup_renaming: bool,
+            expected: Expected,
+        }
+
+        struct FailureTestCase {
+            explicit_upload_name: Option<&'static str>,
+            repository: &'static str,
+            disable_subgroup_renaming: bool,
+            error_msg: &'static str,
+        }
+
+        let success_cases: Vec<SuccessTestCase> = vec![
+            SuccessTestCase {
+                explicit_upload_name: Some("DeterminateSystems/flakehub-test"),
+                repository: "DeterminateSystems/flakehub",
+                disable_subgroup_renaming: false,
+                expected: Expected {
+                    upload_name: "DeterminateSystems/flakehub-test",
+                    project_owner: "DeterminateSystems",
+                    project_name: "flakehub",
+                },
+            },
+            SuccessTestCase {
+                explicit_upload_name: None,
+                repository: "DeterminateSystems/flakehub",
+                disable_subgroup_renaming: false,
+                expected: Expected {
+                    upload_name: "DeterminateSystems/flakehub",
+                    project_owner: "DeterminateSystems",
+                    project_name: "flakehub",
+                },
+            },
+            SuccessTestCase {
+                explicit_upload_name: Some("a/my-flake"),
+                disable_subgroup_renaming: false,
+                repository: "a/b/c",
+                expected: Expected {
+                    upload_name: "a/my-flake",
+                    project_owner: "a",
+                    project_name: "b-c",
+                },
+            },
+            SuccessTestCase {
+                explicit_upload_name: None,
+                repository: "a/b/c/d/e/f/g/h",
+                disable_subgroup_renaming: false,
+                expected: Expected {
+                    upload_name: "a/b/c/d/e/f/g/h",
+                    project_owner: "a",
+                    project_name: "b-c-d-e-f-g-h",
+                },
+            },
+            SuccessTestCase {
+                explicit_upload_name: None,
+                repository: "a/b/c/d/e/f/g/h/i/j/k/l",
+                disable_subgroup_renaming: false,
+                expected: Expected {
+                    upload_name: "a/b/c/d/e/f/g/h/i/j/k/l",
+                    project_owner: "a",
+                    project_name: "b-c-d-e-f-g-h-i-j-k-l",
+                },
+            },
+            SuccessTestCase {
+                explicit_upload_name: None,
+                repository: "DeterminateSystems/subgroup/flakehub",
+                disable_subgroup_renaming: false,
+                expected: Expected {
+                    upload_name: "DeterminateSystems/subgroup/flakehub",
+                    project_owner: "DeterminateSystems",
+                    project_name: "subgroup-flakehub",
+                },
+            },
+            SuccessTestCase {
+                explicit_upload_name: None,
+                repository: "DeterminateSystems/subgroup/subsubgroup/flakehub",
+                disable_subgroup_renaming: false,
+                expected: Expected {
+                    upload_name: "DeterminateSystems/subgroup/subsubgroup/flakehub",
+                    project_owner: "DeterminateSystems",
+                    project_name: "subgroup-subsubgroup-flakehub",
+                },
+            },
+        ];
+
+        for SuccessTestCase {
+            explicit_upload_name,
+            repository,
+            disable_subgroup_renaming,
+            expected:
+                Expected {
+                    upload_name: expected_upload_name,
+                    project_owner: expected_project_owner,
+                    project_name: expected_project_name,
+                },
+        } in success_cases
+        {
+            let (upload_name, owner, name) = determine_names(
+                &explicit_upload_name.map(String::from),
+                repository,
+                disable_subgroup_renaming,
+            )
+            .unwrap();
+            assert_eq!(
+                (String::from(expected_upload_name), String::from(expected_project_owner), String::from(expected_project_name)),
+                (upload_name.clone(), owner.clone(), name.clone()),
+                "expected {expected_project_owner}/{expected_project_name} from repository {repository} but got {owner}/{name} instead"
+            );
+        }
+
+        let failure_cases: Vec<FailureTestCase> = vec![
+            FailureTestCase {
+                explicit_upload_name: None,
+                // Two slashes in repository with subgroup renaming disabled
+                repository: "a/b/c",
+                disable_subgroup_renaming: true,
+                error_msg: "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push`",
+            },
+            FailureTestCase {
+                explicit_upload_name: None,
+                // No slashes in repository
+                repository: "a",
+                disable_subgroup_renaming: false,
+                error_msg: "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push` or `determinatesystems/subgroup-segments.../flakehub-push`)",
+            },
+            FailureTestCase {
+                // No slashes in explicit name
+                explicit_upload_name: Some("zero-slashes"),
+                repository: "doesnt-matter",
+                disable_subgroup_renaming: true,
+                error_msg: "The argument `--name` must be in the format of `owner-name/repo-name` and cannot contain whitespace or other special characters",
+            },
+            FailureTestCase {
+                // Two slashes in explicit name wit subgroup renaming disabled
+                explicit_upload_name: Some("a/b/c"),
+                repository: "a/b",
+                disable_subgroup_renaming: true,
+                error_msg: "The argument `--name` must be in the format of `owner-name/repo-name` and cannot contain whitespace or other special characters",
+            },
+            FailureTestCase {
+                // Five slashes in explicit name wit subgroup renaming disabled
+                explicit_upload_name: Some("a/b/c/d/e/f"),
+                repository: "doesnt-matter",
+                disable_subgroup_renaming: true,
+                error_msg: "The argument `--name` must be in the format of `owner-name/repo-name` and cannot contain whitespace or other special characters",
+            },
+        ];
+
+        for FailureTestCase {
+            explicit_upload_name,
+            repository,
+            disable_subgroup_renaming,
+            error_msg: expected_error_msg,
+        } in failure_cases
+        {
+            let error_msg = determine_names(
+                &explicit_upload_name.map(String::from),
+                repository,
+                disable_subgroup_renaming,
+            )
+            .err()
+            .unwrap()
+            .to_string();
+
+            assert_eq!(
+                error_msg,
+                String::from(expected_error_msg),
+                "expected {} and `{repository}` to produce error message `{expected_error_msg}` but produced message `{error_msg}` instead", if let Some(ref explicit_upload_name) = &explicit_upload_name { format!("explicit upload name `{}`", explicit_upload_name) } else { String::from("no explicit upload name") },
+            );
+        }
     }
 }
