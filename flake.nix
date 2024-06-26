@@ -54,7 +54,7 @@
         default = flakehub-push;
 
         flakehub-push = pkgs.craneLib.buildPackage
-          {
+          ({
             pname = "flakehub-push";
             version = "0.1.0";
             src = pkgs.craneLib.path ./.;
@@ -64,9 +64,9 @@
               darwin.apple_sdk.frameworks.SystemConfiguration
             ]);
           } // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
-          CARGO_BUILD_TARGET = "x86_64-unknown-linux-musl";
-          CARGO_BUILD_RUSTFLAGS = "-C target-feature=+crt-static";
-        };
+            CARGO_BUILD_TARGET = "x86_64-unknown-linux-musl";
+            CARGO_BUILD_RUSTFLAGS = "-C target-feature=+crt-static";
+          });
       });
 
       devShells = forAllSystems ({ system, pkgs, ... }: {
