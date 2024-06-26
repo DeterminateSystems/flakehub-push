@@ -4,6 +4,7 @@ use clap::Parser;
 use color_eyre::eyre::{eyre, Result};
 use error::Error;
 use http::StatusCode;
+use reqwest::Response;
 
 use crate::{
     flakehub_client::{FlakeHubClient, StageResult},
@@ -121,28 +122,16 @@ async fn execute() -> Result<std::process::ExitCode> {
                     return Err(Error::Unauthorized(message))?;
                 }
                 StatusCode::BAD_REQUEST => {
-                    let body = response.bytes().await?;
-                    let message = serde_json::from_slice::<String>(&body).ok();
-                    return Err(Error::BadRequest(if let Some(message) = message {
-                        message
-                    } else {
-                        String::from("no body")
-                    }))?;
+                    return Err(Error::BadRequest(handle_message(response).await))?;
                 }
                 _ => {
-                    let body = response.bytes().await?;
-                    let message = serde_json::from_slice::<String>(&body).ok();
                     return Err(eyre!(
                         "\
                         Status {} from metadata POST\n\
                         {}\
                         ",
                         response_status,
-                        if let Some(message) = message {
-                            message
-                        } else {
-                            String::from("no body")
-                        }
+                        handle_message(response).await,
                     ));
                 }
             }
@@ -162,6 +151,14 @@ async fn execute() -> Result<std::process::ExitCode> {
     );
 
     Ok(ExitCode::SUCCESS)
+}
+
+async fn handle_message(res: Response) -> String {
+    if let Ok(message) = res.text().await {
+        message
+    } else {
+        String::from("no body")
+    }
 }
 
 #[derive(Debug, Clone, Copy, clap::ValueEnum, serde::Serialize, serde::Deserialize)]
