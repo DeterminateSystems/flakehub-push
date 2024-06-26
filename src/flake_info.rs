@@ -249,6 +249,13 @@ impl FlakeMetadata {
             .prefix("flakehub_push_outputs")
             .tempdir()
             .wrap_err("Creating tempdir")?;
+        // NOTE(cole-h): Work around the fact that macOS's /tmp is a symlink to /private/tmp.
+        // Otherwise, Nix is unhappy:
+        // error:
+        //        … while fetching the input 'path:/tmp/nix-shell.q1H8OB/flakehub_push_outputsfG1YvC'
+        //
+        //        error: path '/tmp' is a symlink
+        let tempdir_path = tempdir.path().canonicalize()?;
 
         let flake_contents = include_str!("mixed-flake.nix")
             .replace(
@@ -264,14 +271,14 @@ impl FlakeMetadata {
                 },
             );
 
-        let mut flake = tokio::fs::File::create(tempdir.path().join("flake.nix")).await?;
+        let mut flake = tokio::fs::File::create(tempdir_path.join("flake.nix")).await?;
         flake.write_all(flake_contents.as_bytes()).await?;
 
         let mut cmd = tokio::process::Command::new("nix");
         cmd.arg("eval");
         cmd.arg("--json");
         cmd.arg("--no-write-lock-file");
-        cmd.arg(format!("{}#contents", tempdir.path().display()));
+        cmd.arg(format!("{}#contents", tempdir_path.display()));
         let output = cmd.output().await.wrap_err_with(|| {
             eyre!(
                 "Failed to get flake outputs from tarball {}",
