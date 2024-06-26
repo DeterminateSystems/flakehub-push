@@ -373,30 +373,6 @@ fn determine_names(
     repository: &str,
     subgroup_renaming_explicitly_disabled: bool,
 ) -> Result<(String, String, String)> {
-    // If a flake name is explicitly provided, validate that name, otherwise use the
-    // inferred repository name
-    let upload_name = if let Some(name) = explicitly_provided_name {
-        let num_slashes = name.matches('/').count();
-
-        if num_slashes == 0
-            || !name.is_ascii()
-            || name.contains(char::is_whitespace)
-            // Prohibit more than one slash only if subgroup renaming is disabled
-            || (subgroup_renaming_explicitly_disabled && num_slashes > 1)
-        {
-            let error_msg = if subgroup_renaming_explicitly_disabled {
-                "The argument `--name` must be in the format of `owner-name/repo-name` and cannot contain whitespace or other special characters"
-            } else {
-                "The argument `--name` must be in the format of `owner-name/subgroup/repo-name` and cannot contain whitespace or other special characters"
-            };
-            return Err(eyre!(error_msg));
-        } else {
-            name.to_string()
-        }
-    } else {
-        String::from(repository)
-    };
-
     let error_msg = if subgroup_renaming_explicitly_disabled {
         "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push`"
     } else {
@@ -426,6 +402,24 @@ fn determine_names(
             acc.push_str(&format!("-{segment}"));
             acc
         })
+    };
+
+    // If a flake name is explicitly provided, validate that name, otherwise use the
+    // inferred repository name
+    let upload_name = if let Some(name) = explicitly_provided_name {
+        let num_slashes = name.matches('/').count();
+
+        if num_slashes == 0
+            || !name.is_ascii()
+            || name.contains(char::is_whitespace)
+            || num_slashes > 1
+        {
+            return Err(eyre!("The argument `--name` must be in the format of `owner-name/flake-name` and cannot contain whitespace or other special characters"));
+        } else {
+            name.to_string()
+        }
+    } else {
+        format!("{project_owner}/{project_name}")
     };
 
     Ok((upload_name, project_owner, project_name))
@@ -458,6 +452,16 @@ mod tests {
         }
 
         let success_cases: Vec<SuccessTestCase> = vec![
+            SuccessTestCase {
+                explicit_upload_name: None,
+                repository: "DeterminateSystems/testing/flakehub-push-test-subrepo",
+                disable_subgroup_renaming: false,
+                expected: Expected {
+                    upload_name: "DeterminateSystems/testing-flakehub-push-test-subrepo",
+                    project_owner: "DeterminateSystems",
+                    project_name: "testing-flakehub-push-test-subrepo",
+                },
+            },
             SuccessTestCase {
                 explicit_upload_name: Some("DeterminateSystems/flakehub-test"),
                 repository: "DeterminateSystems/flakehub",
@@ -493,7 +497,7 @@ mod tests {
                 repository: "a/b/c/d/e/f/g/h",
                 disable_subgroup_renaming: false,
                 expected: Expected {
-                    upload_name: "a/b/c/d/e/f/g/h",
+                    upload_name: "a/b-c-d-e-f-g-h",
                     project_owner: "a",
                     project_name: "b-c-d-e-f-g-h",
                 },
@@ -503,7 +507,7 @@ mod tests {
                 repository: "a/b/c/d/e/f/g/h/i/j/k/l",
                 disable_subgroup_renaming: false,
                 expected: Expected {
-                    upload_name: "a/b/c/d/e/f/g/h/i/j/k/l",
+                    upload_name: "a/b-c-d-e-f-g-h-i-j-k-l",
                     project_owner: "a",
                     project_name: "b-c-d-e-f-g-h-i-j-k-l",
                 },
@@ -513,7 +517,7 @@ mod tests {
                 repository: "DeterminateSystems/subgroup/flakehub",
                 disable_subgroup_renaming: false,
                 expected: Expected {
-                    upload_name: "DeterminateSystems/subgroup/flakehub",
+                    upload_name: "DeterminateSystems/subgroup-flakehub",
                     project_owner: "DeterminateSystems",
                     project_name: "subgroup-flakehub",
                 },
@@ -523,7 +527,7 @@ mod tests {
                 repository: "DeterminateSystems/subgroup/subsubgroup/flakehub",
                 disable_subgroup_renaming: false,
                 expected: Expected {
-                    upload_name: "DeterminateSystems/subgroup/subsubgroup/flakehub",
+                    upload_name: "DeterminateSystems/subgroup-subsubgroup-flakehub",
                     project_owner: "DeterminateSystems",
                     project_name: "subgroup-subsubgroup-flakehub",
                 },
@@ -556,6 +560,7 @@ mod tests {
         }
 
         let failure_cases: Vec<FailureTestCase> = vec![
+
             FailureTestCase {
                 explicit_upload_name: None,
                 // Two slashes in repository with subgroup renaming disabled
@@ -563,6 +568,7 @@ mod tests {
                 disable_subgroup_renaming: true,
                 error_msg: "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push`",
             },
+
             FailureTestCase {
                 explicit_upload_name: None,
                 // No slashes in repository
@@ -575,21 +581,23 @@ mod tests {
                 explicit_upload_name: Some("zero-slashes"),
                 repository: "doesnt-matter",
                 disable_subgroup_renaming: true,
-                error_msg: "The argument `--name` must be in the format of `owner-name/repo-name` and cannot contain whitespace or other special characters",
+                error_msg: "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push`",
             },
             FailureTestCase {
-                // Two slashes in explicit name wit subgroup renaming disabled
+                // Two slashes in explicitly provided name
                 explicit_upload_name: Some("a/b/c"),
                 repository: "a/b",
                 disable_subgroup_renaming: true,
-                error_msg: "The argument `--name` must be in the format of `owner-name/repo-name` and cannot contain whitespace or other special characters",
+                error_msg: "The argument `--name` must be in the format of `owner-name/flake-name` and cannot contain whitespace or other special characters",
             },
+
             FailureTestCase {
                 // Five slashes in explicit name wit subgroup renaming disabled
                 explicit_upload_name: Some("a/b/c/d/e/f"),
                 repository: "doesnt-matter",
                 disable_subgroup_renaming: true,
-                error_msg: "The argument `--name` must be in the format of `owner-name/repo-name` and cannot contain whitespace or other special characters",
+                // The repository name is invalid so that error gets thrown first
+                error_msg: "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push`",
             },
         ];
 
