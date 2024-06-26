@@ -121,16 +121,19 @@ async fn execute() -> Result<std::process::ExitCode> {
                     return Err(Error::Unauthorized(message))?;
                 }
                 _ => {
-                    let body = response.bytes().await?;
-                    let message = serde_json::from_slice::<String>(&body)?;
-                    return Err(eyre!(
-                        "\
-                        Status {} from metadata POST\n\
-                        {}\
-                    ",
-                        response_status,
-                        message
-                    ));
+                    return if let Ok(body) = response.bytes().await {
+                        let message = serde_json::from_slice::<String>(&body)?;
+                        Err(eyre!(
+                            "\
+                            Status {} from metadata POST\n\
+                            {}\
+                        ",
+                            response_status,
+                            message
+                        ))
+                    } else {
+                        Err(eyre!("Status {} from metadata POST", response_status))
+                    }
                 }
             }
         }
