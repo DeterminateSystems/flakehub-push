@@ -122,9 +122,12 @@ async fn execute() -> Result<std::process::ExitCode> {
                 }
                 StatusCode::BAD_REQUEST => {
                     let body = response.bytes().await?;
-                    let message = serde_json::from_slice::<String>(&body)?;
-
-                    return Err(Error::BadRequest(message))?;
+                    let message = serde_json::from_slice::<String>(&body).ok();
+                    return Err(Error::BadRequest(if let Some(message) = message {
+                        message
+                    } else {
+                        String::from("no body")
+                    }))?;
                 }
                 _ => {
                     let body = response.bytes().await?;
