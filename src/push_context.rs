@@ -414,12 +414,7 @@ fn determine_names(
             || name.contains(char::is_whitespace)
             || num_slashes > 1
         {
-            let error_msg = if subgroup_renaming_explicitly_disabled {
-                "The argument `--name` must be in the format of `owner-name/repo-name` and cannot contain whitespace or other special characters"
-            } else {
-                "The argument `--name` must be in the format of `owner-name/subgroup/repo-name` and cannot contain whitespace or other special characters"
-            };
-            return Err(eyre!(error_msg));
+            return Err(eyre!("The argument `--name` must be in the format of `owner-name/flake-name` and cannot contain whitespace or other special characters"));
         } else {
             name.to_string()
         }
@@ -589,11 +584,11 @@ mod tests {
                 error_msg: "Could not determine project owner and name; pass `--repository` formatted like `determinatesystems/flakehub-push`",
             },
             FailureTestCase {
-                // Two slashes in explicit name wit subgroup renaming disabled
+                // Two slashes in explicitly provided name
                 explicit_upload_name: Some("a/b/c"),
                 repository: "a/b",
                 disable_subgroup_renaming: true,
-                error_msg: "The argument `--name` must be in the format of `owner-name/repo-name` and cannot contain whitespace or other special characters",
+                error_msg: "The argument `--name` must be in the format of `owner-name/flake-name` and cannot contain whitespace or other special characters",
             },
 
             FailureTestCase {
