@@ -120,20 +120,27 @@ async fn execute() -> Result<std::process::ExitCode> {
 
                     return Err(Error::Unauthorized(message))?;
                 }
+                StatusCode::BAD_REQUEST => {
+                    let body = response.bytes().await?;
+                    let message = serde_json::from_slice::<String>(&body)?;
+
+                    return Err(Error::BadRequest(message))?;
+                }
                 _ => {
-                    return if let Ok(body) = response.bytes().await {
-                        let message = serde_json::from_slice::<String>(&body)?;
-                        Err(eyre!(
-                            "\
-                            Status {} from metadata POST\n\
-                            {}\
+                    let body = response.bytes().await?;
+                    let message = serde_json::from_slice::<String>(&body).ok();
+                    return Err(eyre!(
+                        "\
+                        Status {} from metadata POST\n\
+                        {}\
                         ",
-                            response_status,
+                        response_status,
+                        if let Some(message) = message {
                             message
-                        ))
-                    } else {
-                        Err(eyre!("Status {} from metadata POST", response_status))
-                    }
+                        } else {
+                            String::from("no body")
+                        }
+                    ));
                 }
             }
         }

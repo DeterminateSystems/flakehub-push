@@ -8,12 +8,14 @@ pub(crate) enum Error {
         upload_name: String,
         release_version: String,
     },
+    #[error("Bad request: {0}")]
+    BadRequest(String),
 }
 
 impl Error {
     pub(crate) fn should_suggest_issue(&self) -> bool {
         match self {
-            Self::Unauthorized(_) | Self::Conflict { .. } => false,
+            Self::Unauthorized(_) | Self::Conflict { .. } | Self::BadRequest(_) => false,
         }
     }
 
@@ -26,6 +28,7 @@ impl Error {
                     println!("::error title=Unauthorized::{message}")
                 }
                 Error::Conflict { .. } => println!("::error title=Conflict::{self}"),
+                Error::BadRequest(_) => println!("::error title=BadRequest::{self}"),
             }
         }
     }
