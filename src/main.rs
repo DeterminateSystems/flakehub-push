@@ -116,13 +116,10 @@ async fn execute() -> Result<std::process::ExitCode> {
                     }
                 }
                 StatusCode::UNAUTHORIZED => {
-                    let body = response.bytes().await?;
-                    let message = serde_json::from_slice::<String>(&body)?;
-
-                    return Err(Error::Unauthorized(message))?;
+                    return Err(Error::Unauthorized(response_text(response).await))?;
                 }
                 StatusCode::BAD_REQUEST => {
-                    return Err(Error::BadRequest(handle_message(response).await))?;
+                    return Err(Error::BadRequest(response_text(response).await))?;
                 }
                 _ => {
                     return Err(eyre!(
@@ -131,7 +128,7 @@ async fn execute() -> Result<std::process::ExitCode> {
                         {}\
                         ",
                         response_status,
-                        handle_message(response).await,
+                        response_text(response).await,
                     ));
                 }
             }
@@ -153,7 +150,7 @@ async fn execute() -> Result<std::process::ExitCode> {
     Ok(ExitCode::SUCCESS)
 }
 
-async fn handle_message(res: Response) -> String {
+async fn response_text(res: Response) -> String {
     if let Ok(message) = res.text().await {
         message
     } else {
