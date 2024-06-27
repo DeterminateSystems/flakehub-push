@@ -1,3 +1,4 @@
 /dist
 /src
 pnpm-lock.yaml
+flake.lock
