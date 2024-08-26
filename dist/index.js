@@ -86331,6 +86331,10 @@ var external_node_os_ = __nccwpck_require__(612);
 var external_node_util_ = __nccwpck_require__(7261);
 // EXTERNAL MODULE: external "os"
 var external_os_ = __nccwpck_require__(2037);
+;// CONCATENATED MODULE: external "node:fs/promises"
+const promises_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs/promises");
+;// CONCATENATED MODULE: external "node:zlib"
+const external_node_zlib_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:zlib");
 ;// CONCATENATED MODULE: external "node:crypto"
 const external_node_crypto_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:crypto");
 ;// CONCATENATED MODULE: ./node_modules/.pnpm/@sindresorhus+is@7.0.0/node_modules/@sindresorhus/is/distribution/index.js
@@ -93408,20 +93412,16 @@ const got = source_create(defaults);
 
 
 ;// CONCATENATED MODULE: external "node:dns/promises"
-const promises_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:dns/promises");
+const external_node_dns_promises_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:dns/promises");
 // EXTERNAL MODULE: ./node_modules/.pnpm/@actions+cache@3.2.4/node_modules/@actions/cache/lib/cache.js
 var cache = __nccwpck_require__(6878);
 ;// CONCATENATED MODULE: external "node:child_process"
 const external_node_child_process_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:child_process");
-;// CONCATENATED MODULE: external "node:fs/promises"
-const external_node_fs_promises_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs/promises");
 ;// CONCATENATED MODULE: external "node:path"
 const external_node_path_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:path");
 ;// CONCATENATED MODULE: external "node:stream/promises"
 const external_node_stream_promises_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:stream/promises");
-;// CONCATENATED MODULE: external "node:zlib"
-const external_node_zlib_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:zlib");
-;// CONCATENATED MODULE: ./node_modules/.pnpm/detsys-ts@https+++codeload.github.com+DeterminateSystems+detsys-ts+tar.gz+d353465ae6a55761963_y6rfgokjlyt7q57y6eo7xlirki/node_modules/detsys-ts/dist/index.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/detsys-ts@https+++codeload.github.com+DeterminateSystems+detsys-ts+tar.gz+e8f6e8f54d85aa0fd3d_oqiyqj7g6nfmghi2ivmxj2sf4e/node_modules/detsys-ts/dist/index.js
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -93634,6 +93634,160 @@ async function getDetails() {
   };
 }
 
+// src/errors.ts
+function stringifyError(e) {
+  if (e instanceof Error) {
+    return e.message;
+  } else if (typeof e === "string") {
+    return e;
+  } else {
+    return JSON.stringify(e);
+  }
+}
+
+// src/backtrace.ts
+
+
+
+
+
+async function collectBacktraces(prefixes) {
+  if (isMacOS) {
+    return await collectBacktracesMacOS(prefixes);
+  }
+  if (isLinux) {
+    return await collectBacktracesSystemd(prefixes);
+  }
+  return /* @__PURE__ */ new Map();
+}
+async function collectBacktracesMacOS(prefixes) {
+  const backtraces = /* @__PURE__ */ new Map();
+  try {
+    const { stdout: logJson } = await exec.getExecOutput(
+      "log",
+      [
+        "show",
+        "--style",
+        "json",
+        "--last",
+        // Note we collect the last 1m only, because it should only take a few seconds to write the crash log.
+        // Therefore, any crashes before this 1m should be long done by now.
+        "1m",
+        "--no-info",
+        "--predicate",
+        "sender = 'ReportCrash'"
+      ],
+      {
+        silent: true
+      }
+    );
+    const sussyArray = JSON.parse(logJson);
+    if (!Array.isArray(sussyArray)) {
+      throw new Error(`Log json isn't an array: ${logJson}`);
+    }
+    if (sussyArray.length > 0) {
+      core.info(`Collecting crash data...`);
+      const delay = async (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      await delay(5e3);
+    }
+  } catch (e) {
+    core.debug(
+      "Failed to check logs for in-progress crash dumps; now proceeding with the assumption that all crash dumps completed."
+    );
+  }
+  const dirs = [
+    ["system", "/Library/Logs/DiagnosticReports/"],
+    ["user", `${process.env["HOME"]}/Library/Logs/DiagnosticReports/`]
+  ];
+  for (const [source, dir] of dirs) {
+    const fileNames = (await (0,promises_namespaceObject.readdir)(dir)).filter((fileName) => {
+      return prefixes.some((prefix) => fileName.startsWith(prefix));
+    });
+    const doGzip = (0,external_node_util_.promisify)(external_node_zlib_namespaceObject.gzip);
+    for (const fileName of fileNames) {
+      try {
+        const logText = await (0,promises_namespaceObject.readFile)(`${dir}/${fileName}`);
+        const buf = await doGzip(logText);
+        backtraces.set(
+          `backtrace_value_${source}_${fileName}`,
+          buf.toString("base64")
+        );
+      } catch (innerError) {
+        backtraces.set(
+          `backtrace_failure_${source}_${fileName}`,
+          stringifyError(innerError)
+        );
+      }
+    }
+  }
+  return backtraces;
+}
+async function collectBacktracesSystemd(prefixes) {
+  const backtraces = /* @__PURE__ */ new Map();
+  const coredumps = [];
+  try {
+    const { stdout: coredumpjson } = await exec.getExecOutput(
+      "coredumpctl",
+      ["--json=pretty", "list", "--since", "1 hour ago"],
+      {
+        silent: true
+      }
+    );
+    const sussyArray = JSON.parse(coredumpjson);
+    if (!Array.isArray(sussyArray)) {
+      throw new Error(`Coredump isn't an array: ${coredumpjson}`);
+    }
+    for (const sussyObject of sussyArray) {
+      const keys = Object.keys(sussyObject);
+      if (keys.includes("exe") && keys.includes("pid")) {
+        if (typeof sussyObject.exe == "string" && typeof sussyObject.pid == "number") {
+          const execParts = sussyObject.exe.split("/");
+          const binaryName = execParts[execParts.length - 1];
+          if (prefixes.some((prefix) => binaryName.startsWith(prefix))) {
+            coredumps.push({
+              exe: sussyObject.exe,
+              pid: sussyObject.pid
+            });
+          }
+        } else {
+          core.debug(
+            `Mysterious coredump entry missing exe string and/or pid number: ${JSON.stringify(sussyObject)}`
+          );
+        }
+      } else {
+        core.debug(
+          `Mysterious coredump entry missing exe value and/or pid value: ${JSON.stringify(sussyObject)}`
+        );
+      }
+    }
+  } catch (innerError) {
+    core.debug(
+      `Cannot collect backtraces: ${stringifyError(innerError)}`
+    );
+    return backtraces;
+  }
+  const doGzip = (0,external_node_util_.promisify)(external_node_zlib_namespaceObject.gzip);
+  for (const coredump of coredumps) {
+    try {
+      const { stdout: logText } = await exec.getExecOutput(
+        "coredumpctl",
+        ["info", `${coredump.pid}`],
+        {
+          silent: true
+        }
+      );
+      const buf = await doGzip(logText);
+      backtraces.set(`backtrace_value_${coredump.pid}`, buf.toString("base64"));
+    } catch (innerError) {
+      backtraces.set(
+        `backtrace_failure_${coredump.pid}`,
+        stringifyError(innerError)
+      );
+    }
+  }
+  return backtraces;
+}
+
 // src/correlation.ts
 
 
@@ -93723,17 +93877,6 @@ function hashEnvironmentVariables(prefix, variables) {
     hash.update("\0");
   }
   return `${prefix}-${hash.digest("hex")}`;
-}
-
-// src/errors.ts
-function stringifyError(e) {
-  if (e instanceof Error) {
-    return e.message;
-  } else if (typeof e === "string") {
-    return e;
-  } else {
-    return JSON.stringify(e);
-  }
 }
 
 // src/ids-host.ts
@@ -93895,7 +94038,7 @@ function recordToUrl(record) {
   }
 }
 async function discoverServiceRecords() {
-  return await discoverServicesStub((0,promises_namespaceObject.resolveSrv)(LOOKUP), 1e3);
+  return await discoverServicesStub((0,external_node_dns_promises_namespaceObject.resolveSrv)(LOOKUP), 1e3);
 }
 async function discoverServicesStub(lookup, timeout) {
   const defaultFallback = new Promise(
@@ -94135,6 +94278,7 @@ function noisilyGetInput(suffix, legacyPrefix) {
 
 
 
+var EVENT_BACKTRACES = "backtrace";
 var EVENT_EXCEPTION = "exception";
 var EVENT_ARTIFACT_CACHE_HIT = "artifact_cache_hit";
 var EVENT_ARTIFACT_CACHE_MISS = "artifact_cache_miss";
@@ -94306,7 +94450,7 @@ var DetSysAction = class {
    */
   async fetchExecutable() {
     const binaryPath = await this.fetchArtifact();
-    await (0,external_node_fs_promises_namespaceObject.chmod)(binaryPath, external_node_fs_promises_namespaceObject.constants.S_IXUSR | external_node_fs_promises_namespaceObject.constants.S_IXGRP);
+    await (0,promises_namespaceObject.chmod)(binaryPath, promises_namespaceObject.constants.S_IXUSR | promises_namespaceObject.constants.S_IXGRP);
     return binaryPath;
   }
   get isMain() {
@@ -94362,6 +94506,9 @@ var DetSysAction = class {
       }
       this.recordEvent(EVENT_EXCEPTION, Object.fromEntries(exceptionContext));
     } finally {
+      if (this.isPost) {
+        await this.collectBacktraces();
+      }
       await this.complete();
     }
   }
@@ -94577,7 +94724,7 @@ var DetSysAction = class {
     const startCwd = process.cwd();
     try {
       const tempDir = this.getTemporaryName();
-      await (0,external_node_fs_promises_namespaceObject.mkdir)(tempDir);
+      await (0,promises_namespaceObject.mkdir)(tempDir);
       process.chdir(tempDir);
       process.env.GITHUB_WORKSPACE_BACKUP = process.env.GITHUB_WORKSPACE;
       delete process.env.GITHUB_WORKSPACE;
@@ -94603,9 +94750,9 @@ var DetSysAction = class {
     const startCwd = process.cwd();
     try {
       const tempDir = this.getTemporaryName();
-      await (0,external_node_fs_promises_namespaceObject.mkdir)(tempDir);
+      await (0,promises_namespaceObject.mkdir)(tempDir);
       process.chdir(tempDir);
-      await (0,external_node_fs_promises_namespaceObject.copyFile)(toolPath, `${tempDir}/${this.actionOptions.name}`);
+      await (0,promises_namespaceObject.copyFile)(toolPath, `${tempDir}/${this.actionOptions.name}`);
       process.env.GITHUB_WORKSPACE_BACKUP = process.env.GITHUB_WORKSPACE;
       delete process.env.GITHUB_WORKSPACE;
       await cache.saveCache(
@@ -94621,13 +94768,28 @@ var DetSysAction = class {
       process.chdir(startCwd);
     }
   }
+  async collectBacktraces() {
+    try {
+      const backtraces = await collectBacktraces(
+        this.actionOptions.binaryNamePrefixes
+      );
+      core.debug(`Backtraces identified: ${backtraces.size}`);
+      if (backtraces.size > 0) {
+        this.recordEvent(EVENT_BACKTRACES, Object.fromEntries(backtraces));
+      }
+    } catch (innerError) {
+      core.debug(
+        `Error collecting backtraces: ${stringifyError2(innerError)}`
+      );
+    }
+  }
   async preflightRequireNix() {
     let nixLocation;
     const pathParts = (process.env["PATH"] || "").split(":");
     for (const location of pathParts) {
       const candidateNix = external_node_path_namespaceObject.join(location, "nix");
       try {
-        await external_node_fs_promises_namespaceObject.access(candidateNix, external_node_fs_promises_namespaceObject.constants.X_OK);
+        await promises_namespaceObject.access(candidateNix, promises_namespaceObject.constants.X_OK);
         core.debug(`Found Nix at ${candidateNix}`);
         nixLocation = candidateNix;
         break;
@@ -94747,7 +94909,12 @@ function makeOptionsConfident(actionOptions) {
     eventPrefix: actionOptions.eventPrefix || "action:",
     fetchStyle: actionOptions.fetchStyle,
     legacySourcePrefix: actionOptions.legacySourcePrefix,
-    requireNix: actionOptions.requireNix
+    requireNix: actionOptions.requireNix,
+    binaryNamePrefixes: actionOptions.binaryNamePrefixes ?? [
+      "nix",
+      "determinate-nixd",
+      actionOptions.name
+    ]
   };
   core.debug("idslib options:");
   core.debug(JSON.stringify(finalOpts, void 0, 2));
