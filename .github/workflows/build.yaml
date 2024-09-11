@@ -48,6 +48,9 @@ jobs:
   # For local development purposes
   build-artifacts-macos:
     runs-on: ${{ matrix.systems.runner }}
+    permissions:
+      id-token: "write"
+      contents: "read"
     strategy:
       matrix:
         systems:
