@@ -21,6 +21,8 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@main
 
       - uses: DeterminateSystems/magic-nix-cache-action@main
+        with:
+          use-gha-cache: false
 
       - name: "Nix formatting"
         run: git ls-files '*.nix' | nix develop --command xargs nixpkgs-fmt --check
@@ -64,6 +66,8 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@main
 
       - uses: DeterminateSystems/magic-nix-cache-action@main
+        with:
+          use-gha-cache: false
 
       - name: Build package
         run: "nix build .# -L --fallback"

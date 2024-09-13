@@ -31,6 +31,8 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@main
 
       - uses: DeterminateSystems/magic-nix-cache-action@main
+        with:
+          use-gha-cache: false
 
       - uses: actions/download-artifact@v4.1.7
         with:
