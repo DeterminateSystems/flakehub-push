@@ -32,7 +32,7 @@ jobs:
 
       - uses: DeterminateSystems/magic-nix-cache-action@main
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4.1.7
         with:
           name: flakehub-push-X64-Linux
           path: flakehub-push-X64-Linux
