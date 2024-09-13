@@ -16,6 +16,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
+        with:
+          use-gha-cache: false
       - name: Install pnpm dependencies
         run: nix develop --command pnpm install
       - name: Check formatting
