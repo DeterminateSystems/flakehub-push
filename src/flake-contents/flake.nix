@@ -26,7 +26,7 @@
               allSchemas = (flake.outputs.schemas or defaultSchemas) // schemaOverrides;
 
               # FIXME: make this configurable
-              defaultSchemas = (builtins.getFlake "https://api.flakehub.com/f/pinned/DeterminateSystems/flake-schemas/0.1.3/0190b841-54d3-7b7a-8550-24942bc38caf/source.tar.gz?narHash=sha256-c2AZH9cOnSpPXV8Lwy19/I8EgW7G%2BE%2BZh6YQBZZwzxI%3D").schemas;
+              defaultSchemas = (builtins.getFlake "https://api.flakehub.com/f/pinned/DeterminateSystems/flake-schemas/0.1.5/0190ef2f-61e0-794b-ba14-e82f225e55e6/source.tar.gz?narHash=sha256-G5CxYeJVm4lcEtaO87LKzOsVnWeTcHGKbKxNamNWgOw%3D").schemas;
 
               # Ignore legacyPackages for now, since it's very big and throws uncatchable errors.
               schemaOverrides.legacyPackages = {
@@ -90,7 +90,7 @@
                                                 value = attrs.derivation.${outputName}.outPath;
                                               }
                                             )
-                                            attrs.derivation.outputs
+                                            (attrs.derivation.outputs or [ "out" ])
                                         )
                                     else
                                       null;
