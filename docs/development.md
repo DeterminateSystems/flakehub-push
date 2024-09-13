@@ -13,3 +13,17 @@ cargo run -- \
   --jwt-issuer-uri http://localhost:8081/jwt/token \
   --host http://localhost:8080
 ```
+
+To test evaluation of a local flake without fetching anything from
+GitHub, and writing the tarball and metadata to a local directory
+instead of FlakeHub, do:
+
+```bash
+cargo run -- \
+  --visibility public \
+  --repository foo/bar \
+  --tag v0.0.1 \
+  --git-root /path/to/repo \
+  --directory /path/to/repo/flake \
+  --dest-dir /tmp/out
+```
