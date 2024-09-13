@@ -90,7 +90,7 @@
                                                 value = attrs.derivation.${outputName}.outPath;
                                               }
                                             )
-                                            (attrs.derivation.outputs or ["out"])
+                                            (attrs.derivation.outputs or [ "out" ])
                                         )
                                     else
                                       null;
