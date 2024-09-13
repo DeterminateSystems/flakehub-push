@@ -257,7 +257,7 @@ impl FlakeMetadata {
         //        error: path '/tmp' is a symlink
         let tempdir_path = tempdir.path().canonicalize()?;
 
-        let flake_contents = include_str!("mixed-flake.nix")
+        let flake_contents = include_str!("flake-contents/flake.nix")
             .replace(
                 FLAKE_URL_PLACEHOLDER_UUID,
                 &self.flake_locked_url.escape_default().to_string(),
