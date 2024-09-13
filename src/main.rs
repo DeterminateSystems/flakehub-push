@@ -65,13 +65,33 @@ async fn main() -> Result<std::process::ExitCode> {
 }
 
 async fn execute() -> Result<std::process::ExitCode> {
-    let ctx = {
-        let mut cli = cli::FlakeHubPushCli::parse();
-        cli.instrumentation.setup()?;
-        PushContext::from_cli_and_env(&mut cli).await?
-    };
+    let mut cli = cli::FlakeHubPushCli::parse();
+    cli.instrumentation.setup()?;
 
-    let fhclient = FlakeHubClient::new(ctx.flakehub_host, ctx.auth_token)?;
+    let ctx = { PushContext::from_cli_and_env(&mut cli).await? };
+
+    if let Some(dest_dir) = cli.dest_dir.0 {
+        std::fs::create_dir_all(&dest_dir)?;
+
+        {
+            let dest_file = dest_dir.join(ctx.release_version.clone() + ".tar.gz");
+            tracing::info!("Writing tarball to {}", dest_file.display());
+            std::fs::write(dest_file, ctx.tarball.bytes)?;
+        }
+
+        {
+            let dest_file = dest_dir.join(ctx.release_version + ".json");
+            tracing::info!("Writing release metadata to {}", dest_file.display());
+            std::fs::write(dest_file, serde_json::to_string(&ctx.metadata)?)?;
+        }
+
+        return Ok(ExitCode::SUCCESS);
+    }
+
+    let fhclient = FlakeHubClient::new(
+        ctx.flakehub_host,
+        ctx.auth_token.expect("did not get FlakeHub auth token"),
+    )?;
 
     // "upload.rs" - stage the release
     let stage_result = fhclient

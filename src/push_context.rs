@@ -22,12 +22,13 @@ use crate::{
 pub enum ExecutionEnvironment {
     GitHub,
     GitLab,
-    Local,
+    LocalGitHub,
+    Fake,
 }
 
 pub(crate) struct PushContext {
     pub(crate) flakehub_host: url::Url,
-    pub(crate) auth_token: String,
+    pub(crate) auth_token: Option<String>,
 
     // url components
     pub(crate) upload_name: String, // {org}/{project}
@@ -52,8 +53,10 @@ impl PushContext {
             ExecutionEnvironment::GitHub
         } else if std::env::var("GITLAB_CI").ok().is_some() {
             ExecutionEnvironment::GitLab
+        } else if cli.dest_dir.0.is_some() {
+            ExecutionEnvironment::Fake
         } else {
-            ExecutionEnvironment::Local
+            ExecutionEnvironment::LocalGitHub
         };
 
         match exec_env.clone() {
@@ -102,7 +105,7 @@ impl PushContext {
 
         // "cli" and "git_ctx" are the user/env supplied info, augmented with data we might have fetched from github/gitlab apis
 
-        let (token, git_ctx) = match (exec_env.clone(), &cli.jwt_issuer_uri) {
+        let (auth_token, git_ctx) = match (exec_env.clone(), &cli.jwt_issuer_uri) {
             (ExecutionEnvironment::GitHub, None) => {
                 // GITHUB CI
                 let github_token = cli
@@ -126,7 +129,7 @@ impl PushContext {
                     .await
                     .wrap_err("Getting upload bearer token from GitHub")?;
 
-                (token, git_ctx)
+                (Some(token), git_ctx)
             }
             (ExecutionEnvironment::GitLab, None) => {
                 // GITLAB CI
@@ -136,9 +139,9 @@ impl PushContext {
 
                 let git_ctx = GitContext::from_cli_and_gitlab(cli, local_rev_info).await?;
 
-                (token, git_ctx)
+                (Some(token), git_ctx)
             }
-            (ExecutionEnvironment::Local, Some(u)) => {
+            (ExecutionEnvironment::LocalGitHub, Some(u)) => {
                 // LOCAL, DEV (aka emulating GITHUB)
                 let github_token = cli
                     .github_token
@@ -165,7 +168,15 @@ impl PushContext {
                     github_graphql_data_result,
                 )
                 .await?;
-                (token, git_ctx)
+                (Some(token), git_ctx)
+            }
+            (ExecutionEnvironment::Fake, _) => {
+                let git_ctx = GitContext {
+                    spdx_expression: cli.spdx_expression.0.clone(),
+                    repo_topics: vec![],
+                    revision_info: local_rev_info,
+                };
+                (None, git_ctx)
             }
             (_, Some(_)) => {
                 // we're in (GitHub|GitLab) and jwt_issuer_uri was specified, invalid
@@ -353,7 +364,7 @@ impl PushContext {
 
         let ctx = Self {
             flakehub_host: cli.host.clone(),
-            auth_token: token,
+            auth_token,
 
             upload_name,
             release_version: rolling_minor_with_postfix_or_tag,

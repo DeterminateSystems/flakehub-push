@@ -118,6 +118,10 @@ pub(crate) struct FlakeHubPushCli {
         default_value_t = false
     )]
     pub(crate) disable_rename_subgroups: bool,
+
+    /// Write the tarball to a directory instead of pushing it to FlakeHub.
+    #[clap(long, env = "FLAKEHUB_DEST_DIR", value_parser = PathBufToNoneParser, default_value = "")]
+    pub(crate) dest_dir: OptionPathBuf,
 }
 
 #[derive(Clone, Debug)]
