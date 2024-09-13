@@ -337,8 +337,6 @@ impl FlakeHubPushCli {
             ExecutionEnvironment::GitHub
         } else if std::env::var("GITLAB_CI").ok().is_some() {
             ExecutionEnvironment::GitLab
-        } else if cli.dest_dir.0.is_some() {
-            ExecutionEnvironment::Fake
         } else {
             ExecutionEnvironment::LocalGitHub
         }

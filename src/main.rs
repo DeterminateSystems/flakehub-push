@@ -68,30 +68,44 @@ async fn execute() -> Result<std::process::ExitCode> {
     let mut cli = cli::FlakeHubPushCli::parse();
     cli.instrumentation.setup()?;
 
-    let ctx = { PushContext::from_cli_and_env(&mut cli).await? };
+    // NOTE(cole-h): If --dest-dir is passed, we're intentionally avoiding doing any actual
+    // networking (i.e. for FlakeHub and GitHub)
+    if let Some(dest_dir) = &cli.dest_dir.0 {
+        let local_git_root = cli.resolve_local_git_root()?;
+        let local_rev_info = revision_info::RevisionInfo::from_git_root(&local_git_root)?;
+        let git_ctx = git_context::GitContext {
+            spdx_expression: cli.spdx_expression.0.clone(),
+            repo_topics: vec![],
+            revision_info: local_rev_info,
+        };
 
-    if let Some(dest_dir) = cli.dest_dir.0 {
-        std::fs::create_dir_all(&dest_dir)?;
+        let release_version = cli.release_version(&git_ctx)?;
+        let release_tarball_name = format!("{release_version}.tar.gz");
+        let release_json_name = format!("{release_version}.json");
+
+        let (release_metadata, tarball) =
+            release_metadata::ReleaseMetadata::new(&cli, &git_ctx, None).await?;
+
+        std::fs::create_dir_all(dest_dir)?;
 
         {
-            let dest_file = dest_dir.join(ctx.release_version.clone() + ".tar.gz");
+            let dest_file = dest_dir.join(release_tarball_name);
             tracing::info!("Writing tarball to {}", dest_file.display());
-            std::fs::write(dest_file, ctx.tarball.bytes)?;
+            std::fs::write(dest_file, tarball.bytes)?;
         }
 
         {
-            let dest_file = dest_dir.join(ctx.release_version + ".json");
+            let dest_file = dest_dir.join(release_json_name);
             tracing::info!("Writing release metadata to {}", dest_file.display());
-            std::fs::write(dest_file, serde_json::to_string(&ctx.metadata)?)?;
+            std::fs::write(dest_file, serde_json::to_string(&release_metadata)?)?;
         }
 
         return Ok(ExitCode::SUCCESS);
     }
 
-    let fhclient = FlakeHubClient::new(
-        ctx.flakehub_host,
-        ctx.auth_token.expect("did not get FlakeHub auth token"),
-    )?;
+    let ctx = PushContext::from_cli_and_env(&mut cli).await?;
+
+    let fhclient = FlakeHubClient::new(ctx.flakehub_host, ctx.auth_token)?;
 
     // "upload.rs" - stage the release
     let stage_result = fhclient
