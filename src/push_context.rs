@@ -11,12 +11,11 @@ pub enum ExecutionEnvironment {
     GitHub,
     GitLab,
     LocalGitHub,
-    Fake,
 }
 
 pub(crate) struct PushContext {
     pub(crate) flakehub_host: url::Url,
-    pub(crate) auth_token: Option<String>,
+    pub(crate) auth_token: String,
 
     // url components
     pub(crate) upload_name: String, // {org}/{project}
@@ -93,7 +92,7 @@ impl PushContext {
                     .await
                     .wrap_err("Getting upload bearer token from GitHub")?;
 
-                (Some(token), git_ctx)
+                (token, git_ctx)
             }
             (ExecutionEnvironment::GitLab, None) => {
                 // GITLAB CI
@@ -103,7 +102,7 @@ impl PushContext {
 
                 let git_ctx = GitContext::from_cli_and_gitlab(cli, local_rev_info).await?;
 
-                (Some(token), git_ctx)
+                (token, git_ctx)
             }
             (ExecutionEnvironment::LocalGitHub, Some(u)) => {
                 // LOCAL, DEV (aka emulating GITHUB)
@@ -132,15 +131,7 @@ impl PushContext {
                     github_graphql_data_result,
                 )
                 .await?;
-                (Some(token), git_ctx)
-            }
-            (ExecutionEnvironment::Fake, _) => {
-                let git_ctx = GitContext {
-                    spdx_expression: cli.spdx_expression.0.clone(),
-                    repo_topics: vec![],
-                    revision_info: local_rev_info,
-                };
-                (None, git_ctx)
+                (token, git_ctx)
             }
             (_, Some(_)) => {
                 // we're in (GitHub|GitLab) and jwt_issuer_uri was specified, invalid
