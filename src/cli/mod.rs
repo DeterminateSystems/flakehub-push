@@ -1,6 +1,13 @@
 mod instrumentation;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::str::FromStr as _;
+
+use color_eyre::eyre::{eyre, Context as _, Result};
+
+use crate::git_context::GitContext;
+use crate::push_context::ExecutionEnvironment;
+use crate::{Visibility, DEFAULT_ROLLING_PREFIX};
 
 #[derive(Debug, clap::Parser)]
 #[clap(version)]
@@ -323,5 +330,99 @@ impl FlakeHubPushCli {
                 self.tag.0 = Some(env_val);
             }
         }
+    }
+
+    pub(crate) fn execution_environment(&self) -> ExecutionEnvironment {
+        if std::env::var("GITHUB_ACTION").ok().is_some() {
+            ExecutionEnvironment::GitHub
+        } else if std::env::var("GITLAB_CI").ok().is_some() {
+            ExecutionEnvironment::GitLab
+        } else if cli.dest_dir.0.is_some() {
+            ExecutionEnvironment::Fake
+        } else {
+            ExecutionEnvironment::LocalGitHub
+        }
+    }
+
+    pub(crate) fn visibility(&self) -> Result<Visibility> {
+        match (self.visibility_alt, self.visibility) {
+            (Some(v), _) => Ok(v),
+            (None, Some(v)) => Ok(v),
+            (None, None) =>  Err(color_eyre::eyre::eyre!(
+                "Could not determine the flake's desired visibility. Use `--visibility` to set this to one of the following: public, unlisted, private.",
+            )),
+        }
+    }
+
+    pub(crate) fn resolve_local_git_root(&self) -> Result<PathBuf> {
+        let maybe_git_root = match &self.git_root.0 {
+            Some(gr) => Ok(gr.to_owned()),
+            None => std::env::current_dir().map(PathBuf::from),
+        };
+
+        let local_git_root = maybe_git_root.wrap_err("Could not determine current `git_root`. Pass `--git-root` or set `FLAKEHUB_PUSH_GIT_ROOT`, or run `flakehub-push` with the git root as the current working directory")?;
+        let local_git_root = local_git_root
+            .canonicalize()
+            .wrap_err("Failed to canonicalize `--git-root` argument")?;
+
+        Ok(local_git_root)
+    }
+
+    pub(crate) fn subdir_from_git_root(&self, local_git_root: &Path) -> Result<PathBuf> {
+        let subdir =
+            if let Some(directory) = &self.directory.0 {
+                let absolute_directory = if directory.is_absolute() {
+                    directory.clone()
+                } else {
+                    local_git_root.join(directory)
+                };
+                let canonical_directory = absolute_directory
+                    .canonicalize()
+                    .wrap_err("Failed to canonicalize `--directory` argument")?;
+
+                PathBuf::from(canonical_directory.strip_prefix(local_git_root).wrap_err(
+                    "Specified `--directory` was not a directory inside the `--git-root`",
+                )?)
+            } else {
+                PathBuf::new()
+            };
+
+        Ok(subdir)
+    }
+
+    pub(crate) fn release_version(&self, git_ctx: &GitContext) -> Result<String> {
+        let rolling_prefix_or_tag = match (self.rolling_minor.0.as_ref(), &self.tag.0) {
+            (Some(_), _) if !self.rolling => {
+                return Err(eyre!(
+                    "You must enable `rolling` to upload a release with a specific `rolling-minor`."
+                ));
+            }
+            (Some(minor), _) => format!("0.{minor}"),
+            (None, _) if self.rolling => DEFAULT_ROLLING_PREFIX.to_string(),
+            (None, Some(tag)) => {
+                let version_only = tag.strip_prefix('v').unwrap_or(tag);
+                // Ensure the version respects semver
+                semver::Version::from_str(version_only).wrap_err_with(|| eyre!("Failed to parse version `{tag}` as semver, see https://semver.org/ for specifications"))?;
+                tag.to_string()
+            }
+            (None, None) => {
+                return Err(eyre!("Could not determine tag or rolling minor version, `--tag`, `GITHUB_REF_NAME`, or `--rolling-minor` must be set"));
+            }
+        };
+
+        let Some(commit_count) = git_ctx.revision_info.commit_count else {
+            return Err(eyre!("Could not determine commit count, this is normally determined via the `--git-root` argument or via the GitHub API"));
+        };
+
+        let rolling_minor_with_postfix_or_tag = if self.rolling_minor.0.is_some() || self.rolling {
+            format!(
+                "{rolling_prefix_or_tag}.{}+rev-{}",
+                commit_count, git_ctx.revision_info.revision
+            )
+        } else {
+            rolling_prefix_or_tag.to_string() // This will always be the tag since `self.rolling_prefix` was empty.
+        };
+
+        Ok(rolling_minor_with_postfix_or_tag)
     }
 }
