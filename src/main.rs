@@ -182,13 +182,27 @@ async fn execute() -> Result<std::process::ExitCode> {
         ctx.release_version
     );
 
-    if let Err(e) = github_actions::set_output(
-        "flakeref",
-        &format!("{}/{}", ctx.upload_name, ctx.release_version),
-    )
-    .await
-    {
-        tracing::warn!("Failed to set the `flakeref` output: {}", e);
+    let outputs = [
+        ("flake_name", &ctx.upload_name),
+        ("flake_version", &ctx.release_version),
+        (
+            "flakeref_descriptive",
+            &format!("{}/{}", ctx.upload_name, ctx.release_version),
+        ),
+        (
+            "flakeref_exact",
+            &format!("{}/={}", ctx.upload_name, ctx.release_version),
+        ),
+    ];
+    for (output_name, value) in outputs.into_iter() {
+        if let Err(e) = github_actions::set_output(output_name, value).await {
+            tracing::warn!(
+                "Failed to set the `{}` output to {}: {}",
+                output_name,
+                value,
+                e
+            );
+        }
     }
 
     Ok(ExitCode::SUCCESS)
