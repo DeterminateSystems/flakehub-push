@@ -14,6 +14,13 @@ There are two ways to get started configuring this Action:
 
 Although the `flakehub-push` Action requires little configuration, you may benefit from assembling it with our friendly UI at [flakehub.com/new][wizard].
 
+## Integration
+
+This action sets the `flakeref` output to the exact name and version that was published.
+The flake reference can be used in subsequent steps or workflows as part of a deployment process.
+
+## More Information
+
 ### Manual configuration
 
 The example workflow configuration below pushes new tags matching the conventional format&mdash;such as `v1.0.0` or `v0.1.0-rc4`&mdash;to [Flakehub]:

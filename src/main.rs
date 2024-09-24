@@ -17,6 +17,7 @@ mod flakehub_auth_fake;
 mod flakehub_client;
 mod git_context;
 mod github;
+mod github_actions;
 mod gitlab;
 mod push_context;
 mod release_metadata;
@@ -180,6 +181,15 @@ async fn execute() -> Result<std::process::ExitCode> {
         ctx.upload_name,
         ctx.release_version
     );
+
+    if let Err(e) = github_actions::set_output(
+        "flakeref",
+        &format!("{}/{}", ctx.upload_name, ctx.release_version),
+    )
+    .await
+    {
+        tracing::warn!("Failed to set the `flakeref` output: {}", e);
+    }
 
     Ok(ExitCode::SUCCESS)
 }
