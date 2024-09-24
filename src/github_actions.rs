@@ -21,7 +21,6 @@ pub(crate) enum Error {
 pub(crate) async fn set_output<'a>(name: &'a str, value: &'a str) -> Result<(), Error> {
     let output_path = std::env::var_os("GITHUB_OUTPUT").ok_or(Error::GithubOutputUnset)?;
     let mut fh = tokio::fs::OpenOptions::new()
-        .create(true)
         .read(true)
         .write(true)
         .truncate(false)
