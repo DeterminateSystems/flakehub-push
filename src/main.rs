@@ -140,6 +140,9 @@ async fn execute() -> Result<std::process::ExitCode> {
                         upload_name = ctx.upload_name,
                         release_version = &ctx.release_version,
                     );
+
+                    set_release_outputs(&ctx.upload_name, &ctx.release_version).await;
+
                     if ctx.error_if_release_conflicts {
                         return Err(Error::Conflict {
                             upload_name: ctx.upload_name.to_string(),
@@ -182,28 +185,7 @@ async fn execute() -> Result<std::process::ExitCode> {
         ctx.release_version
     );
 
-    let outputs = [
-        ("flake_name", &ctx.upload_name),
-        ("flake_version", &ctx.release_version),
-        (
-            "flakeref_descriptive",
-            &format!("{}/{}", ctx.upload_name, ctx.release_version),
-        ),
-        (
-            "flakeref_exact",
-            &format!("{}/={}", ctx.upload_name, ctx.release_version),
-        ),
-    ];
-    for (output_name, value) in outputs.into_iter() {
-        if let Err(e) = github_actions::set_output(output_name, value).await {
-            tracing::warn!(
-                "Failed to set the `{}` output to {}: {}",
-                output_name,
-                value,
-                e
-            );
-        }
-    }
+    set_release_outputs(&ctx.upload_name, &ctx.release_version).await;
 
     Ok(ExitCode::SUCCESS)
 }
@@ -233,6 +215,31 @@ impl Display for Visibility {
             Visibility::Public => f.write_str("public"),
             Visibility::Hidden | Visibility::Unlisted => f.write_str("unlisted"),
             Visibility::Private => f.write_str("private"),
+        }
+    }
+}
+
+async fn set_release_outputs(upload_name: &str, release_version: &str) {
+    let outputs = [
+        ("flake_name", upload_name),
+        ("flake_version", release_version),
+        (
+            "flakeref_descriptive",
+            &format!("{}/{}", upload_name, release_version),
+        ),
+        (
+            "flakeref_exact",
+            &format!("{}/={}", upload_name, release_version),
+        ),
+    ];
+    for (output_name, value) in outputs.into_iter() {
+        if let Err(e) = github_actions::set_output(output_name, value).await {
+            tracing::warn!(
+                "Failed to set the `{}` output to {}: {}",
+                output_name,
+                value,
+                e
+            );
         }
     }
 }
