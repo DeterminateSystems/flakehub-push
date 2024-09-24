@@ -49,5 +49,7 @@ fn escape_key_value<'a>(key: &'a str, value: &'a str) -> Result<String, Error> {
         return Err(Error::ValueContainsDelimiter);
     }
 
-    Ok(format!("{key}<<{delimiter}{eol}{value}{eol}{delimiter}{eol}"))
+    Ok(format!(
+        "{key}<<{delimiter}{eol}{value}{eol}{delimiter}{eol}"
+    ))
 }
