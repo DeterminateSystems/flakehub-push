@@ -16,12 +16,14 @@ Although the `flakehub-push` Action requires little configuration, you may benef
 
 ## Integration
 
-This action sets outputs for integrating into CD pipelines:
+This action sets outputs for integrating into continuous delivery pipelines:
 
-- `flake_name` Name of the flake. Example: `DeterminateSystems/flakehub-push`
-- `flake_version` Name of the flake. Example: `0.1.99+rev-2075013a3f3544d45a96f4b35df4ed03cd53779c`
-- `flakeref_descriptive` A loose reference to this release. Depending on this reference will require at least this version, and will also resolve to newer releases. This output is not sufficient for deployment pipelines, use `flake_exact` instead. Example: `DeterminateSystems/flakehub-push/0.1.99+rev-2075013a3f3544d45a96f4b35df4ed03cd53779c`
-- `flakeref_exact` A precise reference that always resolves to this to this exact release. Example: `DeterminateSystems/flakehub-push/=0.1.99+rev-2075013a3f3544d45a96f4b35df4ed03cd53779c`
+| Output              | Description                                                                                                                                                                                                                    | Example                                                                                 |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| `flake_name`        | Name of the flake.                                                                                                                                                                                                             | `DeterminateSystems/flakehub-push`                                                      |
+| `flake_version`     | Version of the published flake.                                                                                                                                                                                                | `0.1.99+rev-2075013a3f3544d45a96f4b35df4ed03cd53779c`                                   |
+| `flakeref_exact`    | A precise reference that always resolves to this to this exact release.                                                                                                                                                        | `DeterminateSystems/flakehub-push/=0.1.99+rev-2075013a3f3544d45a96f4b35df4ed03cd53779c` |
+| `flakeref_at_least` | A loose reference to this release. Depending on this reference will require at least this version, and will also resolve to newer releases. This output is not sufficient for deployment pipelines, use `flake_exact` instead. | `DeterminateSystems/flakehub-push/0.1.99+rev-2075013a3f3544d45a96f4b35df4ed03cd53779c`  |
 
 ## More Information
 

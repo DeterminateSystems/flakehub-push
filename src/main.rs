@@ -224,7 +224,7 @@ async fn set_release_outputs(upload_name: &str, release_version: &str) {
         ("flake_name", upload_name),
         ("flake_version", release_version),
         (
-            "flakeref_descriptive",
+            "flakeref_at_least",
             &format!("{}/{}", upload_name, release_version),
         ),
         (
