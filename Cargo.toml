@@ -28,7 +28,7 @@ tracing-error = { version = "0.2.0", default-features = false, features = ["trac
 tracing-subscriber = { version = "0.3.15", default-features = false, features = [ "std", "registry", "fmt", "json", "ansi", "env-filter" ] }
 github-actions-oidc-claims = "0.3.0"
 spdx = "0.10.2"
-uuid = { version = "1.4.0", features = ["serde", "v7", "rand", "std"] }
+uuid = { version = "1.4.0", features = ["serde", "v4", "v7", "rand", "std"] }
 semver = { version = "1.0.18", features = ["serde"] }
 thiserror = "1.0.56"
 url = { version = "2.5.0", features = ["serde"] }
