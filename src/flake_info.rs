@@ -19,6 +19,7 @@ pub struct FlakeMetadata {
     pub(crate) source_dir: std::path::PathBuf,
     pub(crate) flake_locked_url: String,
     pub(crate) metadata_json: serde_json::Value,
+    pub(crate) impure: bool,
     my_flake_is_too_big: bool,
 }
 
@@ -26,21 +27,29 @@ pub struct FlakeMetadata {
 pub struct FlakeOutputs(pub serde_json::Value);
 
 impl FlakeMetadata {
-    pub async fn from_dir(directory: &Path, my_flake_is_too_big: bool) -> Result<Self> {
-        let output = tokio::process::Command::new("nix")
-            .arg("flake")
-            .arg("metadata")
-            .arg("--json")
-            .arg("--no-write-lock-file")
-            .arg(directory)
-            .output()
-            .await
-            .wrap_err_with(|| {
-                eyre!(
-                    "Failed to execute `nix flake metadata --json {}`",
-                    directory.display()
-                )
-            })?;
+    pub async fn from_dir(
+        directory: &Path,
+        my_flake_is_too_big: bool,
+        impure: bool,
+    ) -> Result<Self> {
+        let mut command = tokio::process::Command::new("nix");
+        command.arg("flake");
+        command.arg("metadata");
+        command.arg("--json");
+        command.arg("--no-write-lock-file");
+
+        if impure {
+            command.arg("--impure");
+        }
+
+        command.arg(directory);
+
+        let output = command.output().await.wrap_err_with(|| {
+            eyre!(
+                "Failed to execute `nix flake metadata --json {}`",
+                directory.display()
+            )
+        })?;
 
         let metadata_json: serde_json::Value = serde_json::from_slice(&output.stdout)
             .wrap_err_with(|| {
@@ -79,6 +88,7 @@ impl FlakeMetadata {
             flake_locked_url: flake_locked_url.to_string(),
             metadata_json,
             my_flake_is_too_big,
+            impure,
         })
     }
 
@@ -91,6 +101,10 @@ impl FlakeMetadata {
 
         if !self.my_flake_is_too_big {
             command.arg("--all-systems");
+        }
+
+        if self.impure {
+            command.arg("--impure");
         }
 
         command.arg("--json");
@@ -135,20 +149,24 @@ impl FlakeMetadata {
     /// this does not ensure anything about the recentness of the locked revs.
     pub async fn check_lock_if_exists(&self) -> Result<()> {
         if self.source_dir.join("flake.lock").exists() {
-            let output = tokio::process::Command::new("nix")
-                .arg("flake")
-                .arg("metadata")
-                .arg("--json")
-                .arg("--no-update-lock-file")
-                .arg(&self.source_dir)
-                .output()
-                .await
-                .wrap_err_with(|| {
-                    eyre!(
-                        "Failed to execute `nix flake metadata --json --no-update-lock-file {}`",
-                        self.source_dir.display()
-                    )
-                })?;
+            let mut command = tokio::process::Command::new("nix");
+            command.arg("flake");
+            command.arg("metadata");
+            command.arg("--json");
+            command.arg("--no-update-lock-file");
+
+            if self.impure {
+                command.arg("--impure");
+            }
+
+            command.arg(&self.source_dir);
+
+            let output = command.output().await.wrap_err_with(|| {
+                eyre!(
+                    "Failed to execute `nix flake metadata --json --no-update-lock-file {}`",
+                    self.source_dir.display()
+                )
+            })?;
 
             if !output.status.success() {
                 let command = format!(
@@ -278,6 +296,11 @@ impl FlakeMetadata {
         cmd.arg("eval");
         cmd.arg("--json");
         cmd.arg("--no-write-lock-file");
+
+        if self.impure {
+            cmd.arg("--impure");
+        }
+
         cmd.arg(format!("{}#contents", tempdir_path.display()));
         let output = cmd.output().await.wrap_err_with(|| {
             eyre!(
