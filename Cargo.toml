@@ -33,7 +33,7 @@ semver = { version = "1.0.18", features = ["serde"] }
 thiserror = "1.0.56"
 url = { version = "2.5.0", features = ["serde"] }
 http = "1.1.0"
-gitlab = "0.1610.0"
+gitlab = "0.1706.0"
 
 [profile.release]
 strip = true  # Automatically strip symbols from the binary.
