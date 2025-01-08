@@ -1,7 +1,6 @@
-use std::{
-    io::Write,
-    path::{Path, PathBuf},
-};
+use std::ffi::{OsStr, OsString};
+use std::io::Write;
+use std::path::{Path, PathBuf};
 
 use color_eyre::eyre::{eyre, Result, WrapErr};
 use serde::Deserialize;
@@ -14,9 +13,79 @@ use crate::flakehub_client::Tarball;
 const FLAKE_URL_PLACEHOLDER_UUID: &str = "c9026fc0-ced9-48e0-aa3c-fc86c4c86df1";
 const README_FILENAME_LOWERCASE: &str = "readme.md";
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) enum SubmoduleParameter {
+    Include,
+    Exclude,
+}
+
+#[derive(Debug, Clone)]
+struct LocalFlakeRef {
+    source_dir: std::path::PathBuf,
+
+    parent_dir: std::path::PathBuf,
+    directory_name: OsString,
+
+    submodules: SubmoduleParameter,
+}
+
+impl LocalFlakeRef {
+    pub fn try_new(source_dir: &std::path::Path, submodules: SubmoduleParameter) -> Result<Self> {
+        let parent_dir = source_dir
+            .parent()
+            .ok_or_else(|| eyre!("Getting parent directory"))?;
+
+        let directory_name = source_dir
+            .file_name()
+            .ok_or_else(|| eyre!("No file name of directory"))?;
+
+        Ok(Self {
+            source_dir: source_dir.to_path_buf(),
+            parent_dir: parent_dir.to_path_buf(),
+            directory_name: directory_name.into(),
+            submodules,
+        })
+    }
+
+    pub fn directory(&self) -> &Path {
+        &self.source_dir
+    }
+
+    pub fn directory_name(&self) -> &OsStr {
+        &self.directory_name
+    }
+
+    pub fn parent(&self) -> &Path {
+        &self.parent_dir
+    }
+
+    /// Dirty: actually clones
+    pub fn as_os_string(&self) -> OsString {
+        let x = self.clone();
+        x.into_os_string()
+    }
+
+    pub fn into_os_string(self) -> OsString {
+        let mut flakeref = self.source_dir.into_os_string();
+
+        if self.submodules == SubmoduleParameter::Include {
+            flakeref.push("?submodules=1");
+        }
+
+        flakeref
+    }
+
+    pub fn display(&self) -> String {
+        let x = self.clone();
+        let y = x.into_os_string();
+        let z = y.to_string_lossy();
+        z.into_owned()
+    }
+}
+
 #[derive(Debug)]
 pub struct FlakeMetadata {
-    pub(crate) source_dir: std::path::PathBuf,
+    local_flake_ref: LocalFlakeRef,
     pub(crate) flake_locked_url: String,
     pub(crate) metadata_json: serde_json::Value,
     my_flake_is_too_big: bool,
@@ -26,19 +95,25 @@ pub struct FlakeMetadata {
 pub struct FlakeOutputs(pub serde_json::Value);
 
 impl FlakeMetadata {
-    pub async fn from_dir(directory: &Path, my_flake_is_too_big: bool) -> Result<Self> {
+    pub async fn from_dir(
+        source_dir: &Path,
+        submodules: SubmoduleParameter,
+        my_flake_is_too_big: bool,
+    ) -> Result<Self> {
+        let local_flake_ref = LocalFlakeRef::try_new(source_dir, submodules)?;
+
         let output = tokio::process::Command::new("nix")
             .arg("flake")
             .arg("metadata")
             .arg("--json")
             .arg("--no-write-lock-file")
-            .arg(directory)
+            .arg(local_flake_ref.as_os_string())
             .output()
             .await
             .wrap_err_with(|| {
                 eyre!(
                     "Failed to execute `nix flake metadata --json {}`",
-                    directory.display()
+                    local_flake_ref.display()
                 )
             })?;
 
@@ -46,7 +121,7 @@ impl FlakeMetadata {
             .wrap_err_with(|| {
                 eyre!(
                     "Parsing `nix flake metadata --json {}` as JSON",
-                    directory.display()
+                    local_flake_ref.display()
                 )
             })?;
 
@@ -75,7 +150,7 @@ impl FlakeMetadata {
         };
 
         Ok(FlakeMetadata {
-            source_dir: source,
+            local_flake_ref: LocalFlakeRef::try_new(&source, submodules)?,
             flake_locked_url: flake_locked_url.to_string(),
             metadata_json,
             my_flake_is_too_big,
@@ -95,19 +170,19 @@ impl FlakeMetadata {
 
         command.arg("--json");
         command.arg("--no-write-lock-file");
-        command.arg(&self.source_dir);
+        command.arg(&self.local_flake_ref.as_os_string());
 
         let output = command.output().await.wrap_err_with(|| {
             eyre!(
                 "Failed to execute `nix flake show --all-systems --json --no-write-lock-file {}`",
-                self.source_dir.display()
+                self.local_flake_ref.display()
             )
         })?;
 
         if !output.status.success() {
             let command = format!(
                 "nix flake show --all-systems --json --no-write-lock-file {}",
-                self.source_dir.display(),
+                self.local_flake_ref.display(),
             );
             let msg = format!(
                 "\
@@ -134,26 +209,26 @@ impl FlakeMetadata {
     /// and committed/pushed that without the corresponding update to the flake.lock. Importantly,
     /// this does not ensure anything about the recentness of the locked revs.
     pub async fn check_lock_if_exists(&self) -> Result<()> {
-        if self.source_dir.join("flake.lock").exists() {
+        if self.local_flake_ref.directory().join("flake.lock").exists() {
             let output = tokio::process::Command::new("nix")
                 .arg("flake")
                 .arg("metadata")
                 .arg("--json")
                 .arg("--no-update-lock-file")
-                .arg(&self.source_dir)
+                .arg(&self.local_flake_ref.as_os_string())
                 .output()
                 .await
                 .wrap_err_with(|| {
                     eyre!(
                         "Failed to execute `nix flake metadata --json --no-update-lock-file {}`",
-                        self.source_dir.display()
+                        self.local_flake_ref.display()
                     )
                 })?;
 
             if !output.status.success() {
                 let command = format!(
                     "nix flake metadata --json --no-update-lock-file {}",
-                    self.source_dir.display(),
+                    self.local_flake_ref.display(),
                 );
                 let msg = format!(
                     "\
@@ -195,20 +270,12 @@ impl FlakeMetadata {
         // `tar` works according to the current directory (yay)
         // So we change dir and restory it after
         // TODO: Fix this
-        let source = &self.source_dir; // refactor to be known when we create struct with from_dir
         let current_dir = std::env::current_dir().wrap_err("Could not get current directory")?;
-        std::env::set_current_dir(
-            source
-                .parent()
-                .ok_or_else(|| eyre!("Getting parent directory"))?,
-        )?;
-        let dirname = self
-            .source_dir
-            .file_name()
-            .ok_or_else(|| eyre!("No file name of directory"))?;
+        std::env::set_current_dir(self.local_flake_ref.parent())?;
+        let dirname = self.local_flake_ref.directory_name();
         tarball_builder
             .append_dir_all(dirname, dirname)
-            .wrap_err_with(|| eyre!("Adding `{}` to tarball", self.source_dir.display()))?;
+            .wrap_err_with(|| eyre!("Adding `{}` to tarball", self.local_flake_ref.display()))?;
         std::env::set_current_dir(current_dir).wrap_err("Could not set current directory")?;
 
         let tarball = tarball_builder.into_inner().wrap_err("Creating tarball")?;
@@ -307,7 +374,7 @@ impl FlakeMetadata {
 
     #[tracing::instrument(skip_all, fields(readme_dir))]
     pub(crate) async fn get_readme_contents(&self) -> Result<Option<String>> {
-        let mut read_dir = tokio::fs::read_dir(&self.source_dir).await?;
+        let mut read_dir = tokio::fs::read_dir(self.local_flake_ref.directory()).await?;
 
         let readme_path: Option<PathBuf> = {
             let mut readme_path = None;
