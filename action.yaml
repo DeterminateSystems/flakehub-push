@@ -16,6 +16,16 @@ inputs:
     description: The actual GitHub repository containing your flake. In the format of OrgName/RepoName.
     required: true
     default: ${{ github.repository }}
+  repository-default-branch:
+    description: The default branch for the repository. (Used to ensure pushes only occur from the default branch.)
+    required: true
+    default: ${{ github.event.repository.default_branch }}
+  current-ref-name:
+    description: The current context ref_name. (Used to ensure pushes only occur from the default branch.)
+    required: true
+    default: ${{ github.ref_name }}
+  # TODO: do we also need to make sure it's only branches/tags? how does that even work right now?
+  # if I have branches pushed, and then have it push on tags, does it not conflict? Or maybe it's okay because it's the same contents and we allow that?
   mirror:
     description: If the repository is mirrored via DeterminateSystems' mirror functionality. This is only usable by DeterminateSystems.
     required: false

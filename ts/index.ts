@@ -45,6 +45,9 @@ class FlakeHubPushAction extends DetSysAction {
   private name: string | null;
   private rollingMinor: number | null;
 
+  private repositoryDefaultBranch: string;
+  private currentRefName: string;
+
   constructor() {
     super({
       name: "flakehub-push",
@@ -72,6 +75,11 @@ class FlakeHubPushAction extends DetSysAction {
     this.mirror = inputs.getBool("mirror");
     this.name = inputs.getStringOrNull("name");
     this.rollingMinor = inputs.getNumberOrNull("rolling-minor");
+
+    this.repositoryDefaultBranch = inputs.getString(
+      "repository-default-branch",
+    );
+    this.currentRefName = inputs.getString("current-ref-name");
   }
 
   async main(): Promise<void> {
@@ -138,6 +146,19 @@ class FlakeHubPushAction extends DetSysAction {
   }
 
   async pushFlakeToFlakeHub(): Promise<void> {
+    if (
+      this.name === null &&
+      this.currentRefName !== this.repositoryDefaultBranch
+    ) {
+      // actionsCore.error(
+      //   "flakehub-push can only be triggered from the repository's default branch",
+      // );
+      actionsCore.setFailed(
+        "flakehub-push can only be triggered from the repository's default branch",
+      );
+      process.exit();
+    }
+
     const executionEnv = this.executionEnvironment();
 
     const flakeHubPushBinary =
