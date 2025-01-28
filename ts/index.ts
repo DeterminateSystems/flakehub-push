@@ -5,6 +5,8 @@ import { DetSysAction, inputs } from "detsys-ts";
 
 const EVENT_EXECUTION_FAILURE = "execution_failure";
 
+const FACT_PUSH_ATTEMPT_FROM_PR = "push_attempt_from_pr";
+
 type ExecutionEnvironment = {
   FLAKEHUB_PUSH_VISIBILITY?: string;
   FLAKEHUB_PUSH_TAG?: string;
@@ -140,7 +142,10 @@ class FlakeHubPushAction extends DetSysAction {
 
   async pushFlakeToFlakeHub(): Promise<void> {
     if (actionsGithub.context.payload.pull_request) {
-      actionsCore.setFailed("flakehub-push cannot be triggered from pull requests");
+      actionsCore.setFailed(
+        "flakehub-push cannot be triggered from pull requests",
+      );
+      this.addFact(FACT_PUSH_ATTEMPT_FROM_PR, true);
       return;
     }
 

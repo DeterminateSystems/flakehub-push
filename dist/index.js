@@ -99394,6 +99394,7 @@ function makeOptionsConfident(actionOptions) {
 
 
 var EVENT_EXECUTION_FAILURE = "execution_failure";
+var FACT_PUSH_ATTEMPT_FROM_PR = "push_attempt_from_pr";
 var FlakeHubPushAction = class extends DetSysAction {
   constructor() {
     super({
@@ -99469,16 +99470,12 @@ var FlakeHubPushAction = class extends DetSysAction {
     return env;
   }
   async pushFlakeToFlakeHub() {
-    const defaultBranchRef = `refs/heads/${github.context.payload.repository?.default_branch}`;
-    core.debug(
-      `actionsGithub.context.ref=='${github.context.ref}'`
-    );
-    core.debug(`default_branch_ref=='${defaultBranchRef}'`);
-    if (this.name === null && github.context.ref !== defaultBranchRef) {
+    if (github.context.payload.pull_request) {
       core.setFailed(
-        "flakehub-push can only be triggered from the repository's default branch"
+        "flakehub-push cannot be triggered from pull requests"
       );
-      process.exit();
+      this.addFact(FACT_PUSH_ATTEMPT_FROM_PR, true);
+      return;
     }
     const executionEnv = this.executionEnvironment();
     const flakeHubPushBinary = this.sourceBinary !== null ? this.sourceBinary : await this.fetchExecutable();
