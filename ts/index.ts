@@ -1,5 +1,6 @@
 import * as actionsCore from "@actions/core";
 import * as actionsExec from "@actions/exec";
+import * as actionsGithub from "@actions/github";
 import { DetSysAction, inputs } from "detsys-ts";
 
 const EVENT_EXECUTION_FAILURE = "execution_failure";
@@ -45,9 +46,6 @@ class FlakeHubPushAction extends DetSysAction {
   private name: string | null;
   private rollingMinor: number | null;
 
-  private repositoryDefaultBranch: string;
-  private currentRefName: string;
-
   constructor() {
     super({
       name: "flakehub-push",
@@ -75,11 +73,6 @@ class FlakeHubPushAction extends DetSysAction {
     this.mirror = inputs.getBool("mirror");
     this.name = inputs.getStringOrNull("name");
     this.rollingMinor = inputs.getNumberOrNull("rolling-minor");
-
-    this.repositoryDefaultBranch = inputs.getString(
-      "repository-default-branch",
-    );
-    this.currentRefName = inputs.getString("current-ref-name");
   }
 
   async main(): Promise<void> {
@@ -146,13 +139,17 @@ class FlakeHubPushAction extends DetSysAction {
   }
 
   async pushFlakeToFlakeHub(): Promise<void> {
+    actionsCore.debug(
+      `actionsGithub.context.ref=='${actionsGithub.context.ref}'`,
+    );
+    actionsCore.debug(
+      `actionsGithub.context.payload.repository?.default_branch=='${actionsGithub.context.payload.repository?.default_branch}'`,
+    );
     if (
       this.name === null &&
-      this.currentRefName !== this.repositoryDefaultBranch
+      actionsGithub.context.ref !==
+        `refs/heads/${actionsGithub.context.payload.repository?.default_branch}`
     ) {
-      // actionsCore.error(
-      //   "flakehub-push can only be triggered from the repository's default branch",
-      // );
       actionsCore.setFailed(
         "flakehub-push can only be triggered from the repository's default branch",
       );
