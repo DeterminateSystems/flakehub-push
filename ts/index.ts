@@ -139,21 +139,9 @@ class FlakeHubPushAction extends DetSysAction {
   }
 
   async pushFlakeToFlakeHub(): Promise<void> {
-    actionsCore.debug(
-      `actionsGithub.context.ref=='${actionsGithub.context.ref}'`,
-    );
-    actionsCore.debug(
-      `actionsGithub.context.payload.repository?.default_branch=='${actionsGithub.context.payload.repository?.default_branch}'`,
-    );
-    if (
-      this.name === null &&
-      actionsGithub.context.ref !==
-        `refs/heads/${actionsGithub.context.payload.repository?.default_branch}`
-    ) {
-      actionsCore.setFailed(
-        "flakehub-push can only be triggered from the repository's default branch",
-      );
-      process.exit();
+    if (actionsGithub.context.payload.pull_request) {
+      actionsCore.setFailed("flakehub-push cannot be triggered from pull requests");
+      return;
     }
 
     const executionEnv = this.executionEnvironment();

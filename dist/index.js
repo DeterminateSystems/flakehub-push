@@ -99469,13 +99469,12 @@ var FlakeHubPushAction = class extends DetSysAction {
     return env;
   }
   async pushFlakeToFlakeHub() {
+    const defaultBranchRef = `refs/heads/${github.context.payload.repository?.default_branch}`;
     core.debug(
       `actionsGithub.context.ref=='${github.context.ref}'`
     );
-    core.debug(
-      `actionsGithub.context.payload.repository?.default_branch=='${github.context.payload.repository?.default_branch}'`
-    );
-    if (this.name === null && github.context.ref !== `refs/heads/${github.context.payload.repository?.default_branch}`) {
+    core.debug(`default_branch_ref=='${defaultBranchRef}'`);
+    if (this.name === null && github.context.ref !== defaultBranchRef) {
       core.setFailed(
         "flakehub-push can only be triggered from the repository's default branch"
       );
