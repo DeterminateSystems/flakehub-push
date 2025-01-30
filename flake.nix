@@ -80,6 +80,7 @@
             rust-analyzer
             rustc
             cargo
+            lychee
 
             nodejs_latest
             nodePackages_latest.pnpm
