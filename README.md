@@ -1,5 +1,7 @@
 # `flakehub-push`
 
+[![FlakeHub](https://img.shields.io/endpoint?url=https://flakehub.com/f/DeterminateSystems/flakehub-push/badge)](https://flakehub.com/flake/DeterminateSystems/flakehub-push)
+
 A GitHub Action for publishing [Nix flakes][flakes] to [FlakeHub].
 Create a [YAML configuration](#configuration), push it to your repo, and you're ready to go.
 
