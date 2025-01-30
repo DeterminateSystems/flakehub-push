@@ -1,6 +1,7 @@
 name: Build artifacts
 
 on:
+  merge_group:
   workflow_dispatch:
   workflow_call:
   pull_request:
