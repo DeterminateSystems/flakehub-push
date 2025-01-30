@@ -1,6 +1,7 @@
 name: Release PR
 
 on:
+  merge_group:
   pull_request:
     types:
       - opened

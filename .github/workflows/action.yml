@@ -1,6 +1,7 @@
 name: TypeScript-based Action
 
 on:
+  merge_group:
   pull_request:
   push:
     branches: [main]
