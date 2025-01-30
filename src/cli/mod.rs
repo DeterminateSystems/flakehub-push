@@ -94,6 +94,17 @@ pub(crate) struct FlakeHubPushCli {
     )]
     pub(crate) error_on_conflict: bool,
 
+    /// Include submodules when evaluating the flake.
+    ///
+    /// Adds `?submodules=1` to the flake while evaluating.
+    #[clap(
+      long,
+      env = "FLAKEHUB_PUSH_INCLUDE_SUBMODULES",
+      value_parser = EmptyBoolParser,
+      default_value_t = false
+    )]
+    pub(crate) include_submodules: bool,
+
     /// Do less work on extremely large flakes.
     ///
     /// This flag is intended to limit the scope of evaluations which are too large to complete on one machine.
