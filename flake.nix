@@ -1,5 +1,5 @@
 {
-  description = "A https://flakehub.com/ pusher.";
+  description = "A GitHub Action for publishing Nix flakes to FlakeHub";
 
   inputs = {
     nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1.514192.tar.gz";
