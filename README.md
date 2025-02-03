@@ -229,6 +229,6 @@ See the [development docs](./docs/development.md).
 [semver]: https://docs.determinate.systems/flakehub/concepts/semver
 [signup]: https://flakehub.com/signup
 [store-paths]: https://docs.determinate.systems/flakehub/store-paths
-[tagged]: https://docs.determinate.systems/flakehub/concepts/versioning#rolling
+[tagged]: https://docs.determinate.systems/flakehub/concepts/versioning#tagged
 [visibility]: https://docs.determinate.systems/flakehub/concepts/visibility
 [wizard]: https://flakehub.com/new
