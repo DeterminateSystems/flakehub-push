@@ -96,7 +96,7 @@ This configuration sets the rolling minor to 2:
 
 #### Tagged releases
 
-Published [tagged releases][tagged] is a little bit tricker because you need to tell `flakehub-push` which tag to use.
+Publishing [tagged releases][tagged] is a little bit trickier because you need to tell `flakehub-push` which tag to use.
 Here's an example configuration:
 
 ```yaml
