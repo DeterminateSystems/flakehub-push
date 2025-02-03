@@ -55,7 +55,7 @@ Some other common configuration use cases are described in the sections below, a
 
 #### Set flake visibility to public, private, etc.
 
-Whenever you configuration the `flakehub-push` Action, you need to specify the flake's [visibility] using the `visibility` parameter.
+Whenever you configure the `flakehub-push` Action, you need to specify the flake's [visibility] using the `visibility` parameter.
 This configuration would make the flake public:
 
 ```yaml
