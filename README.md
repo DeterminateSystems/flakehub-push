@@ -131,7 +131,7 @@ jobs:
 
 #### Store output paths
 
-[FlakeHub] has a feature called [resolved store paths][store-paths] that, when activated...
+[FlakeHub] has a feature called [resolved store paths][store-paths] that, when activated, evaluates and stores all of the store paths associated with your flake outputs.
 To activate resolved store paths, set `include-output-paths` to `true`:
 
 ```yaml
