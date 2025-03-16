@@ -26,6 +26,7 @@ type ExecutionEnvironment = {
   FLAKEHUB_PUSH_ROLLING?: string;
   FLAKEHUB_PUSH_MIRROR?: string;
   FLAKEHUB_PUSH_ROLLING_MINOR?: string;
+  FLAKEHUB_PUSH_IMPURE?: string;
 };
 
 class FlakeHubPushAction extends DetSysAction {
@@ -47,6 +48,7 @@ class FlakeHubPushAction extends DetSysAction {
   private mirror: boolean;
   private name: string | null;
   private rollingMinor: number | null;
+  private impure: boolean;
 
   constructor() {
     super({
@@ -75,6 +77,7 @@ class FlakeHubPushAction extends DetSysAction {
     this.mirror = inputs.getBool("mirror");
     this.name = inputs.getStringOrNull("name");
     this.rollingMinor = inputs.getNumberOrNull("rolling-minor");
+    this.impure = inputs.getBool("impure");
   }
 
   async main(): Promise<void> {
@@ -128,6 +131,7 @@ class FlakeHubPushAction extends DetSysAction {
     env.FLAKEHUB_PUSH_INCLUDE_OUTPUT_PATHS = this.includeOutputPaths.toString();
     env.FLAKEHUB_PUSH_ROLLING = this.rolling.toString();
     env.FLAKEHUB_PUSH_MIRROR = this.mirror.toString();
+    env.FLAKEHUB_PUSH_IMPURE = this.impure.toString();
 
     if (this.name !== null) {
       env.FLAKEHUB_PUSH_NAME = this.name;
