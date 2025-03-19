@@ -41,7 +41,7 @@ pub struct Instrumentation {
     pub log_directives: Vec<Directive>,
 }
 
-impl<'a> Instrumentation {
+impl Instrumentation {
     pub fn log_level(&self) -> String {
         match self.verbose {
             0 => "info",
@@ -51,7 +51,7 @@ impl<'a> Instrumentation {
         .to_string()
     }
 
-    pub fn setup<'b: 'a>(&'b self) -> color_eyre::Result<()> {
+    pub fn setup(&self) -> color_eyre::Result<()> {
         let filter_layer = self.filter_layer()?;
 
         let registry = tracing_subscriber::registry()

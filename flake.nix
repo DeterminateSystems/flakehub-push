@@ -4,8 +4,7 @@
   inputs = {
     nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1.514192.tar.gz";
     crane = {
-      url = "https://flakehub.com/f/ipetkov/crane/0.14.1.tar.gz";
-      inputs.nixpkgs.follows = "nixpkgs";
+      url = "https://flakehub.com/f/ipetkov/crane/0.20.1.tar.gz";
     };
     fenix = {
       url = "https://flakehub.com/f/nix-community/fenix/0.1.1885.tar.gz";
