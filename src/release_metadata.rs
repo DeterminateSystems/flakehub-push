@@ -46,9 +46,10 @@ impl ReleaseMetadata {
         // flake_dir is an absolute path of flake_root(aka git_root)/subdir
         let flake_dir = local_git_root.join(&subdir);
 
-        let flake_metadata = FlakeMetadata::from_dir(&flake_dir, cli.my_flake_is_too_big)
-            .await
-            .wrap_err("Getting flake metadata")?;
+        let flake_metadata =
+            FlakeMetadata::from_dir(&flake_dir, cli.my_flake_is_too_big, cli.impure)
+                .await
+                .wrap_err("Getting flake metadata")?;
         tracing::debug!("Got flake metadata: {:?}", flake_metadata);
 
         // sanity checks
