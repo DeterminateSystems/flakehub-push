@@ -21,7 +21,7 @@ gix-ref = { version = "0.50.0", features = ["serde"] }
 tar = { git = "https://github.com/DeterminateSystems/tar-rs.git", branch = "force-mtime", features = ["xattr"] }
 flate2 = "1.0.26"
 tempfile = "3.6.0"
-ring = "0.16.20"
+ring = "0.17.14"
 base64 = "0.21.2"
 tracing = { version = "0.1.36", default-features = false, features = [ "std", "attributes" ] }
 tracing-error = { version = "0.2.0", default-features = false, features = ["traced-error"] }
