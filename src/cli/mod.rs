@@ -355,7 +355,7 @@ impl FlakeHubPushCli {
     pub(crate) fn resolve_local_git_root(&self) -> Result<PathBuf> {
         let maybe_git_root = match &self.git_root.0 {
             Some(gr) => Ok(gr.to_owned()),
-            None => std::env::current_dir().map(PathBuf::from),
+            None => std::env::current_dir(),
         };
 
         let local_git_root = maybe_git_root.wrap_err("Could not determine current `git_root`. Pass `--git-root` or set `FLAKEHUB_PUSH_GIT_ROOT`, or run `flakehub-push` with the git root as the current working directory")?;
