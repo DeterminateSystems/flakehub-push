@@ -48,6 +48,19 @@ impl FlakeHubClient {
 
         Ok(client)
     }
+
+    pub async fn token_status(&self) -> Result<Response> {
+        let status_url = self.host.join("token")?.join("status")?;
+
+        self.client
+            .get(status_url)
+            .bearer_auth(&self.bearer_token)
+            .headers(flakehub_headers())
+            .send()
+            .await
+            .wrap_err("Checking token status")
+    }
+
     pub async fn release_stage(
         &self,
         upload_name: &str,
