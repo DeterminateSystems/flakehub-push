@@ -143,6 +143,48 @@ To activate resolved store paths, set `include-output-paths` to `true`:
 This setting only makes a difference if you're using [FlakeHub Cache][cache].
 You can [sign up at any time][signup] to take advantage of this feature.
 
+#### Handling multiple flakes in one repository
+
+You can use `flakehub-push` to publish multiple flakes in the same repository by keeping different flakes in different directories and using the `directory` parameter to specify the root of those flakes.
+Here's an example configuration that would publish separate flakes in the `my-subflake-1` and `my-subflake-2` subdirectories:
+
+```yaml
+name: Publish multiple flakes to FlakeHub
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  flakehub-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: DeterminateSystems/nix-installer-action@main
+
+      # Publish my-subflake-1
+      - uses: DeterminateSystems/flakehub-push@main
+        with:
+          rolling: true
+          directory: my-subflake-1
+          visibility: public
+
+      # Publish my-subflake-2
+      - uses: DeterminateSystems/flakehub-push@main
+        with:
+          rolling: true
+          directory: my-subflake-2
+          visibility: public
+```
+
+In this case, `flakehub-push` publishes rolling releases for both flakes every time there's a push to `main`.
+But in other cases you may need to structure your configuration differently.
+If different flakes have different release strategies, for example one flake uses tagged releases and another one uses rolling releases, you may need to provide different configurations in separate YAML files to accommodate separate `on` blocks.
+
 #### Available parameters
 
 | Parameter              | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Type          | Required? | Default                    |
