@@ -50,7 +50,7 @@ impl FlakeHubClient {
     }
 
     pub async fn token_status(&self) -> Result<Response> {
-        let status_url = self.host.join("token")?.join("status")?;
+        let status_url = self.host.join("token/")?.join("status")?;
 
         self.client
             .get(status_url)
