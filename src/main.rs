@@ -108,6 +108,19 @@ async fn execute() -> Result<std::process::ExitCode> {
 
     let fhclient = FlakeHubClient::new(ctx.flakehub_host, ctx.auth_token)?;
 
+    let response = fhclient.token_status().await?;
+    if let Err(e) = response.error_for_status() {
+        let was_client_error = e.status().is_some_and(|x| x.is_client_error());
+        if std::env::var("GITHUB_ACTIONS").is_ok() {
+            if was_client_error {
+                println!("::error title={{FlakeHub: Unauthenticated}}::{{Unable to authenticate to FlakeHub. Individuals must register at FlakeHub.com; Organizations must create an organization at FlakeHub.com.}}")
+            } else {
+                println!("::error title={{FlakeHub: Unauthenticated}}::{{Unable to authenticate to FlakeHub. {}}}", e);
+            }
+        }
+        return Err(e.into());
+    }
+
     // "upload.rs" - stage the release
     let stage_result = fhclient
         .release_stage(
