@@ -26,6 +26,7 @@ type ExecutionEnvironment = {
   FLAKEHUB_PUSH_ROLLING?: string;
   FLAKEHUB_PUSH_MIRROR?: string;
   FLAKEHUB_PUSH_ROLLING_MINOR?: string;
+  GITHUB_CONTEXT?: string;
 };
 
 class FlakeHubPushAction extends DetSysAction {
@@ -128,6 +129,8 @@ class FlakeHubPushAction extends DetSysAction {
     env.FLAKEHUB_PUSH_INCLUDE_OUTPUT_PATHS = this.includeOutputPaths.toString();
     env.FLAKEHUB_PUSH_ROLLING = this.rolling.toString();
     env.FLAKEHUB_PUSH_MIRROR = this.mirror.toString();
+
+    env.GITHUB_CONTEXT = JSON.stringify(actionsGithub.context);
 
     if (this.name !== null) {
       env.FLAKEHUB_PUSH_NAME = this.name;
