@@ -93148,6 +93148,7 @@ var FlakeHubPushAction = class extends DetSysAction {
     env.FLAKEHUB_PUSH_INCLUDE_OUTPUT_PATHS = this.includeOutputPaths.toString();
     env.FLAKEHUB_PUSH_ROLLING = this.rolling.toString();
     env.FLAKEHUB_PUSH_MIRROR = this.mirror.toString();
+    env.GITHUB_CONTEXT = JSON.stringify(github.context);
     if (this.name !== null) {
       env.FLAKEHUB_PUSH_NAME = this.name;
     }

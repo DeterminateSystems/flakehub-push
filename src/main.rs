@@ -113,9 +113,10 @@ async fn execute() -> Result<std::process::ExitCode> {
         let was_client_error = e.status().is_some_and(|x| x.is_client_error());
         if std::env::var("GITHUB_ACTIONS").is_ok() {
             if was_client_error {
-                println!("::error title={{FlakeHub: Unauthenticated}}::{{Unable to authenticate to FlakeHub. Individuals must register at FlakeHub.com; Organizations must create an organization at FlakeHub.com.}}")
+                tracing::error!("FlakeHub Unauthenticated: {}", e);
+                github::print_unauthenticated_error();
             } else {
-                println!("::error title={{FlakeHub: Unauthenticated}}::{{Unable to authenticate to FlakeHub. {}}}", e);
+                println!("::error title=FlakeHub: Unauthenticated::Unable to authenticate to FlakeHub. {}", e);
             }
         }
         return Err(e.into());
