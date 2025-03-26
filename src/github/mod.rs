@@ -43,12 +43,12 @@ pub(crate) fn print_unauthenticated_error() {
         let owner = workflow_data.event.repository.owner;
         if owner.kind == GITHUB_ACTOR_TYPE_USER {
             msg = format!(
-                "Please create an account for {} on FlakeHub.com to publish flakes.",
+                "::error title=FlakeHub registration required.::Please create an account for {} on FlakeHub.com to publish flakes.",
                 &owner.login
             );
         } else if owner.kind == GITHUB_ACTOR_TYPE_ORGANIZATION {
             msg = format!(
-                "Please create an organization for {} on FlakeHub.com to publish flakes.",
+                "::error title=FlakeHub registration required.::Please create an organization for {} on FlakeHub.com to publish flakes.",
                 &owner.login
             );
         }
