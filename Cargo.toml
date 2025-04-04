@@ -9,23 +9,58 @@ repository = "https://github.com/DeterminateSystems/flakehub-push"
 
 [dependencies]
 clap = { version = "4.3.4", features = ["derive", "env"] }
-color-eyre = { version = "0.6.2", default-features = false, features = [ "track-caller", "issue-url", "tracing-error", "capture-spantrace", "color-spantrace" ] }
+color-eyre = { version = "0.6.2", default-features = false, features = [
+  "track-caller",
+  "issue-url",
+  "tracing-error",
+  "capture-spantrace",
+  "color-spantrace",
+] }
 graphql_client = { version = "0.13.0" }
-tokio = { version = "1.21.0", default-features = false, features = ["time", "io-std", "process", "fs", "signal", "tracing", "rt-multi-thread", "macros", "io-util", "parking_lot" ] }
-reqwest = { version = "0.12.3", default-features = false, features = ["rustls-tls-native-roots", "stream", "socks", "json"] }
+tokio = { version = "1.21.0", default-features = false, features = [
+  "time",
+  "io-std",
+  "process",
+  "fs",
+  "signal",
+  "tracing",
+  "rt-multi-thread",
+  "macros",
+  "io-util",
+  "parking_lot",
+] }
+reqwest = { version = "0.12.3", default-features = false, features = [
+  "rustls-tls-native-roots",
+  "stream",
+  "socks",
+  "json",
+] }
 serde = { version = "1.0.164", features = ["derive"] }
 serde_json = "1.0.97"
 gix = { version = "0.70.0", features = ["async-network-client", "serde"] }
-gix-ref = { version = "0.51.0", features = ["serde"] }
 #tar = { version = "0.4.38", features = ["xattr"] }
-tar = { git = "https://github.com/DeterminateSystems/tar-rs.git", branch = "force-mtime", features = ["xattr"] }
+tar = { git = "https://github.com/DeterminateSystems/tar-rs.git", branch = "force-mtime", features = [
+  "xattr",
+] }
 flate2 = "1.0.26"
 tempfile = "3.6.0"
 ring = "0.17.14"
 base64 = "0.21.2"
-tracing = { version = "0.1.36", default-features = false, features = [ "std", "attributes" ] }
-tracing-error = { version = "0.2.0", default-features = false, features = ["traced-error"] }
-tracing-subscriber = { version = "0.3.15", default-features = false, features = [ "std", "registry", "fmt", "json", "ansi", "env-filter" ] }
+tracing = { version = "0.1.36", default-features = false, features = [
+  "std",
+  "attributes",
+] }
+tracing-error = { version = "0.2.0", default-features = false, features = [
+  "traced-error",
+] }
+tracing-subscriber = { version = "0.3.15", default-features = false, features = [
+  "std",
+  "registry",
+  "fmt",
+  "json",
+  "ansi",
+  "env-filter",
+] }
 github-actions-oidc-claims = "0.3.0"
 spdx = "0.10.2"
 uuid = { version = "1.4.0", features = ["serde", "v4", "v7", "rand", "std"] }
@@ -36,6 +71,6 @@ http = "1.1.0"
 gitlab = "0.1706.0"
 
 [profile.release]
-strip = true  # Automatically strip symbols from the binary.
-opt-level = "z"  # Optimize for size.
+strip = true    # Automatically strip symbols from the binary.
+opt-level = "z" # Optimize for size.
 lto = true
