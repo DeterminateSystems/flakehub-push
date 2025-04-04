@@ -15,7 +15,7 @@ tokio = { version = "1.21.0", default-features = false, features = ["time", "io-
 reqwest = { version = "0.12.3", default-features = false, features = ["rustls-tls-native-roots", "stream", "socks", "json"] }
 serde = { version = "1.0.164", features = ["derive"] }
 serde_json = "1.0.97"
-gix = { version = "0.70.0", features = ["async-network-client", "serde"] }
+gix = { version = "0.71.0", features = ["async-network-client", "serde"] }
 #tar = { version = "0.4.38", features = ["xattr"] }
 tar = { git = "https://github.com/DeterminateSystems/tar-rs.git", branch = "force-mtime", features = ["xattr"] }
 flate2 = "1.0.26"
