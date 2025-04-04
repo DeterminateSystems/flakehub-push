@@ -15,11 +15,11 @@ impl RevisionInfo {
             .wrap_err("Getting the HEAD revision of the repository")?;
 
         let revision = match gix_repository_head.kind {
-            gix::head::Kind::Symbolic(gix_ref::Reference {
+            gix::head::Kind::Symbolic(gix::refs::Reference {
                 name: _, target, ..
             }) => match target {
-                gix_ref::Target::Object(object_id) => object_id,
-                gix_ref::Target::Symbolic(_) => {
+                gix::refs::Target::Object(object_id) => object_id,
+                gix::refs::Target::Symbolic(_) => {
                     return Err(eyre!(
                 "Symbolic revision pointing to a symbolic revision is not supported at this time"
             ))
