@@ -11,6 +11,7 @@ pub enum ExecutionEnvironment {
     GitHub,
     GitLab,
     LocalGitHub,
+    Generic,
 }
 
 pub(crate) struct PushContext {
@@ -101,6 +102,15 @@ impl PushContext {
                     .wrap_err("Getting upload bearer token from GitLab")?;
 
                 let git_ctx = GitContext::from_cli_and_gitlab(cli, local_rev_info).await?;
+
+                (token, git_ctx)
+            }
+            (ExecutionEnvironment::Generic, None) => {
+                // Generic CI (Semaphore, ...)
+                let token = std::env::var("FLAKEHUB_PUSH_OIDC_TOKEN")
+                    .with_context(|| "missing FLAKEHUB_PUSH_OIDC_TOKEN environment variable")?;
+
+                let git_ctx = GitContext::from_cli(cli, local_rev_info).await?;
 
                 (token, git_ctx)
             }
