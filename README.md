@@ -53,7 +53,7 @@ jobs:
 
 Some other common configuration use cases are described in the sections below, along with a full listing of [all available parameters](#available-parameters).
 
-#### Set flake visibility to public, private, etc.
+#### Set flake visibility to public, private, or unlisted
 
 Whenever you configure the `flakehub-push` Action, you need to specify the flake's [visibility] using the `visibility` parameter.
 This configuration would make the flake public:
@@ -66,11 +66,11 @@ This configuration would make the flake public:
 
 The available options are:
 
-| Option     | What it means                                                                                                                                                    |
-| :--------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `public`   | The flake is viewable and usable if you know the URL for the flake and it shows up in search results and on the [flake listing][all-flakes].                     |
-| `private`  | The flake is viewable and usable only by users who are authenticated and granted access to the flake. Private flakes are available only on [paid plans][signup]. |
-| `unlisted` | The flake is viewable and usable only if you know the URL for it. It shows up neither in search results nor on the [flake listing][all-flakes].                  |
+| Option     | What it means                                                                                                                                                                      |
+| :--------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `public`   | The flake is viewable and usable if you know the URL for the flake and it shows up in search results and on the [flake listing][all-flakes].                                       |
+| `private`  | The flake is viewable and usable only by users who are authenticated and granted access to the flake. [Private flakes][private-flakes] are available only on [paid plans][signup]. |
+| `unlisted` | The flake is viewable and usable only if you know the URL for it. It shows up neither in search results nor on the [flake listing][all-flakes].                                    |
 
 #### Rolling releases
 
@@ -189,7 +189,7 @@ If different flakes have different release strategies, for example one flake use
 
 | Parameter              | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Type          | Required? | Default                    |
 | :--------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------ | :-------- | :------------------------- |
-| `visibility`           | `public`, `unlisted`, or `private`. Private flakes are in private beta, contact support@flakehub.com to sign up.                                                                                                                                                                                                                                                                                                                                                        | enum          | ✅        |                            |
+| `visibility`           | `public`, `unlisted`, or `private`. [Private flakes][private-flakes] are available only on a [FlakeHub paid plan][signup].                                                                                                                                                                                                                                                                                                                                              | enum          | ✅        |                            |
 | `repository`           | The GitHub repository containing your flake in the format of `{org}/{repo}`.                                                                                                                                                                                                                                                                                                                                                                                            | string        | ✅        | `${{ github.repository }}` |
 | `name`                 | The name of your published flake in the format of `{org}/{name}`. The `{org}` must match your organization's GitHub root name or the publish will fail. Specify this only if you want to publish under a different name from the `{org}/{repo}`.                                                                                                                                                                                                                        | string        |           |                            |
 | `include-output-paths` | Whether to expose store paths for the flake's outputs via the FlakeHub API. This is most useful when used in conjunction with [FlakeHub Cache][cache].                                                                                                                                                                                                                                                                                                                  | Boolean       |           | `false`                    |
