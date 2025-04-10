@@ -66,4 +66,18 @@ impl GitContext {
         };
         Ok(ctx)
     }
+
+    pub async fn from_cli(
+        cli: &FlakeHubPushCli,
+        local_revision_info: RevisionInfo,
+    ) -> Result<Self> {
+        let spdx_expression = &cli.spdx_expression.0;
+
+        let ctx = GitContext {
+            spdx_expression: spdx_expression.clone(),
+            repo_topics: vec![],
+            revision_info: local_revision_info,
+        };
+        Ok(ctx)
+    }
 }

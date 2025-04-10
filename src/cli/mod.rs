@@ -337,6 +337,8 @@ impl FlakeHubPushCli {
             ExecutionEnvironment::GitHub
         } else if std::env::var("GITLAB_CI").ok().is_some() {
             ExecutionEnvironment::GitLab
+        } else if std::env::var("FLAKEHUB_PUSH_OIDC_TOKEN").ok().is_some() {
+            ExecutionEnvironment::Generic
         } else {
             ExecutionEnvironment::LocalGitHub
         }
