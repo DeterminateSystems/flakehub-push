@@ -95230,6 +95230,7 @@ var FlakeHubPushAction = class extends DetSysAction {
       `execution environment: ${JSON.stringify(executionEnv, null, 2)}`
     );
     const exitCode = await exec.exec(flakeHubPushBinary, [], {
+      ignoreReturnCode: true,
       env: {
         ...executionEnv,
         ...process.env
