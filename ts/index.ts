@@ -150,6 +150,7 @@ class FlakeHubPushAction extends DetSysAction {
     );
 
     const exitCode = await actionsExec.exec(flakeHubPushBinary, [], {
+      ignoreReturnCode: true,
       env: {
         ...executionEnv,
         ...process.env, // To get PATH, etc.
