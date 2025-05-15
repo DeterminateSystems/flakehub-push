@@ -100,14 +100,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
+        if: ${{ github.event_name == 'merge_group' }}
         with:
           determinate: true
       - uses: DeterminateSystems/flakehub-cache-action@main
+        if: ${{ github.event_name == 'merge_group' }}
 
       - run: |
           nix build -j0 .#
+        if: ${{ github.event_name == 'merge_group' }}
 
       - name: Production test
+        if: ${{ github.event_name == 'merge_group' }}
         uses: ./
         with:
           visibility: "hidden"
@@ -119,7 +123,7 @@ jobs:
           _internal-strict-mode: true
 
   PushToIDS:
-    needs: DeterminateCI
+    needs: ProductionTest
     runs-on: ubuntu-latest
     permissions:
       id-token: "write"
