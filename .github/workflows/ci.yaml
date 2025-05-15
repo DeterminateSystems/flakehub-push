@@ -74,8 +74,6 @@ jobs:
         run: git diff --exit-code
 
   DeterminateCI:
-    needs:
-      - Lints
     uses: DeterminateSystems/ci/.github/workflows/workflow.yml@main
     permissions:
       id-token: "write"
@@ -91,7 +89,9 @@ jobs:
         }
 
   ProductionTest:
-    needs: DeterminateCI
+    needs:
+      - Lints
+      - DeterminateCI
     runs-on: UbuntuLatest32Cores128G
     timeout-minutes: 5
     permissions:
