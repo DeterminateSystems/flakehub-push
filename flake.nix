@@ -61,9 +61,9 @@
               path = inputs.self;
               filter = (path: type:
                 baseNameOf path != "ts"
-                && baseNameOf path != "dist"
-                && baseNameOf path != ".github"
-                && path != "flake.nix"
+                  && baseNameOf path != "dist"
+                  && baseNameOf path != ".github"
+                  && path != "flake.nix"
               );
             });
 
