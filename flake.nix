@@ -56,7 +56,16 @@
           ({
             pname = "flakehub-push";
             version = "0.1.0";
-            src = pkgs.craneLib.path ./.;
+            src = pkgs.craneLib.path (builtins.path {
+              name = "determinate-nixd-source";
+              path = inputs.self;
+              filter = (path: type:
+                baseNameOf path != "ts"
+                && baseNameOf path != "dist"
+                && baseNameOf path != ".github"
+                && path != "flake.nix"
+              );
+            });
 
             buildInputs = pkgs.lib.optionals (pkgs.stdenv.isDarwin) (with pkgs; [
               libiconv

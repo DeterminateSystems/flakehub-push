@@ -140,16 +140,16 @@ jobs:
           mkdir artifacts
 
           nix build -j0 .#packages.x86_64-linux.default
-          cp -r ./result/bin/flakehub-push ./artifacts/flakehub-push-X64-Linux
+          cp -r ./result/bin/flakehub-push ./artifacts/X64-Linux
 
           nix build -j0 .#packages.aarch64-linux.default
-          cp -r ./result/bin/flakehub-push ./artifacts/flakehub-push-ARM64-Linux
+          cp -r ./result/bin/flakehub-push ./artifacts/ARM64-Linux
 
           nix build -j0 .#packages.x86_64-darwin.default
-          cp -r ./result/bin/flakehub-push ./artifacts/flakehub-push-X64-macOS
+          cp -r ./result/bin/flakehub-push ./artifacts/X64-macOS
 
           nix build -j0 .#packages.aarch64-darwin.default
-          cp -r ./result/bin/flakehub-push ./artifacts/flakehub-push-ARM64-macOS
+          cp -r ./result/bin/flakehub-push ./artifacts/ARM64-macOS
 
       - uses: DeterminateSystems/push-artifact-ids@main
         with:
