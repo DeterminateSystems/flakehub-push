@@ -1,0 +1,160 @@
+on:
+  merge_group:
+  pull_request:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+  release:
+    types:
+      - released
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  Lints:
+    name: Check the dist/ folder is up to date
+    runs-on: UbuntuLatest32Cores128G
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+        with:
+          determinate: true
+      - uses: DeterminateSystems/flakehub-cache-action@main
+      - uses: DeterminateSystems/flake-checker-action@main
+
+      - name: Check README links
+        if: success() || failure()
+        run: nix develop --command lychee README.md
+
+      - name: Install pnpm dependencies
+        if: success() || failure()
+        run: nix develop --command pnpm install
+
+      - name: Check formatting
+        if: success() || failure()
+        run: nix develop --command pnpm run check-fmt
+
+      - name: Run ESLint
+        if: success() || failure()
+        run: nix develop --command pnpm run lint
+
+      - name: Build bundle
+        if: success() || failure()
+        run: nix develop --command pnpm run build
+
+      - name: Package as Node.js runnable
+        if: success() || failure()
+        run: nix develop --command pnpm run package
+
+      - name: Check git status
+        if: success() || failure()
+        run: git status --porcelain=v1
+
+      - name: "Nix formatting"
+        if: success() || failure()
+        run: git ls-files '*.nix' | nix develop --command xargs nixpkgs-fmt --check
+
+      - name: "Rust formatting"
+        if: success() || failure()
+        run: nix develop --command cargo fmt --check
+
+      - name: "Clippy"
+        if: success() || failure()
+        run: nix develop --command cargo clippy --all-targets --all-features --  -Dwarnings
+
+      - name: Ensure no staged changes
+        if: success() || failure()
+        run: git diff --exit-code
+
+  DeterminateCI:
+    uses: DeterminateSystems/ci/.github/workflows/workflow.yml@main
+    permissions:
+      id-token: "write"
+      contents: "read"
+    with:
+      visibility: public
+      runner-map: |
+        {
+          "aarch64-darwin": "namespace-profile-mac-m2-12c28g",
+          "aarch64-linux": "UbuntuLatest32Cores128GArm",
+          "x86_64-darwin": "namespace-profile-mac-m2-12c28g",
+          "x86_64-linux": "UbuntuLatest32Cores128G"
+        }
+
+  ProductionTest:
+    needs:
+      - Lints
+      - DeterminateCI
+    runs-on: UbuntuLatest32Cores128G
+    timeout-minutes: 5
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+        if: ${{ github.event_name == 'merge_group' }}
+        with:
+          determinate: true
+      - uses: DeterminateSystems/flakehub-cache-action@main
+        if: ${{ github.event_name == 'merge_group' }}
+
+      - run: |
+          nix build -j0 .#
+        if: ${{ github.event_name == 'merge_group' }}
+
+      - name: Production test
+        if: ${{ github.event_name == 'merge_group' }}
+        uses: ./
+        with:
+          visibility: "hidden"
+          rolling-minor: 0
+          rolling: true
+          log-directives: "flakehub_push=trace"
+          logger: "pretty"
+          flakehub-push-binary: ./result/bin/flakehub-push
+          _internal-strict-mode: true
+
+  PushToIDS:
+    needs: ProductionTest
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: "write"
+      contents: "read"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: DeterminateSystems/nix-installer-action@main
+        with:
+          determinate: true
+      - uses: DeterminateSystems/flakehub-cache-action@main
+
+      - run: |
+          mkdir artifacts
+
+          nix build -j0 .#packages.x86_64-linux.default
+          cp -r ./result/bin/flakehub-push ./artifacts/X64-Linux
+
+          nix build -j0 .#packages.aarch64-linux.default
+          cp -r ./result/bin/flakehub-push ./artifacts/ARM64-Linux
+
+          nix build -j0 .#packages.x86_64-darwin.default
+          cp -r ./result/bin/flakehub-push ./artifacts/X64-macOS
+
+          nix build -j0 .#packages.aarch64-darwin.default
+          cp -r ./result/bin/flakehub-push ./artifacts/ARM64-macOS
+
+      - uses: DeterminateSystems/push-artifact-ids@main
+        with:
+          s3_upload_role: ${{ secrets.AWS_S3_UPLOAD_ROLE }}
+          bucket: ${{ secrets.AWS_S3_UPLOAD_BUCKET }}
+          directory: ./artifacts
+          ids_project_name: flakehub-push
+          ids_binary_prefix: flakehub-push

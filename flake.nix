@@ -56,14 +56,26 @@
           ({
             pname = "flakehub-push";
             version = "0.1.0";
-            src = pkgs.craneLib.path ./.;
+            src = pkgs.craneLib.path (builtins.path {
+              name = "determinate-nixd-source";
+              path = inputs.self;
+              filter = (path: type:
+                baseNameOf path != "ts"
+                  && baseNameOf path != "dist"
+                  && baseNameOf path != ".github"
+                  && path != "flake.nix"
+              );
+            });
 
             buildInputs = pkgs.lib.optionals (pkgs.stdenv.isDarwin) (with pkgs; [
               libiconv
               darwin.apple_sdk.frameworks.SystemConfiguration
             ]);
           } // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
-            CARGO_BUILD_TARGET = "x86_64-unknown-linux-musl";
+            CARGO_BUILD_TARGET = {
+              "x86_64-linux" = "x86_64-unknown-linux-musl";
+              "aarch64-linux" = "aarch64-unknown-linux-musl";
+            }."${pkgs.stdenv.system}" or null;
             CARGO_BUILD_RUSTFLAGS = "-C target-feature=+crt-static";
           });
       });
