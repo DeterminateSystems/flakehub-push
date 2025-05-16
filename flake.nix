@@ -2,12 +2,10 @@
   description = "A GitHub Action for publishing Nix flakes to FlakeHub";
 
   inputs = {
-    nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1.514192.tar.gz";
-    crane = {
-      url = "https://flakehub.com/f/ipetkov/crane/0.20.1.tar.gz";
-    };
+    nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1";
+    crane.url = "https://flakehub.com/f/ipetkov/crane/0.20.1";
     fenix = {
-      url = "https://flakehub.com/f/nix-community/fenix/0.1.1885.tar.gz";
+      url = "https://flakehub.com/f/nix-community/fenix/0.1";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
