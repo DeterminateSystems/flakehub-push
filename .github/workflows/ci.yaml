@@ -23,11 +23,11 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v4
-      - uses: DeterminateSystems/nix-installer-action@main
-        with:
-          determinate: true
-      - uses: DeterminateSystems/flakehub-cache-action@main
       - uses: DeterminateSystems/flake-checker-action@main
+        with:
+          fail-mode: true
+      - uses: DeterminateSystems/determinate-nix-action@main
+      - uses: DeterminateSystems/flakehub-cache-action@main
 
       - name: Check README links
         if: success() || failure()
@@ -99,10 +99,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/determinate-nix-action@main
         if: ${{ github.event_name == 'merge_group' }}
-        with:
-          determinate: true
       - uses: DeterminateSystems/flakehub-cache-action@main
         if: ${{ github.event_name == 'merge_group' }}
 
@@ -131,9 +129,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: DeterminateSystems/nix-installer-action@main
-        with:
-          determinate: true
+      - uses: DeterminateSystems/determinate-nix-action@main
       - uses: DeterminateSystems/flakehub-cache-action@main
 
       - run: |
