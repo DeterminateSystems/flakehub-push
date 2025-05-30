@@ -8,24 +8,43 @@ const EVENT_EXECUTION_FAILURE = "execution_failure";
 const FACT_PUSH_ATTEMPT_FROM_PR = "push_attempt_from_pr";
 
 type ExecutionEnvironment = {
+  // biome-ignore lint/style/useNamingConvention: environment variable
   FLAKEHUB_PUSH_VISIBILITY?: string;
+  // biome-ignore lint/style/useNamingConvention: environment variable
   FLAKEHUB_PUSH_TAG?: string;
+  // biome-ignore lint/style/useNamingConvention: environment variable
   FLAKEHUB_PUSH_HOST?: string;
+  // biome-ignore lint/style/useNamingConvention: environment variable
   FLAKEHUB_PUSH_LOG_DIRECTIVES?: string;
+  // biome-ignore lint/style/useNamingConvention: environment variable
   FLAKEHUB_PUSH_LOGGER?: string;
+  // biome-ignore lint/style/useNamingConvention: environment variable
   FLAKEHUB_PUSH_GITHUB_TOKEN?: string;
+  // biome-ignore lint/style/useNamingConvention: environment variable
   FLAKEHUB_PUSH_NAME?: string;
+  // biome-ignore lint/style/useNamingConvention: environment variable
   FLAKEHUB_PUSH_REPOSITORY?: string;
+  // biome-ignore lint/style/useNamingConvention: environment variable
   FLAKEHUB_PUSH_DIRECTORY?: string;
+  // biome-ignore lint/style/useNamingConvention: environment variable
   FLAKEHUB_PUSH_GIT_ROOT?: string;
+  // biome-ignore lint/style/useNamingConvention: environment variable
   FLAKEHUB_PUSH_MY_FLAKE_IS_TOO_BIG?: string;
+  // biome-ignore lint/style/useNamingConvention: environment variable
   FLAKEHUB_PUSH_EXTRA_LABELS?: string;
+  // biome-ignore lint/style/useNamingConvention: environment variable
   FLAKEHUB_PUSH_SPDX_EXPRESSION?: string;
+  // biome-ignore lint/style/useNamingConvention: environment variable
   FLAKEHUB_PUSH_ERROR_ON_CONFLICT?: string;
+  // biome-ignore lint/style/useNamingConvention: environment variable
   FLAKEHUB_PUSH_INCLUDE_OUTPUT_PATHS?: string;
+  // biome-ignore lint/style/useNamingConvention: environment variable
   FLAKEHUB_PUSH_ROLLING?: string;
+  // biome-ignore lint/style/useNamingConvention: environment variable
   FLAKEHUB_PUSH_MIRROR?: string;
+  // biome-ignore lint/style/useNamingConvention: environment variable
   FLAKEHUB_PUSH_ROLLING_MINOR?: string;
+  // biome-ignore lint/style/useNamingConvention: environment variable
   GITHUB_CONTEXT?: string;
 };
 
@@ -83,6 +102,7 @@ class FlakeHubPushAction extends DetSysAction {
   }
 
   // No post step
+  // biome-ignore lint/suspicious/noEmptyBlockStatements: no post step
   async post(): Promise<void> {}
 
   // extra-tags is deprecated but we still honor it

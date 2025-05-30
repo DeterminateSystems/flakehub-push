@@ -7,21 +7,17 @@
   "type": "module",
   "scripts": {
     "build": "tsup",
-    "format": "prettier --write .",
-    "check-fmt": "prettier --check .",
-    "lint": "eslint ts/**/*.ts",
+    "format": "biome format --write",
+    "check-fmt": "biome format",
+    "lint": "biome lint",
     "package": "ncc build",
-    "all": "pnpm run format && pnpm run lint && pnpm run build && pnpm run package"
+    "all": "pnpm install && pnpm run format && pnpm run lint && pnpm run build && pnpm run package"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/DeterminateSystems/flakehub-push.git"
   },
-  "keywords": [
-    "nix",
-    "flakes",
-    "flakehub"
-  ],
+  "keywords": ["nix", "flakes", "flakehub"],
   "author": "Determinate Systems",
   "license": "LGPL",
   "bugs": {
@@ -35,23 +31,12 @@
     "detsys-ts": "github:DeterminateSystems/detsys-ts"
   },
   "devDependencies": {
-    "@trivago/prettier-plugin-sort-imports": "^4.3.0",
     "@types/node": "^22.15.18",
-    "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@vercel/ncc": "^0.38.3",
-    "eslint": "^8.57.1",
-    "eslint-import-resolver-typescript": "^3.10.1",
-    "eslint-plugin-github": "^4.10.2",
-    "eslint-plugin-import": "^2.31.0",
-    "eslint-plugin-prettier": "^5.4.0",
-    "prettier": "^3.5.3",
     "tsup": "^8.4.0",
     "typescript": "^5.8.3"
   },
   "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild",
-      "unrs-resolver"
-    ]
+    "onlyBuiltDependencies": ["esbuild", "unrs-resolver"]
   }
 }
