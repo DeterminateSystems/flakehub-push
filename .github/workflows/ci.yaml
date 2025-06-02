@@ -41,7 +41,7 @@ jobs:
         if: success() || failure()
         run: nix develop --command pnpm run check-fmt
 
-      - name: Run ESLint
+      - name: Lint
         if: success() || failure()
         run: nix develop --command pnpm run lint
 

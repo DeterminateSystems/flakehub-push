@@ -67,7 +67,6 @@
 
             buildInputs = pkgs.lib.optionals (pkgs.stdenv.isDarwin) (with pkgs; [
               libiconv
-              darwin.apple_sdk.frameworks.SystemConfiguration
             ]);
           } // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
             CARGO_BUILD_TARGET = {
@@ -89,14 +88,14 @@
             rust-analyzer
             rustc
             cargo
+            bacon
             lychee
 
             nodejs_latest
             nodePackages_latest.pnpm
-            bacon
+            biome
           ]
-          ++ inputs.self.packages.${system}.flakehub-push.buildInputs
-          ++ pkgs.lib.optionals pkgs.stdenv.isDarwin (with pkgs.darwin.apple_sdk.frameworks; [ Security ]);
+          ++ inputs.self.packages.${system}.flakehub-push.buildInputs;
 
           nativeBuildInputs = with pkgs; [
           ]
