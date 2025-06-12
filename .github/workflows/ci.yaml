@@ -123,6 +123,7 @@ jobs:
   PushToIDS:
     needs: ProductionTest
     runs-on: ubuntu-latest
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     permissions:
       id-token: "write"
       contents: "read"
