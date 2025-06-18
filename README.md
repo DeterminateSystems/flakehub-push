@@ -256,6 +256,12 @@ jobs:
             -d '{"flake_version":"${{ steps.flakehub_push.outputs.version }}"}'
 ```
 
+## Platform Support
+
+This action supports publishing Apple Silicon, `aarch64-linux`, and `x86_64-linux`.
+Your flake only needs to be published once from a single architecture to cover all architectures your flake supports.
+In other words: all you need to do to publish a flake that supports `x86_64-darwin` is run the `flakehub-push` action from any other architecture, like `x86_64-linux`.
+
 ## Developing `flakehub-push`
 
 See the [development docs](./docs/development.md).
