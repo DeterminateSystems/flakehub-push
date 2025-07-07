@@ -57,21 +57,45 @@ impl FlakeMetadata {
                 eyre!("Could not get `url` attribute from `nix flake metadata --json` output")
             })?;
         tracing::debug!("Locked URL = {}", flake_locked_url);
-        let flake_metadata_value_path = metadata_json
-            .get("path")
-            .and_then(serde_json::Value::as_str)
-            .ok_or_else(|| {
-                eyre!("Could not get `path` attribute from `nix flake metadata --json` output")
-            })?;
         let flake_metadata_value_resolved_dir = metadata_json
             .pointer("/resolved/dir")
             .and_then(serde_json::Value::as_str);
 
+        let output = tokio::process::Command::new("nix")
+            .arg("flake")
+            .arg("prefetch")
+            .arg("--json")
+            .arg("--no-write-lock-file")
+            .arg(directory)
+            .output()
+            .await
+            .wrap_err_with(|| {
+                eyre!(
+                    "Failed to execute `nix flake prefetch --json {}`",
+                    directory.display()
+                )
+            })?;
+
+        let prefetch_json: serde_json::Value = serde_json::from_slice(&output.stdout)
+            .wrap_err_with(|| {
+                eyre!(
+                    "Parsing `nix flake prefetch --json {}` as JSON",
+                    directory.display()
+                )
+            })?;
+
+        let flake_prefetch_value_path = prefetch_json
+            .get("storePath")
+            .and_then(serde_json::Value::as_str)
+            .ok_or_else(|| {
+                eyre!("Could not get `storePath` attribute from `nix flake prefetch --json` output")
+            })?;
+
         let source = match flake_metadata_value_resolved_dir {
             Some(flake_metadata_value_resolved_dir) => {
-                Path::new(flake_metadata_value_path).join(flake_metadata_value_resolved_dir)
+                Path::new(flake_prefetch_value_path).join(flake_metadata_value_resolved_dir)
             }
-            None => PathBuf::from(flake_metadata_value_path),
+            None => PathBuf::from(flake_prefetch_value_path),
         };
 
         Ok(FlakeMetadata {
