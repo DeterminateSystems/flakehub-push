@@ -99535,6 +99535,7 @@ var FlakeHubPushAction = class extends DetSysAction {
     });
     this.visibility = inputs_exports.getString("visibility");
     this.tag = inputs_exports.getString("tag");
+    this.rev = inputs_exports.getString("rev");
     this.host = inputs_exports.getString("host");
     this.logDirectives = inputs_exports.getString("log-directives");
     this.logger = inputs_exports.getString("logger");
@@ -99576,6 +99577,7 @@ var FlakeHubPushAction = class extends DetSysAction {
     const env = {};
     env.FLAKEHUB_PUSH_VISIBILITY = this.visibility;
     env.FLAKEHUB_PUSH_TAG = this.tag;
+    env.FLAKEHUB_PUSH_REV = this.rev;
     env.FLAKEHUB_PUSH_HOST = this.host;
     env.FLAKEHUB_PUSH_LOG_DIRECTIVES = this.logDirectives;
     env.FLAKEHUB_PUSH_LOGGER = this.logger;

@@ -29,6 +29,8 @@ pub(crate) struct FlakeHubPushCli {
     // Will also detect `GITHUB_REF_NAME`
     #[clap(long, env = "FLAKEHUB_PUSH_TAG", value_parser = StringToNoneParser, default_value = "")]
     pub(crate) tag: OptionString,
+    #[clap(long, env = "FLAKEHUB_PUSH_REV", value_parser = StringToNoneParser, default_value = "")]
+    pub(crate) rev: OptionString,
     #[clap(long, env = "FLAKEHUB_PUSH_ROLLING_MINOR", value_parser = U64ToNoneParser, default_value = "")]
     pub(crate) rolling_minor: OptionU64,
     #[clap(long, env = "FLAKEHUB_PUSH_ROLLING", value_parser = EmptyBoolParser, default_value_t = false)]
