@@ -10,6 +10,7 @@ const FACT_PUSH_ATTEMPT_FROM_PR = "push_attempt_from_pr";
 type ExecutionEnvironment = {
   FLAKEHUB_PUSH_VISIBILITY?: string;
   FLAKEHUB_PUSH_TAG?: string;
+  FLAKEHUB_PUSH_REV?: string;
   FLAKEHUB_PUSH_HOST?: string;
   FLAKEHUB_PUSH_LOG_DIRECTIVES?: string;
   FLAKEHUB_PUSH_LOGGER?: string;
@@ -33,6 +34,7 @@ class FlakeHubPushAction extends DetSysAction {
   // Action inputs translated into environment variables to pass to flakehub-push
   private visibility: string;
   private tag: string;
+  private rev: string;
   private host: string;
   private logDirectives: string;
   private logger: string;
@@ -61,6 +63,7 @@ class FlakeHubPushAction extends DetSysAction {
     // Inputs translated into environment variables for flakehub-push
     this.visibility = inputs.getString("visibility");
     this.tag = inputs.getString("tag");
+    this.rev = inputs.getString("rev");
     this.host = inputs.getString("host");
     this.logDirectives = inputs.getString("log-directives");
     this.logger = inputs.getString("logger");
@@ -114,6 +117,7 @@ class FlakeHubPushAction extends DetSysAction {
 
     env.FLAKEHUB_PUSH_VISIBILITY = this.visibility;
     env.FLAKEHUB_PUSH_TAG = this.tag;
+    env.FLAKEHUB_PUSH_REV = this.rev;
     env.FLAKEHUB_PUSH_HOST = this.host;
     env.FLAKEHUB_PUSH_LOG_DIRECTIVES = this.logDirectives;
     env.FLAKEHUB_PUSH_LOGGER = this.logger;

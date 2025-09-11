@@ -40,12 +40,18 @@ impl GitContext {
             cli.spdx_expression.0.clone()
         };
 
+        let rev = cli
+            .rev
+            .0
+            .as_ref()
+            .unwrap_or(&github_graphql_data_result.revision);
+
         let ctx = GitContext {
             spdx_expression,
             repo_topics: github_graphql_data_result.topics.clone(),
             revision_info: RevisionInfo {
                 commit_count: Some(github_graphql_data_result.rev_count as usize),
-                revision: github_graphql_data_result.revision.clone(),
+                revision: rev.to_string(),
             },
         };
         Ok(ctx)
@@ -59,10 +65,15 @@ impl GitContext {
         // spdx_expression: can't find any evidence GitLab tries to surface this info
         let spdx_expression = &cli.spdx_expression.0;
 
+        let rev = cli.rev.0.as_ref().unwrap_or(&local_revision_info.revision);
+
         let ctx = GitContext {
             spdx_expression: spdx_expression.clone(),
             repo_topics: vec![],
-            revision_info: local_revision_info,
+            revision_info: RevisionInfo {
+                commit_count: local_revision_info.commit_count,
+                revision: rev.to_string(),
+            },
         };
         Ok(ctx)
     }
@@ -73,10 +84,15 @@ impl GitContext {
     ) -> Result<Self> {
         let spdx_expression = &cli.spdx_expression.0;
 
+        let rev = cli.rev.0.as_ref().unwrap_or(&local_revision_info.revision);
+
         let ctx = GitContext {
             spdx_expression: spdx_expression.clone(),
             repo_topics: vec![],
-            revision_info: local_revision_info,
+            revision_info: RevisionInfo {
+                commit_count: local_revision_info.commit_count,
+                revision: rev.to_string(),
+            },
         };
         Ok(ctx)
     }

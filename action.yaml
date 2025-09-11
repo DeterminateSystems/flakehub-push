@@ -32,6 +32,10 @@ inputs:
     description: The Git tag to use, for non-rolling releases. This must be the character `v` followed by a SemVer version, e.g. `v0.1.1`.
     required: false
     default: null
+  rev:
+    description: The Git revision SHA to use for non-rolling releases.
+    required: false
+    default: null
   rolling-minor:
     description: "Specify the SemVer minor version of your rolling releases. All releases will follow the versioning scheme '0.[rolling-minor].[commit count]+rev-[git sha]'"
     required: false
