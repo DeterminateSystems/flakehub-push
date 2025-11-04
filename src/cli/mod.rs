@@ -90,6 +90,14 @@ pub(crate) struct FlakeHubPushCli {
 
     #[clap(
         long,
+        env = "FLAKEHUB_PUSH_DISABLE_GITHUB_API",
+        value_parser = EmptyBoolParser,
+        default_value_t = false
+    )]
+    pub(crate) disable_github_api: bool,
+
+    #[clap(
+        long,
         env = "FLAKEHUB_PUSH_ERROR_ON_CONFLICT",
         value_parser = EmptyBoolParser,
         default_value_t = false

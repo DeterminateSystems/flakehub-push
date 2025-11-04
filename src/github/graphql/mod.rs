@@ -143,7 +143,7 @@ impl GithubGraphqlDataQuery {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct GithubGraphqlDataResult {
     pub(crate) revision: String,
     pub(crate) rev_count: i64,

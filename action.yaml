@@ -88,6 +88,10 @@ inputs:
     description: Please read the source code of flakehub-push before using this.
     required: false
     default: false
+  disable-github-api:
+    description: Disables communicating to the GitHub API.
+    required: false
+    default: false
 
   # Used to construct the binary download URL
   source-binary:
