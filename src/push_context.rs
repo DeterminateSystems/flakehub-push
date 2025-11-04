@@ -78,16 +78,22 @@ impl PushContext {
                     .clone()
                     .expect("failed to get github token when running in GitHub Actions");
 
-                let github_graphql_data_result = GithubGraphqlDataQuery::get(
-                    &client,
-                    &github_token,
-                    &project_owner,
-                    &project_name,
-                    &local_rev_info.revision,
-                )
-                .await?;
+                let github_graphql_data_result = if cli.disable_github_api {
+                    None
+                } else {
+                    Some(
+                        GithubGraphqlDataQuery::get(
+                            &client,
+                            &github_token,
+                            &project_owner,
+                            &project_name,
+                            &local_rev_info.revision,
+                        )
+                        .await?,
+                    )
+                };
 
-                let git_ctx = GitContext::from_cli_and_github(cli, &github_graphql_data_result)?;
+                let git_ctx = GitContext::from_cli_and_github(cli, github_graphql_data_result)?;
 
                 let token = crate::github::get_actions_id_bearer_token(&cli.host)
                     .await
@@ -131,8 +137,14 @@ impl PushContext {
                 )
                 .await?;
 
-                let git_ctx: GitContext =
-                    GitContext::from_cli_and_github(cli, &github_graphql_data_result)?;
+                let git_ctx: GitContext = GitContext::from_cli_and_github(
+                    cli,
+                    if cli.disable_github_api {
+                        None
+                    } else {
+                        Some(github_graphql_data_result.clone())
+                    },
+                )?;
 
                 let token = flakehub_auth_fake::get_fake_bearer_token(
                     u,

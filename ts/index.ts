@@ -27,6 +27,7 @@ type ExecutionEnvironment = {
   FLAKEHUB_PUSH_ROLLING?: string;
   FLAKEHUB_PUSH_MIRROR?: string;
   FLAKEHUB_PUSH_ROLLING_MINOR?: string;
+  FLAKEHUB_PUSH_DISABLE_GITHUB_API?: string;
   GITHUB_CONTEXT?: string;
 };
 
@@ -50,6 +51,7 @@ class FlakeHubPushAction extends DetSysAction {
   private mirror: boolean;
   private name: string | null;
   private rollingMinor: number | null;
+  private disableGitHubAPI: boolean;
 
   constructor() {
     super({
@@ -79,6 +81,7 @@ class FlakeHubPushAction extends DetSysAction {
     this.mirror = inputs.getBool("mirror");
     this.name = inputs.getStringOrNull("name");
     this.rollingMinor = inputs.getNumberOrNull("rolling-minor");
+    this.disableGitHubAPI = inputs.getBool("disable-github-api");
   }
 
   async main(): Promise<void> {
@@ -133,6 +136,7 @@ class FlakeHubPushAction extends DetSysAction {
     env.FLAKEHUB_PUSH_INCLUDE_OUTPUT_PATHS = this.includeOutputPaths.toString();
     env.FLAKEHUB_PUSH_ROLLING = this.rolling.toString();
     env.FLAKEHUB_PUSH_MIRROR = this.mirror.toString();
+    env.FLAKEHUB_PUSH_DISABLE_GITHUB_API = this.disableGitHubAPI.toString();
 
     env.GITHUB_CONTEXT = JSON.stringify(actionsGithub.context);
 

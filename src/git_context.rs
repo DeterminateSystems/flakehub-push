@@ -14,13 +14,16 @@ pub struct GitContext {
 impl GitContext {
     pub fn from_cli_and_github(
         cli: &FlakeHubPushCli,
-        github_graphql_data_result: &GithubGraphqlDataResult,
+        github_graphql_data_result: Option<GithubGraphqlDataResult>,
     ) -> Result<Self> {
         // step: validate spdx, backfill from GitHub API
         let spdx_expression = if cli.spdx_expression.0.is_none() {
-            if let Some(spdx_string) = &github_graphql_data_result.spdx_identifier {
+            if let Some(spdx_string) = github_graphql_data_result
+                .clone()
+                .and_then(|result| result.spdx_identifier.clone())
+            {
                 tracing::debug!("Recieved SPDX identifier `{}` from GitHub API", spdx_string);
-                let parsed = spdx::Expression::parse(spdx_string)
+                let parsed = spdx::Expression::parse(&spdx_string)
                     .wrap_err("Invalid SPDX license identifier reported from the GitHub API, either you are using a non-standard license or GitHub has returned a value that cannot be validated")?;
                 Some(parsed)
             } else {
@@ -28,29 +31,35 @@ impl GitContext {
             }
         } else {
             // Provide the user notice if the SPDX expression passed differs from the one detected on GitHub -- It's probably something they care about.
-            if github_graphql_data_result.spdx_identifier
-                != cli.spdx_expression.0.as_ref().map(|v| v.to_string())
+            if github_graphql_data_result
+                .clone()
+                .map(|result| result.spdx_identifier)
+                != Some(cli.spdx_expression.0.as_ref().map(|v| v.to_string()))
             {
                 tracing::warn!(
                     "SPDX identifier `{}` was passed via argument, but GitHub's API suggests it may be `{}`",
                     cli.spdx_expression.0.as_ref().map(|v| v.to_string()).unwrap_or_else(|| "None".to_string()),
-                    github_graphql_data_result.spdx_identifier.clone().unwrap_or_else(|| "None".to_string()),
+                    github_graphql_data_result.clone().map(|result| result.spdx_identifier.clone().unwrap_or_else(|| "None".to_string())).unwrap_or_else(|| "None".to_string()),
                 )
             }
             cli.spdx_expression.0.clone()
         };
 
-        let rev = cli
-            .rev
-            .0
-            .as_ref()
-            .unwrap_or(&github_graphql_data_result.revision);
+        let rev = cli.rev.0.clone().unwrap_or_else(|| {
+            github_graphql_data_result
+                .clone()
+                .expect("GitHub API is disabled and rev is not specified")
+                .revision
+        });
 
         let ctx = GitContext {
             spdx_expression,
-            repo_topics: github_graphql_data_result.topics.clone(),
+            repo_topics: github_graphql_data_result
+                .clone()
+                .map(|result| result.topics.clone())
+                .unwrap_or_default(),
             revision_info: RevisionInfo {
-                commit_count: Some(github_graphql_data_result.rev_count as usize),
+                commit_count: github_graphql_data_result.map(|result| result.rev_count as usize),
                 revision: rev.to_string(),
             },
         };
