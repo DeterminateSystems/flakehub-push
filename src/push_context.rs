@@ -83,7 +83,7 @@ impl PushContext {
                     &github_token,
                     &project_owner,
                     &project_name,
-                    &local_rev_info.revision,
+                    cli.rev.0.as_ref().unwrap_or(&local_rev_info.revision),
                 )
                 .await?;
 
@@ -127,7 +127,7 @@ impl PushContext {
                     &github_token,
                     &project_owner,
                     &project_name,
-                    &local_rev_info.revision,
+                    cli.rev.0.as_ref().unwrap_or(&local_rev_info.revision),
                 )
                 .await?;
 
