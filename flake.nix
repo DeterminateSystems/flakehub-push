@@ -113,7 +113,6 @@
             buildInputs =
               with pkgs;
               [
-                nixpkgs-fmt
                 rustfmt
                 cargo-outdated
                 cargo-watch
@@ -124,6 +123,8 @@
                 nodejs_latest
                 nodePackages_latest.pnpm
                 bacon
+
+                self.formatter.${system}
               ]
               ++ inputs.self.packages.${system}.flakehub-push.buildInputs;
 
@@ -135,6 +136,8 @@
           };
         }
       );
+
+      formatter = forAllSystems ({ pkgs, ... }: pkgs.nixfmt-rfc-style);
 
       dockerImages = forDockerSystems (
         { system, pkgs, ... }:
