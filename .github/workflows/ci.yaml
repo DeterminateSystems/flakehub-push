@@ -22,7 +22,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: DeterminateSystems/flake-checker-action@main
         with:
           fail-mode: true
@@ -57,7 +57,7 @@ jobs:
 
       - name: "Nix formatting"
         if: success() || failure()
-        run: git ls-files '*.nix' | nix develop --command xargs nixpkgs-fmt --check
+        run: git ls-files '*.nix' | nix develop --command xargs nixfmt --check
 
       - name: "Rust formatting"
         if: success() || failure()
