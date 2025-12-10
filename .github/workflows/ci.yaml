@@ -31,25 +31,25 @@ jobs:
       - if: success() || failure()
         uses: DeterminateSystems/flakehub-cache-action@main
 
-      - name: Install pnpm dependencies
+      - name: Install npm dependencies
         if: success() || failure()
-        run: nix develop --command pnpm install
+        run: nix develop --command npm ci
 
       - name: Check formatting
         if: success() || failure()
-        run: nix develop --command pnpm run check-fmt
+        run: nix develop --command npm run check-fmt
 
       - name: Run ESLint
         if: success() || failure()
-        run: nix develop --command pnpm run lint
+        run: nix develop --command npm run lint
 
       - name: Build bundle
         if: success() || failure()
-        run: nix develop --command pnpm run build
+        run: nix develop --command npm run build
 
       - name: Package as Node.js runnable
         if: success() || failure()
-        run: nix develop --command pnpm run package
+        run: nix develop --command npm run package
 
       - name: Check git status
         if: success() || failure()

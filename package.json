@@ -11,7 +11,7 @@
     "check-fmt": "prettier --check .",
     "lint": "eslint ts/**/*.ts",
     "package": "ncc build",
-    "all": "pnpm run format && pnpm run lint && pnpm run build && pnpm run package"
+    "all": "npm run format && npm run lint && npm run build && npm run package"
   },
   "repository": {
     "type": "git",
@@ -51,11 +51,5 @@
     "prettier": "^3.7.4",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild",
-      "unrs-resolver"
-    ]
   }
 }

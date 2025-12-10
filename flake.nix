@@ -121,7 +121,6 @@
                 cargo
 
                 nodejs_latest
-                nodePackages_latest.pnpm
                 bacon
 
                 self.formatter.${system}
