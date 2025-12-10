@@ -32,7 +32,6 @@
     "@actions/core": "^1.11.1",
     "@actions/exec": "^1.1.1",
     "@actions/github": "^6.0.1",
-    "@typescript-eslint/parser": "^8.49.0",
     "detsys-ts": "github:DeterminateSystems/detsys-ts"
   },
   "devDependencies": {
@@ -40,6 +39,7 @@
     "@eslint/js": "^9.39.1",
     "@trivago/prettier-plugin-sort-imports": "^4.3.0",
     "@types/node": "^22.19.2",
+    "@typescript-eslint/parser": "^8.49.0",
     "@typescript-eslint/eslint-plugin": "^8.49.0",
     "@vercel/ncc": "^0.38.4",
     "eslint": "^9.39.1",
