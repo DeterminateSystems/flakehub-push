@@ -106,7 +106,12 @@ async fn execute() -> Result<std::process::ExitCode> {
 
     let ctx = PushContext::from_cli_and_env(&mut cli).await?;
 
-    let fhclient = FlakeHubClient::new(ctx.flakehub_host, ctx.auth_token)?;
+    // Acquire the auth token *after* PushContext construction (which includes
+    // Nix evaluation via ReleaseMetadata::new). This ensures short-lived OIDC
+    // tokens are fresh when first used.
+    let (auth_token, ctx) = ctx.acquire_auth_token().await?;
+
+    let fhclient = FlakeHubClient::new(ctx.flakehub_host, auth_token)?;
 
     let response = fhclient.token_status().await?;
     if let Err(e) = response.error_for_status() {

@@ -14,9 +14,27 @@ pub enum ExecutionEnvironment {
     Generic,
 }
 
+/// Captures the data needed to acquire an auth token for a given execution
+/// environment. Token acquisition is deferred until after Nix evaluation
+/// completes, so that short-lived OIDC tokens (e.g. GitHub's ~5 min JWTs)
+/// are not stale by the time they are used.
+pub(crate) enum TokenContext {
+    GitHub {
+        host: url::Url,
+    },
+    GitLab,
+    Generic,
+    LocalGitHub {
+        jwt_issuer_uri: String,
+        project_owner: String,
+        repository: String,
+        github_graphql_data_result: crate::github::graphql::GithubGraphqlDataResult,
+    },
+}
+
 pub(crate) struct PushContext {
     pub(crate) flakehub_host: url::Url,
-    pub(crate) auth_token: String,
+    pub(crate) token_context: TokenContext,
 
     // url components
     pub(crate) upload_name: String, // {org}/{project}
@@ -69,7 +87,7 @@ impl PushContext {
 
         // "cli" and "git_ctx" are the user/env supplied info, augmented with data we might have fetched from github/gitlab apis
 
-        let (auth_token, git_ctx) = match (&exec_env, &cli.jwt_issuer_uri) {
+        let (token_context, git_ctx) = match (&exec_env, &cli.jwt_issuer_uri) {
             (ExecutionEnvironment::GitHub, None) => {
                 // GITHUB CI
                 let github_token = cli
@@ -89,30 +107,23 @@ impl PushContext {
 
                 let git_ctx = GitContext::from_cli_and_github(cli, &github_graphql_data_result)?;
 
-                let token = crate::github::get_actions_id_bearer_token(&cli.host)
-                    .await
-                    .wrap_err("Getting upload bearer token from GitHub")?;
+                let token_ctx = TokenContext::GitHub {
+                    host: cli.host.clone(),
+                };
 
-                (token, git_ctx)
+                (token_ctx, git_ctx)
             }
             (ExecutionEnvironment::GitLab, None) => {
                 // GITLAB CI
-                let token = crate::gitlab::get_runner_bearer_token()
-                    .await
-                    .wrap_err("Getting upload bearer token from GitLab")?;
-
                 let git_ctx = GitContext::from_cli_and_gitlab(cli, local_rev_info).await?;
 
-                (token, git_ctx)
+                (TokenContext::GitLab, git_ctx)
             }
             (ExecutionEnvironment::Generic, None) => {
                 // Generic CI (Semaphore, ...)
-                let token = std::env::var("FLAKEHUB_PUSH_OIDC_TOKEN")
-                    .with_context(|| "missing FLAKEHUB_PUSH_OIDC_TOKEN environment variable")?;
-
                 let git_ctx = GitContext::from_cli(cli, local_rev_info).await?;
 
-                (token, git_ctx)
+                (TokenContext::Generic, git_ctx)
             }
             (ExecutionEnvironment::LocalGitHub, Some(u)) => {
                 // LOCAL, DEV (aka emulating GITHUB)
@@ -134,14 +145,14 @@ impl PushContext {
                 let git_ctx: GitContext =
                     GitContext::from_cli_and_github(cli, &github_graphql_data_result)?;
 
-                let token = flakehub_auth_fake::get_fake_bearer_token(
-                    u,
-                    &project_owner,
-                    repository,
+                let token_ctx = TokenContext::LocalGitHub {
+                    jwt_issuer_uri: u.clone(),
+                    project_owner: project_owner.clone(),
+                    repository: repository.clone(),
                     github_graphql_data_result,
-                )
-                .await?;
-                (token, git_ctx)
+                };
+
+                (token_ctx, git_ctx)
             }
             (_, Some(_)) => {
                 // we're in (GitHub|GitLab) and jwt_issuer_uri was specified, invalid
@@ -162,7 +173,7 @@ impl PushContext {
 
         let ctx = Self {
             flakehub_host: cli.host.clone(),
-            auth_token,
+            token_context,
 
             upload_name,
             release_version,
@@ -174,6 +185,75 @@ impl PushContext {
         };
 
         Ok(ctx)
+    }
+
+    /// Acquire the auth token for the current execution environment.
+    ///
+    /// This is intentionally called *after* PushContext construction (which
+    /// includes expensive Nix evaluation) so that short-lived OIDC tokens
+    /// are fresh when first used by FlakeHubClient.
+    pub async fn acquire_auth_token(self) -> Result<(String, Self)> {
+        // Destructure up front so we own all fields and can match on
+        // token_context by value (required for LocalGitHub which moves
+        // github_graphql_data_result into get_fake_bearer_token).
+        let PushContext {
+            flakehub_host,
+            token_context,
+            upload_name,
+            release_version,
+            error_if_release_conflicts,
+            metadata,
+            tarball,
+        } = self;
+
+        let (token, token_context) = match token_context {
+            TokenContext::GitHub { ref host } => {
+                let t = crate::github::get_actions_id_bearer_token(host)
+                    .await
+                    .wrap_err("Getting upload bearer token from GitHub")?;
+                (t, token_context)
+            }
+            TokenContext::GitLab => {
+                let t = crate::gitlab::get_runner_bearer_token()
+                    .await
+                    .wrap_err("Getting upload bearer token from GitLab")?;
+                (t, TokenContext::GitLab)
+            }
+            TokenContext::Generic => {
+                let t = std::env::var("FLAKEHUB_PUSH_OIDC_TOKEN")
+                    .with_context(|| "missing FLAKEHUB_PUSH_OIDC_TOKEN environment variable")?;
+                (t, TokenContext::Generic)
+            }
+            TokenContext::LocalGitHub {
+                jwt_issuer_uri,
+                project_owner,
+                repository,
+                github_graphql_data_result,
+            } => {
+                let t = flakehub_auth_fake::get_fake_bearer_token(
+                    &jwt_issuer_uri,
+                    &project_owner,
+                    &repository,
+                    github_graphql_data_result,
+                )
+                .await?;
+                // Use a sentinel since the token has been acquired and the
+                // graphql data has been consumed.
+                (t, TokenContext::Generic)
+            }
+        };
+
+        let ctx = PushContext {
+            flakehub_host,
+            token_context,
+            upload_name,
+            release_version,
+            error_if_release_conflicts,
+            metadata,
+            tarball,
+        };
+
+        Ok((token, ctx))
     }
 }
 
