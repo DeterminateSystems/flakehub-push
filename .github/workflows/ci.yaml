@@ -22,12 +22,15 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: DeterminateSystems/flake-checker-action@main
         with:
           fail-mode: true
       - if: success() || failure()
         uses: DeterminateSystems/determinate-nix-action@main
+        with:
+          extra-conf: |
+            extra-experimental-features = provenance
       - if: success() || failure()
         uses: DeterminateSystems/flakehub-cache-action@main
 
@@ -95,9 +98,12 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: DeterminateSystems/determinate-nix-action@main
         if: ${{ github.event_name == 'merge_group' }}
+        with:
+          extra-conf: |
+            extra-experimental-features = provenance
       - uses: DeterminateSystems/flakehub-cache-action@main
         if: ${{ github.event_name == 'merge_group' }}
 
@@ -124,11 +130,14 @@ jobs:
       id-token: "write"
       contents: "read"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: DeterminateSystems/determinate-nix-action@main
-      - uses: DeterminateSystems/flakehub-cache-action@main
+        with:
+          extra-conf: |
+            extra-experimental-features = provenance
 
+      - uses: DeterminateSystems/flakehub-cache-action@main
       - run: |
           mkdir artifacts
 
