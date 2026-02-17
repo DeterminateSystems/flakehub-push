@@ -63,7 +63,7 @@ pub(crate) async fn get_actions_id_bearer_token(host: &url::Url) -> color_eyre::
     span.record("audience", audience);
 
     let actions_id_token_request_token = std::env::var("ACTIONS_ID_TOKEN_REQUEST_TOKEN")
-        // We do want to preserve the whitespace here  
+        // We do want to preserve the whitespace here
         .wrap_err("\
 No `ACTIONS_ID_TOKEN_REQUEST_TOKEN` found, `flakehub-push` requires a JWT. To provide this, add `permissions` to your job, eg:
 
@@ -75,7 +75,7 @@ jobs:
         id-token: write # Authenticate against FlakeHub
         contents: read
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v6
     # ...\n\
         ")?;
     let actions_id_token_request_url = std::env::var("ACTIONS_ID_TOKEN_REQUEST_URL").wrap_err("`ACTIONS_ID_TOKEN_REQUEST_URL` required if `ACTIONS_ID_TOKEN_REQUEST_TOKEN` is also present")?;

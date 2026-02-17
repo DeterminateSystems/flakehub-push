@@ -36,11 +36,11 @@ jobs:
       id-token: write # Necessary for authenticating against FlakeHub
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ (inputs.tag != null) && format('refs/tags/{0}', inputs.tag) || '' }}
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
+      - name: Install Determinate Nix
+        uses: DeterminateSystems/determinate-nix-action@main
       - name: Push to FlakeHub
         uses: DeterminateSystems/flakehub-push@main
         with:
@@ -118,11 +118,11 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           # Checking out only the tag isn't necessary but should speed things up
           ref: ${{ inputs.tag }}
-      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/determinate-nix-action@main
       - uses: DeterminateSystems/flakehub-push@main
         with:
           visibility: private
@@ -163,8 +163,8 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v3
-      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: actions/checkout@v6
+      - uses: DeterminateSystems/determinate-nix-action@main
 
       # Publish my-subflake-1
       - uses: DeterminateSystems/flakehub-push@main
@@ -189,8 +189,8 @@ If different flakes have different release strategies, for example one flake use
 
 | Parameter              | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Type          | Required? | Default                    |
 | :--------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------ | :-------- | :------------------------- |
-| `visibility`           | `public`, `unlisted`, or `private`. [Private flakes][private-flakes] are available only on a [FlakeHub paid plan][signup].                                                                                                                                                                                                                                                                                                                                              | enum          | ✅        |                            |
-| `repository`           | The GitHub repository containing your flake in the format of `{org}/{repo}`.                                                                                                                                                                                                                                                                                                                                                                                            | string        | ✅        | `${{ github.repository }}` |
+| `visibility`           | `public`, `unlisted`, or `private`. [Private flakes][private-flakes] are available only on a [FlakeHub paid plan][signup].                                                                                                                                                                                                                                                                                                                                              | enum          | ✅         |                            |
+| `repository`           | The GitHub repository containing your flake in the format of `{org}/{repo}`.                                                                                                                                                                                                                                                                                                                                                                                            | string        | ✅         | `${{ github.repository }}` |
 | `name`                 | The name of your published flake in the format of `{org}/{name}`. The `{org}` must match your organization's GitHub root name or the publish will fail. Specify this only if you want to publish under a different name from the `{org}/{repo}`.                                                                                                                                                                                                                        | string        |           |                            |
 | `include-output-paths` | Whether to expose store paths for the flake's outputs via the FlakeHub API. This is most useful when used in conjunction with [FlakeHub Cache][cache].                                                                                                                                                                                                                                                                                                                  | Boolean       |           | `false`                    |
 | `mirror`               | Whether the repository is mirrored via DeterminateSystems' mirror functionality. This is only usable by DeterminateSystems.                                                                                                                                                                                                                                                                                                                                             | Boolean       |           | `false`                    |
@@ -240,8 +240,8 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: DeterminateSystems/nix-installer-action@main # Install Nix
+      - uses: actions/checkout@v6
+      - uses: DeterminateSystems/determinate-nix-action@main # Install Determinate Nix
       - uses: DeterminateSystems/flakehub-push@main # Publish to FlakeHub
         id: flakehub_push
         with:
