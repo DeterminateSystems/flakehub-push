@@ -7,7 +7,8 @@ use color_eyre::eyre::{eyre, Context as _, Result};
 
 use crate::git_context::GitContext;
 use crate::push_context::ExecutionEnvironment;
-use crate::{Visibility, DEFAULT_ROLLING_PREFIX};
+use crate::visibility::Visibility;
+use crate::DEFAULT_ROLLING_PREFIX;
 
 #[derive(Debug, clap::Parser)]
 #[clap(version)]
@@ -20,11 +21,11 @@ pub(crate) struct FlakeHubPushCli {
     pub(crate) host: url::Url,
 
     #[clap(long, env = "FLAKEHUB_PUSH_VISIBILITY")]
-    pub(crate) visibility: Option<crate::Visibility>,
+    pub(crate) visibility: Option<Visibility>,
     // This was the original env var to set this value. As you can see, we previously misspelled it.
     // We need to continue to support it just in case.
     #[clap(long, env = "FLAKEHUB_PUSH_VISIBLITY")]
-    pub(crate) visibility_alt: Option<crate::Visibility>,
+    pub(crate) visibility_alt: Option<Visibility>,
 
     // Will also detect `GITHUB_REF_NAME`
     #[clap(long, env = "FLAKEHUB_PUSH_TAG", value_parser = StringToNoneParser, default_value = "")]
