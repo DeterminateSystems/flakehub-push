@@ -1,4 +1,5 @@
-use std::{fmt::Display, io::IsTerminal, process::ExitCode};
+use std::io::IsTerminal;
+use std::process::ExitCode;
 
 use clap::Parser;
 use color_eyre::eyre::{eyre, Result};
@@ -6,10 +7,9 @@ use error::Error;
 use http::StatusCode;
 use reqwest::Response;
 
-use crate::{
-    flakehub_client::{FlakeHubClient, StageResult},
-    push_context::PushContext,
-};
+use crate::flakehub_client::{FlakeHubClient, StageResult};
+use crate::push_context::PushContext;
+
 mod cli;
 mod error;
 mod flake_info;
@@ -23,6 +23,7 @@ mod push_context;
 mod release_metadata;
 mod revision_info;
 mod s3;
+mod visibility;
 
 const DEFAULT_ROLLING_PREFIX: &str = "0.1";
 
@@ -209,27 +210,6 @@ async fn response_text(res: Response) -> String {
         message
     } else {
         String::from("no body")
-    }
-}
-
-#[derive(Debug, Clone, Copy, clap::ValueEnum, serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub(crate) enum Visibility {
-    Public,
-    // a backwards-compatible alias to unlisted
-    #[serde(rename = "unlisted")]
-    Hidden,
-    Unlisted,
-    Private,
-}
-
-impl Display for Visibility {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Visibility::Public => f.write_str("public"),
-            Visibility::Hidden | Visibility::Unlisted => f.write_str("unlisted"),
-            Visibility::Private => f.write_str("private"),
-        }
     }
 }
 

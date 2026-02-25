@@ -8,7 +8,7 @@ use crate::flakehub_client::Tarball;
 use crate::git_context::GitContext;
 use crate::github::graphql::{MAX_LABEL_LENGTH, MAX_NUM_TOTAL_LABELS};
 use crate::push_context::ExecutionEnvironment;
-use crate::Visibility;
+use crate::visibility::Visibility;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub(crate) struct ReleaseMetadata {
