@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use color_eyre::eyre::{eyre, Context as _, Result};
+use flake_schemas::InspectOutput;
 
 use crate::cli::FlakeHubPushCli;
 use crate::flake_info::FlakeMetadata;
@@ -14,7 +15,7 @@ use crate::Visibility;
 pub(crate) struct ReleaseMetadata {
     pub(crate) commit_count: usize,
     pub(crate) description: Option<String>,
-    pub(crate) outputs: serde_json::Value,
+    pub(crate) outputs: InspectOutput,
     pub(crate) raw_flake_metadata: serde_json::Value,
     pub(crate) readme: Option<String>,
     pub(crate) repo: String,
@@ -97,7 +98,7 @@ impl ReleaseMetadata {
         let release_metadata = ReleaseMetadata {
             commit_count,
             description,
-            outputs: flake_outputs.0,
+            outputs: flake_outputs,
             raw_flake_metadata: flake_metadata.metadata_json.clone(),
             readme,
             // TODO(colemickens): remove this confusing, redundant field (FH-267)

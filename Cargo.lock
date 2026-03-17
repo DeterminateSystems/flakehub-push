@@ -597,12 +597,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "flake-schemas"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca54907066da26f39064ff445820b27712070f5fe6fdeb53cadfea062148e11d"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror 2.0.12",
+]
+
+[[package]]
 name = "flakehub-push"
 version = "0.1.0"
 dependencies = [
  "base64 0.21.7",
  "clap",
  "color-eyre",
+ "flake-schemas",
  "flate2",
  "github-actions-oidc-claims",
  "gitlab",
