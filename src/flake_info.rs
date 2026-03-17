@@ -4,7 +4,7 @@ use std::{
 };
 
 use color_eyre::eyre::{eyre, Result, WrapErr};
-use flake_schemas::{InspectOutput, InspectOptions};
+use flake_schemas::{InspectOptions, InspectOutput};
 
 use crate::flakehub_client::Tarball;
 
