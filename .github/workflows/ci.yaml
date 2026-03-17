@@ -97,16 +97,16 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: DeterminateSystems/determinate-nix-action@main
-        if: ${{ github.event_name == 'merge_group' }}
+        # if: ${{ github.event_name == 'merge_group' }}
       - uses: DeterminateSystems/flakehub-cache-action@main
-        if: ${{ github.event_name == 'merge_group' }}
+        # if: ${{ github.event_name == 'merge_group' }}
 
       - run: |
           nix build -j0 .#
-        if: ${{ github.event_name == 'merge_group' }}
+        # if: ${{ github.event_name == 'merge_group' }}
 
       - name: Production test
-        if: ${{ github.event_name == 'merge_group' }}
+        # if: ${{ github.event_name == 'merge_group' }}
         uses: ./
         with:
           visibility: "hidden"
