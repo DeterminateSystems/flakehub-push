@@ -116,6 +116,7 @@ jobs:
           logger: "pretty"
           flakehub-push-binary: ./result/bin/flakehub-push
           _internal-strict-mode: true
+          include-output-paths: true
 
   PushToIDS:
     needs: ProductionTest

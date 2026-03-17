@@ -4,14 +4,10 @@ use std::{
 };
 
 use color_eyre::eyre::{eyre, Result, WrapErr};
-use serde::Deserialize;
-use tokio::io::AsyncWriteExt;
+use flake_schemas::{InspectOptions, InspectOutput};
 
 use crate::flakehub_client::Tarball;
 
-// The UUID embedded in our flake that we'll replace with the flake URL of the flake we're trying to
-// get outputs from.
-const FLAKE_URL_PLACEHOLDER_UUID: &str = "c9026fc0-ced9-48e0-aa3c-fc86c4c86df1";
 const README_FILENAME_LOWERCASE: &str = "readme.md";
 
 #[derive(Debug)]
@@ -21,9 +17,6 @@ pub struct FlakeMetadata {
     pub(crate) metadata_json: serde_json::Value,
     my_flake_is_too_big: bool,
 }
-
-#[derive(Debug, Deserialize)]
-pub struct FlakeOutputs(pub serde_json::Value);
 
 impl FlakeMetadata {
     pub async fn from_dir(directory: &Path, my_flake_is_too_big: bool) -> Result<Self> {
@@ -264,69 +257,15 @@ impl FlakeMetadata {
         Ok(tarball)
     }
 
-    pub async fn outputs(&self, include_output_paths: bool) -> Result<FlakeOutputs> {
+    pub async fn outputs(&self, include_output_paths: bool) -> Result<InspectOutput> {
         if self.my_flake_is_too_big {
-            return Ok(FlakeOutputs(serde_json::json!({})));
+            return Ok(InspectOutput::new());
         }
 
-        let tempdir = tempfile::Builder::new()
-            .prefix("flakehub_push_outputs")
-            .tempdir()
-            .wrap_err("Creating tempdir")?;
-        // NOTE(cole-h): Work around the fact that macOS's /tmp is a symlink to /private/tmp.
-        // Otherwise, Nix is unhappy:
-        // error:
-        //        … while fetching the input 'path:/tmp/nix-shell.q1H8OB/flakehub_push_outputsfG1YvC'
-        //
-        //        error: path '/tmp' is a symlink
-        let tempdir_path = tempdir.path().canonicalize()?;
+        let options = InspectOptions::new().with_output(include_output_paths);
 
-        let flake_contents = include_str!("flake-contents/flake.nix")
-            .replace(
-                FLAKE_URL_PLACEHOLDER_UUID,
-                &self.flake_locked_url.escape_default().to_string(),
-            )
-            .replace(
-                "INCLUDE_OUTPUT_PATHS",
-                if include_output_paths {
-                    "true"
-                } else {
-                    "false"
-                },
-            );
-
-        let mut flake = tokio::fs::File::create(tempdir_path.join("flake.nix")).await?;
-        flake.write_all(flake_contents.as_bytes()).await?;
-
-        let mut cmd = tokio::process::Command::new("nix");
-        cmd.arg("eval");
-        cmd.arg("--json");
-        cmd.arg("--no-write-lock-file");
-        cmd.arg(format!("{}#contents", tempdir_path.display()));
-        let output = cmd.output().await.wrap_err_with(|| {
-            eyre!(
-                "Failed to get flake outputs from tarball {}",
-                &self.flake_locked_url
-            )
-        })?;
-
-        if !output.status.success() {
-            return Err(eyre!(
-                "Failed to get flake outputs from tarball {}: {}",
-                &self.flake_locked_url,
-                String::from_utf8(output.stderr).unwrap()
-            ));
-        }
-
-        let output_json = serde_json::from_slice(&output.stdout).wrap_err_with(|| {
-            eyre!(
-                "Parsing flake outputs from {} as JSON: {}",
-                &self.flake_locked_url,
-                String::from_utf8(output.stdout).unwrap(),
-            )
-        })?;
-
-        Ok(output_json)
+        flake_schemas::inspect_with_options(&self.flake_locked_url, &options)
+            .wrap_err_with(|| eyre!("Parsing flake outputs from {}", self.flake_locked_url))
     }
 
     #[tracing::instrument(skip_all, fields(readme_dir))]
