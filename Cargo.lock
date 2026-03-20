@@ -598,9 +598,9 @@ dependencies = [
 
 [[package]]
 name = "flake-schemas"
-version = "0.2.1"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6b03a421492bf619876daa31c52b172a48af04cc837bc2576c6f2bb685a1768"
+checksum = "1afeee260aba421e91f6cc9f90afe77245c4497bb06f3c2e831c69d99bd37764"
 dependencies = [
  "serde",
  "serde_json",
