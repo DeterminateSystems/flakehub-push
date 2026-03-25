@@ -223,6 +223,7 @@ pub(crate) enum Visibility {
     Public,
     // a backwards-compatible alias to unlisted
     #[serde(alias = "hidden")]
+    #[value(alias("hidden"))]
     Unlisted,
     Private,
 }
