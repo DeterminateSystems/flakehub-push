@@ -222,8 +222,7 @@ async fn response_text(res: Response) -> String {
 pub(crate) enum Visibility {
     Public,
     // a backwards-compatible alias to unlisted
-    #[serde(rename = "unlisted")]
-    Hidden,
+    #[serde(alias = "hidden")]
     Unlisted,
     Private,
 }
@@ -232,7 +231,7 @@ impl Display for Visibility {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Visibility::Public => f.write_str("public"),
-            Visibility::Hidden | Visibility::Unlisted => f.write_str("unlisted"),
+            Visibility::Unlisted => f.write_str("unlisted"),
             Visibility::Private => f.write_str("private"),
         }
     }
