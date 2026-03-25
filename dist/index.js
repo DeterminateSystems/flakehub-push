@@ -50821,24 +50821,20 @@ function getOctokit(token, options, ...additionalPlugins) {
     return new GitHubWithPlugins(getOctokitOptions(token, options));
 }
 //# sourceMappingURL=github.js.map
-;// CONCATENATED MODULE: ./node_modules/detsys-ts/dist/chunk-C6wwvPpM.mjs
-//#region rolldown:runtime
+;// CONCATENATED MODULE: ./node_modules/detsys-ts/dist/chunk-CfYAbeIz.mjs
+//#region \0rolldown/runtime.js
 var __defProp = Object.defineProperty;
-var __export = (all, symbols) => {
+var __exportAll = (all, no_symbols) => {
 	let target = {};
-	for (var name in all) {
-		__defProp(target, name, {
-			get: all[name],
-			enumerable: true
-		});
-	}
-	if (symbols) {
-		__defProp(target, Symbol.toStringTag, { value: "Module" });
-	}
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
 	return target;
 };
-
 //#endregion
+
 
 ;// CONCATENATED MODULE: external "node:fs"
 const external_node_fs_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs");
@@ -104451,7 +104447,6 @@ const external_node_path_namespaceObject = __WEBPACK_EXTERNAL_createRequire(impo
 
 
 
-
 //#region src/linux-release-info.ts
 /*!
 * linux-release-info
@@ -104561,7 +104556,6 @@ function readSyncOsreleaseFile(releaseFileList, options) {
 	if (fileData === null) throw new Error("Cannot read os-release file!");
 	return formatFileData(getOsInfo(), fileData);
 }
-
 //#endregion
 //#region src/actions-core-platform.ts
 /**
@@ -104657,7 +104651,6 @@ async function dist_getDetails() {
 		isLinux: dist_isLinux
 	};
 }
-
 //#endregion
 //#region src/errors.ts
 /**
@@ -104668,7 +104661,6 @@ function stringifyError(e) {
 	else if (typeof e === "string") return e;
 	else return JSON.stringify(e);
 }
-
 //#endregion
 //#region src/backtrace.ts
 /**
@@ -104764,7 +104756,6 @@ async function collectBacktracesSystemd(prefixes, programNameDenyList, startTime
 	}
 	return backtraces;
 }
-
 //#endregion
 //#region src/correlation.ts
 const OPTIONAL_VARIABLES = ["INVOCATION_ID"];
@@ -104852,7 +104843,6 @@ function hashEnvironmentVariables(prefix, variables) {
 	}
 	return `${prefix}-${hash.digest("hex")}`;
 }
-
 //#endregion
 //#region src/ids-host.ts
 /**
@@ -104868,15 +104858,16 @@ const DEFAULT_TIMEOUT = 1e4;
 * Host information for install.determinate.systems.
 */
 var IdsHost = class {
-	constructor(idsProjectName, diagnosticsSuffix, runtimeDiagnosticsUrl) {
+	constructor(idsProjectName, diagnosticsSuffix, runtimeDiagnosticsUrl, timeout = DEFAULT_TIMEOUT) {
 		this.idsProjectName = idsProjectName;
 		this.diagnosticsSuffix = diagnosticsSuffix;
 		this.runtimeDiagnosticsUrl = runtimeDiagnosticsUrl;
 		this.client = void 0;
+		this.timeout = timeout;
 	}
 	async getGot(recordFailoverCallback) {
 		if (this.client === void 0) this.client = got.extend({
-			timeout: { request: DEFAULT_TIMEOUT },
+			timeout: { request: this.timeout },
 			retry: {
 				limit: Math.max((await this.getUrlsByPreference()).length, 3),
 				methods: ["GET", "HEAD"]
@@ -105017,20 +105008,20 @@ function weightedRandom(records) {
 	}
 	return result;
 }
-
 //#endregion
 //#region src/inputs.ts
 /**
 * @packageDocumentation
 * Helpers for getting values from an Action's configuration.
 */
-var inputs_exports = /* @__PURE__ */ __export({
+var inputs_exports = /* @__PURE__ */ __exportAll({
 	getArrayOfStrings: () => getArrayOfStrings,
 	getArrayOfStringsOrNull: () => getArrayOfStringsOrNull,
 	getBool: () => getBool,
 	getBoolOrUndefined: () => getBoolOrUndefined,
 	getMultilineStringOrNull: () => getMultilineStringOrNull,
 	getNumberOrNull: () => getNumberOrNull,
+	getNumberOrUndefined: () => getNumberOrUndefined,
 	getString: () => getString,
 	getStringOrNull: () => getStringOrNull,
 	getStringOrUndefined: () => getStringOrUndefined,
@@ -105087,6 +105078,14 @@ const getNumberOrNull = (name) => {
 	else return Number(value);
 };
 /**
+* Get a Number input from the Action's configuration by name, or undefined if it is unset.
+*/
+const getNumberOrUndefined = (name) => {
+	const value = getStringOrUndefined(name);
+	if (value === void 0) return;
+	return Number(value);
+};
+/**
 * Get a string input from the Action's configuration.
 */
 const getString = (name) => {
@@ -105108,14 +105107,13 @@ const getStringOrUndefined = (name) => {
 	if (value === "") return;
 	else return value;
 };
-
 //#endregion
 //#region src/platform.ts
 /**
 * @packageDocumentation
 * Helpers for determining system attributes of the current runner.
 */
-var platform_exports = /* @__PURE__ */ __export({
+var platform_exports = /* @__PURE__ */ __exportAll({
 	getArchOs: () => getArchOs,
 	getNixPlatform: () => getNixPlatform
 });
@@ -105147,7 +105145,6 @@ function getNixPlatform(archOs) {
 		throw new Error(`Cannot convert ArchOs (${archOs}) to a supported Nix platform.`);
 	}
 }
-
 //#endregion
 //#region src/sourcedef.ts
 function constructSourceParameters(legacyPrefix) {
@@ -105172,7 +105169,6 @@ function noisilyGetInput(suffix, legacyPrefix) {
 		return legacyInput;
 	} else return preferredInput;
 }
-
 //#endregion
 //#region src/index.ts
 /**
@@ -105253,7 +105249,7 @@ var DetSysAction = class {
 	}
 	constructor(actionOptions) {
 		this.actionOptions = makeOptionsConfident(actionOptions);
-		this.idsHost = new IdsHost(this.actionOptions.idsProjectName, actionOptions.diagnosticsSuffix, process.env["INPUT_DIAGNOSTIC-ENDPOINT"]);
+		this.idsHost = new IdsHost(this.actionOptions.idsProjectName, actionOptions.diagnosticsSuffix, process.env["INPUT_DIAGNOSTIC-ENDPOINT"], getNumberOrUndefined("timeout-request"));
 		this.exceptionAttachments = /* @__PURE__ */ new Map();
 		this.nixStoreTrust = "unknown";
 		this.strictMode = getBool("_internal-strict-mode");
@@ -105746,8 +105742,8 @@ var DetSysAction = class {
 		}
 		try {
 			const parsed = JSON.parse(output);
-			if (parsed.trusted === 1) this.nixStoreTrust = "trusted";
-			else if (parsed.trusted === 0) this.nixStoreTrust = "untrusted";
+			if (parsed.trusted === true || parsed.trusted === 1) this.nixStoreTrust = "trusted";
+			else if (parsed.trusted === false || parsed.trusted === 0) this.nixStoreTrust = "untrusted";
 			else if (parsed.trusted !== void 0) this.addFact(FACT_NIX_STORE_CHECK_ERROR, `Mysterious trusted value: ${JSON.stringify(parsed.trusted)}`);
 			this.addFact(FACT_NIX_STORE_VERSION, JSON.stringify(parsed.version));
 		} catch (e) {
@@ -105802,14 +105798,14 @@ function makeOptionsConfident(actionOptions) {
 			"determinate-nixd",
 			actionOptions.name
 		],
-		binaryNamesDenyList: actionOptions.binaryNamePrefixes ?? PROGRAM_NAME_CRASH_DENY_LIST
+		binaryNamesDenyList: actionOptions.binaryNamesDenyList ?? PROGRAM_NAME_CRASH_DENY_LIST
 	};
 	core_debug("idslib options:");
 	core_debug(JSON.stringify(finalOpts, void 0, 2));
 	return finalOpts;
 }
-
 //#endregion
+
 
 //# sourceMappingURL=index.mjs.map
 ;// CONCATENATED MODULE: ./dist/index.js
