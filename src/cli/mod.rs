@@ -131,6 +131,10 @@ pub(crate) struct FlakeHubPushCli {
     /// Write the tarball to a directory instead of pushing it to FlakeHub.
     #[clap(long, env = "FLAKEHUB_DEST_DIR", value_parser = PathBufToNoneParser, default_value = "")]
     pub(crate) dest_dir: OptionPathBuf,
+
+    /// The GitHub GraphQL API URL base.
+    #[clap(long, env = "FLAKEHUB_GITHUB_GRAPHQL_URL", value_parser = StringToNoneParser, default_value = "")]
+    pub(crate) github_graphql_url: OptionString,
 }
 
 #[derive(Clone, Debug)]
@@ -301,6 +305,14 @@ impl FlakeHubPushCli {
             if let Ok(env_val) = std::env::var(env_key) {
                 tracing::debug!(repository = %env_val, "Set via `${env_key}`");
                 self.tag.0 = Some(env_val);
+            }
+        }
+
+        if self.github_graphql_url.0.is_none() {
+            let env_key = "GITHUB_GRAPHQL_URL";
+            if let Ok(env_val) = std::env::var(env_key) {
+                tracing::debug!(repository = %env_val, "Set via `${env_key}`");
+                self.github_graphql_url.0 = Some(env_val);
             }
         }
     }
