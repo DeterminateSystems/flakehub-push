@@ -3,7 +3,6 @@
 use color_eyre::eyre::{eyre, WrapErr};
 use graphql_client::GraphQLQuery;
 
-pub(crate) const GITHUB_ENDPOINT: &str = "https://api.github.com/graphql";
 pub(crate) const MAX_LABEL_LENGTH: usize = 50;
 pub(crate) const MAX_NUM_TOTAL_LABELS: usize = 25;
 const MAX_NUM_EXTRA_TOPICS: i64 = 20;
@@ -25,6 +24,7 @@ impl GithubGraphqlDataQuery {
     ))]
     pub(crate) async fn get(
         reqwest_client: &reqwest::Client,
+        graphql_endpoint: &str,
         bearer_token: &str,
         project_owner: &str,
         project_name: &str,
@@ -39,11 +39,15 @@ impl GithubGraphqlDataQuery {
                 max_num_topics: MAX_NUM_EXTRA_TOPICS,
             };
 
-            tracing::debug!(?variables); // TODO remove
+            tracing::debug!(
+                ?variables,
+                graphql_endpoint,
+                "Building and sending GraphQL query"
+            );
 
             let query = GithubGraphqlDataQuery::build_query(variables);
             let reqwest_response = reqwest_client
-                .post(GITHUB_ENDPOINT)
+                .post(graphql_endpoint)
                 .bearer_auth(bearer_token)
                 .json(&query)
                 .send()

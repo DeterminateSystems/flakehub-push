@@ -96,8 +96,13 @@ impl PushContext {
                     .clone()
                     .expect("failed to get github token when running in GitHub Actions");
 
+                let Some(github_graphql_url) = cli.github_graphql_url.0.as_ref() else {
+                    return Err(eyre!("`--github-graphql-url` was not specified and could not be populated from the GITHUB_GRAPHQL_URL environment variable"));
+                };
+
                 let github_graphql_data_result = GithubGraphqlDataQuery::get(
                     &client,
+                    github_graphql_url,
                     &github_token,
                     &project_owner,
                     &project_name,
@@ -133,8 +138,13 @@ impl PushContext {
                     .clone()
                     .expect("failed to get github token when running locally");
 
+                let Some(github_graphql_url) = cli.github_graphql_url.0.as_ref() else {
+                    return Err(eyre!("`--github-graphql-url` was not specified and could not be populated from the GITHUB_GRAPHQL_URL environment variable"));
+                };
+
                 let github_graphql_data_result = GithubGraphqlDataQuery::get(
                     &client,
+                    github_graphql_url,
                     &github_token,
                     &project_owner,
                     &project_name,
