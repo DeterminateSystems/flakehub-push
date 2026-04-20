@@ -101,6 +101,23 @@
                 ."${pkgs.stdenv.system}" or null;
               CARGO_BUILD_RUSTFLAGS = "-C target-feature=+crt-static";
             }
+            // pkgs.lib.optionalAttrs pkgs.stdenv.isDarwin {
+              # The Darwin build links against Nix-store libiconv, baking the
+              # store path into the binary's load commands. When the artifact
+              # is distributed standalone (as this action does), that store
+              # path doesn't exist on the consumer's machine and dyld fails.
+              # Rewrite the reference to the system-provided libiconv, which
+              # is always present on macOS.
+              postInstall = ''
+                for bin in $(find "$out/bin" -type f); do
+                  linked=$(otool -L "$bin" | awk '/\/nix\/store\/.*libiconv.*\.dylib/ {print $1}') || true
+                  if [ -n "$linked" ]; then
+                    echo "Rewriting $bin: $linked -> /usr/lib/libiconv.2.dylib"
+                    install_name_tool -change "$linked" "/usr/lib/libiconv.2.dylib" "$bin"
+                  fi
+                done
+              '';
+            }
           );
         }
       );
