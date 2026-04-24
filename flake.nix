@@ -64,42 +64,54 @@
 
       packages = forAllSystems (
         { system, pkgs, ... }:
+        let
+          sharedAttrs = {
+            pname = "flakehub-push";
+            version = "0.1.0";
+            src = pkgs.craneLib.path (
+              builtins.path {
+                name = "flakehub-push-source";
+                path = inputs.self;
+                filter = (
+                  path: type:
+                  baseNameOf path != "ts"
+                  && baseNameOf path != "dist"
+                  && baseNameOf path != ".github"
+                  && path != "flake.nix"
+                );
+              }
+            );
+
+            buildInputs = pkgs.lib.optionals (pkgs.stdenv.isDarwin) (
+              with pkgs;
+              [
+                libiconv
+              ]
+            );
+          }
+          // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
+            CARGO_BUILD_TARGET =
+              {
+                "x86_64-linux" = "x86_64-unknown-linux-musl";
+                "aarch64-linux" = "aarch64-unknown-linux-musl";
+              }
+              ."${pkgs.stdenv.system}" or null;
+            CARGO_BUILD_RUSTFLAGS = "-C target-feature=+crt-static";
+          };
+        in
         rec {
           default = flakehub-push;
 
           flakehub-push = pkgs.craneLib.buildPackage (
-            {
-              pname = "flakehub-push";
-              version = "0.1.0";
-              src = pkgs.craneLib.path (
-                builtins.path {
-                  name = "determinate-nixd-source";
-                  path = inputs.self;
-                  filter = (
-                    path: type:
-                    baseNameOf path != "ts"
-                    && baseNameOf path != "dist"
-                    && baseNameOf path != ".github"
-                    && path != "flake.nix"
-                  );
-                }
-              );
-
-              buildInputs = pkgs.lib.optionals (pkgs.stdenv.isDarwin) (
-                with pkgs;
-                [
-                  libiconv
-                ]
-              );
-            }
-            // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
-              CARGO_BUILD_TARGET =
-                {
-                  "x86_64-linux" = "x86_64-unknown-linux-musl";
-                  "aarch64-linux" = "aarch64-unknown-linux-musl";
-                }
-                ."${pkgs.stdenv.system}" or null;
-              CARGO_BUILD_RUSTFLAGS = "-C target-feature=+crt-static";
+            sharedAttrs
+            // {
+              cargoArtifacts = pkgs.craneLib.buildDepsOnly sharedAttrs;
+              postFixup = pkgs.lib.optionalString pkgs.stdenv.isDarwin ''
+                install_name_tool -change \
+                  "$(otool -L $out/bin/flakehub-push | grep libiconv | awk '{print $1}')" \
+                  /usr/lib/libiconv.2.dylib \
+                  $out/bin/flakehub-push
+              '';
             }
           );
         }
