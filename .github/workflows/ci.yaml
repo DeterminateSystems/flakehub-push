@@ -22,12 +22,17 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
       - uses: DeterminateSystems/flake-checker-action@main
         with:
           fail-mode: true
+
       - if: success() || failure()
         uses: DeterminateSystems/determinate-nix-action@main
+
       - if: success() || failure()
         uses: DeterminateSystems/flakehub-cache-action@main
 
@@ -95,9 +100,13 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
       - uses: DeterminateSystems/determinate-nix-action@main
         if: ${{ github.event_name == 'merge_group' }}
+
       - uses: DeterminateSystems/flakehub-cache-action@main
         if: ${{ github.event_name == 'merge_group' }}
 
@@ -125,7 +134,9 @@ jobs:
       id-token: "write"
       contents: "read"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - uses: DeterminateSystems/determinate-nix-action@main
 
