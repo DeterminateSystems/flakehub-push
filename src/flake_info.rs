@@ -1,7 +1,4 @@
-use std::{
-    io::Write,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 use color_eyre::eyre::{eyre, Result, WrapErr};
 use flake_schemas::{InspectOptions, InspectOutput};
@@ -204,39 +201,52 @@ impl FlakeMetadata {
         };
         tracing::debug!("lastModified = {}", last_modified);
 
-        let mut tarball_builder = tar::Builder::new(vec![]);
+        let output = flate2::write::GzEncoder::new(vec![], flate2::Compression::default());
+        let output = std::io::BufWriter::new(output);
+        let mut tarball_builder = tar::Builder::new(output);
         tarball_builder.follow_symlinks(false);
-        tarball_builder.force_mtime(last_modified);
 
-        tracing::trace!("Creating tarball");
-        // `tar` works according to the current directory (yay)
-        // So we change dir and restory it after
-        // TODO: Fix this
         let source = &self.source_dir; // refactor to be known when we create struct with from_dir
-        let current_dir = std::env::current_dir().wrap_err("Could not get current directory")?;
-        std::env::set_current_dir(
-            source
-                .parent()
-                .ok_or_else(|| eyre!("Getting parent directory"))?,
-        )?;
-        let dirname = self
-            .source_dir
-            .file_name()
-            .ok_or_else(|| eyre!("No file name of directory"))?;
-        tarball_builder
-            .append_dir_all(dirname, dirname)
-            .wrap_err_with(|| eyre!("Adding `{}` to tarball", self.source_dir.display()))?;
-        std::env::set_current_dir(current_dir).wrap_err("Could not set current directory")?;
+        let parent = source
+            .parent()
+            .ok_or_else(|| eyre!("Source dir had no parent, cannot continue"))?;
+
+        tracing::trace!("Creating compressed tarball");
+        for entry in walkdir::WalkDir::new(source).sort_by_file_name() {
+            let entry = entry?;
+            let path = entry.path();
+            let subpath = path.strip_prefix(parent)?;
+
+            let metadata = path.symlink_metadata()?;
+
+            let mut header = tar::Header::new_gnu();
+            header.set_metadata_in_mode(&metadata, tar::HeaderMode::Deterministic);
+            header.set_mtime(last_modified);
+            header.set_uid(0);
+            header.set_gid(0);
+
+            if metadata.is_dir() {
+                tarball_builder.append_data(&mut header, subpath, std::io::Cursor::new([]))?;
+            } else if metadata.is_file() {
+                let src = std::fs::File::open(path).map(std::io::BufReader::new)?;
+                tarball_builder.append_data(&mut header, subpath, src)?;
+            } else if metadata.is_symlink() {
+                let target = path.read_link()?;
+                tarball_builder.append_link(&mut header, subpath, target)?;
+            } else {
+                tracing::warn!(?path, "Ignoring unexpected special file");
+                continue;
+            }
+        }
 
         let tarball = tarball_builder.into_inner().wrap_err("Creating tarball")?;
-        tracing::trace!("Created tarball, compressing...");
-        let mut gzip_encoder =
-            flate2::write::GzEncoder::new(vec![], flate2::Compression::default());
-        gzip_encoder
-            .write_all(&tarball[..])
-            .wrap_err("Adding tarball to gzip")?;
-        let compressed_tarball = gzip_encoder.finish().wrap_err("Creating gzip")?;
-        tracing::trace!("Compressed tarball");
+        tracing::trace!("Created tarball, finishing compression...");
+        let compressed_tarball = tarball
+            .into_inner()
+            .wrap_err("Creating gzip")?
+            .finish()
+            .wrap_err("Finalizing compression")?;
+        tracing::trace!("Finished tarball");
 
         let flake_tarball_hash = {
             let mut context = ring::digest::Context::new(&ring::digest::SHA256);
