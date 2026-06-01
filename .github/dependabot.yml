@@ -1,0 +1,35 @@
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci
+    labels:
+      - dependencies
+      - github-actions
+    ignore:
+      - dependency-name: DeterminateSystems/*
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
+      semver-minor-days: 7
+      semver-patch-days: 3
+    groups:
+      npm-deps:
+        patterns: ["*"]
+    labels:
+      - dependencies
+      - npm
