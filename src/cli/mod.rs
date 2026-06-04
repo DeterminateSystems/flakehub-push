@@ -31,6 +31,8 @@ pub(crate) struct FlakeHubPushCli {
     pub(crate) tag: OptionString,
     #[clap(long, env = "FLAKEHUB_PUSH_REV", value_parser = StringToNoneParser, default_value = "")]
     pub(crate) rev: OptionString,
+    #[clap(long, env = "FLAKEHUB_PUSH_ROLLING_MAJOR", value_parser = U64ToNoneParser, default_value = "")]
+    pub(crate) rolling_major: OptionU64,
     #[clap(long, env = "FLAKEHUB_PUSH_ROLLING_MINOR", value_parser = U64ToNoneParser, default_value = "")]
     pub(crate) rolling_minor: OptionU64,
     #[clap(long, env = "FLAKEHUB_PUSH_ROLLING", value_parser = EmptyBoolParser, default_value_t = false)]
@@ -405,21 +407,31 @@ impl FlakeHubPushCli {
     }
 
     pub(crate) fn release_version(&self, git_ctx: &GitContext) -> Result<String> {
-        let rolling_prefix_or_tag = match (self.rolling_minor.0.as_ref(), &self.tag.0) {
-            (Some(_), _) if !self.rolling => {
+        let rolling_prefix_or_tag = match (
+            self.rolling_major.0.as_ref(),
+            self.rolling_minor.0.as_ref(),
+            &self.tag.0,
+        ) {
+            (Some(_), None, _) | (None, Some(_), _) | (Some(_), Some(_), _) if !self.rolling => {
                 return Err(eyre!(
-                    "You must enable `rolling` to upload a release with a specific `rolling-minor`."
+                    "You must enable `rolling` to upload a release with a specific `rolling-major` and/or `rolling-minor`."
                 ));
             }
-            (Some(minor), _) => format!("0.{minor}"),
-            (None, _) if self.rolling => DEFAULT_ROLLING_PREFIX.to_string(),
-            (None, Some(tag)) => {
+            (None, Some(minor), _) => format!("0.{minor}"),
+            (Some(major), Some(minor), _) => format!("{major}.{minor}"),
+            (None, None, _) if self.rolling => DEFAULT_ROLLING_PREFIX.to_string(),
+            (None, None, Some(tag)) => {
                 let version_only = tag.strip_prefix('v').unwrap_or(tag);
                 // Ensure the version respects semver
                 semver::Version::from_str(version_only).wrap_err_with(|| eyre!("Failed to parse version `{tag}` as semver, see https://semver.org/ for specifications"))?;
                 tag.to_string()
             }
-            (None, None) => {
+            (Some(_), None, _) => {
+                return Err(eyre!(
+                    "You cannot set `--rolling-major` without `--rolling-minor`"
+                ));
+            }
+            (None, None, None) => {
                 return Err(eyre!("Could not determine tag or rolling minor version, `--tag`, `GITHUB_REF_NAME`, or `--rolling-minor` must be set"));
             }
         };
@@ -428,14 +440,15 @@ impl FlakeHubPushCli {
             return Err(eyre!("Could not determine commit count, this is normally determined via the `--git-root` argument or via the GitHub API"));
         };
 
-        let rolling_minor_with_postfix_or_tag = if self.rolling_minor.0.is_some() || self.rolling {
-            format!(
-                "{rolling_prefix_or_tag}.{}+rev-{}",
-                commit_count, git_ctx.revision_info.revision
-            )
-        } else {
-            rolling_prefix_or_tag.to_string() // This will always be the tag since `self.rolling_prefix` was empty.
-        };
+        let rolling_minor_with_postfix_or_tag =
+            if self.rolling_major.0.is_some() || self.rolling_minor.0.is_some() || self.rolling {
+                format!(
+                    "{rolling_prefix_or_tag}.{}+rev-{}",
+                    commit_count, git_ctx.revision_info.revision
+                )
+            } else {
+                rolling_prefix_or_tag.to_string() // This will always be the tag since `self.rolling_prefix` was empty.
+            };
 
         Ok(rolling_minor_with_postfix_or_tag)
     }
