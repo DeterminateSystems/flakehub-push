@@ -16,8 +16,7 @@ reqwest = { version = "0.12.3", default-features = false, features = ["rustls-tl
 serde = { version = "1.0.164", features = ["derive"] }
 serde_json = "1.0.97"
 gix = { version = "0.83.0", features = ["async-network-client", "serde"] }
-#tar = { version = "0.4.38", features = ["xattr"] }
-tar = { git = "https://github.com/DeterminateSystems/tar-rs.git", branch = "force-mtime", features = ["xattr"] }
+tar = { version = "0.4.46", features = ["xattr"] }
 flate2 = "1.0.26"
 tempfile = "3.6.0"
 ring = "0.17.14"
@@ -34,6 +33,7 @@ url = { version = "2.5.0", features = ["serde"] }
 http = "1.1.0"
 gitlab = "0.1706.0"
 flake-schemas = "0.3.0"
+walkdir = "2.5.0"
 
 [profile.release]
 strip = true  # Automatically strip symbols from the binary.

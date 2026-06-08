@@ -639,6 +639,7 @@ dependencies = [
  "tracing-subscriber",
  "url",
  "uuid",
+ "walkdir",
 ]
 
 [[package]]
@@ -3247,8 +3248,9 @@ dependencies = [
 
 [[package]]
 name = "tar"
-version = "0.4.40"
-source = "git+https://github.com/DeterminateSystems/tar-rs.git?branch=force-mtime#b25211be672398a005b39061ee35d28a2a3d7e8a"
+version = "0.4.46"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f6221d9a6003c78398e3b239969f352578258df48c8eb051caadae0015bc840"
 dependencies = [
  "filetime",
  "libc",
