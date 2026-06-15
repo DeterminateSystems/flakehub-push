@@ -108413,6 +108413,7 @@ var FlakeHubPushAction = class extends DetSysAction {
     this.rolling = inputs_exports.getBool("rolling");
     this.mirror = inputs_exports.getBool("mirror");
     this.name = inputs_exports.getStringOrNull("name");
+    this.rollingMajor = inputs_exports.getNumberOrNull("rolling-major");
     this.rollingMinor = inputs_exports.getNumberOrNull("rolling-minor");
   }
   async main() {
@@ -108458,6 +108459,9 @@ var FlakeHubPushAction = class extends DetSysAction {
     env.GITHUB_CONTEXT = JSON.stringify(github_context);
     if (this.name !== null) {
       env.FLAKEHUB_PUSH_NAME = this.name;
+    }
+    if (this.rollingMajor !== null) {
+      env.FLAKEHUB_PUSH_ROLLING_MAJOR = this.rollingMajor.toString();
     }
     if (this.rollingMinor !== null) {
       env.FLAKEHUB_PUSH_ROLLING_MINOR = this.rollingMinor.toString();

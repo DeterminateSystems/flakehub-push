@@ -26,6 +26,7 @@ type ExecutionEnvironment = {
   FLAKEHUB_PUSH_INCLUDE_OUTPUT_PATHS?: string;
   FLAKEHUB_PUSH_ROLLING?: string;
   FLAKEHUB_PUSH_MIRROR?: string;
+  FLAKEHUB_PUSH_ROLLING_MAJOR?: string;
   FLAKEHUB_PUSH_ROLLING_MINOR?: string;
   GITHUB_CONTEXT?: string;
 };
@@ -49,6 +50,7 @@ class FlakeHubPushAction extends DetSysAction {
   private rolling: boolean;
   private mirror: boolean;
   private name: string | null;
+  private rollingMajor: number | null;
   private rollingMinor: number | null;
 
   constructor() {
@@ -78,6 +80,7 @@ class FlakeHubPushAction extends DetSysAction {
     this.rolling = inputs.getBool("rolling");
     this.mirror = inputs.getBool("mirror");
     this.name = inputs.getStringOrNull("name");
+    this.rollingMajor = inputs.getNumberOrNull("rolling-major");
     this.rollingMinor = inputs.getNumberOrNull("rolling-minor");
   }
 
@@ -138,6 +141,10 @@ class FlakeHubPushAction extends DetSysAction {
 
     if (this.name !== null) {
       env.FLAKEHUB_PUSH_NAME = this.name;
+    }
+
+    if (this.rollingMajor !== null) {
+      env.FLAKEHUB_PUSH_ROLLING_MAJOR = this.rollingMajor.toString();
     }
 
     if (this.rollingMinor !== null) {
