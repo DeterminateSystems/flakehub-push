@@ -65,31 +65,29 @@
       packages = forAllSystems (
         { system, pkgs, ... }:
         let
+          lib = pkgs.lib;
+
           sharedAttrs = {
             pname = "flakehub-push";
             version = "0.1.0";
-            src = pkgs.craneLib.path (
-              builtins.path {
-                name = "flakehub-push-source";
-                path = inputs.self;
-                filter = (
-                  path: type:
-                  baseNameOf path != "ts"
-                  && baseNameOf path != "dist"
-                  && baseNameOf path != ".github"
-                  && path != "flake.nix"
-                );
-              }
-            );
+            src = lib.fileset.toSource {
+              root = ./.;
+              fileset = lib.fileset.unions [
+                ./Cargo.toml
+                ./Cargo.lock
+                ./.cargo
+                ./src
+              ];
+            };
 
-            buildInputs = pkgs.lib.optionals (pkgs.stdenv.isDarwin) (
+            buildInputs = lib.optionals (pkgs.stdenv.isDarwin) (
               with pkgs;
               [
                 libiconv
               ]
             );
           }
-          // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
+          // lib.optionalAttrs pkgs.stdenv.isLinux {
             CARGO_BUILD_TARGET =
               {
                 "x86_64-linux" = "x86_64-unknown-linux-musl";
@@ -106,7 +104,7 @@
             sharedAttrs
             // {
               cargoArtifacts = pkgs.craneLib.buildDepsOnly sharedAttrs;
-              postFixup = pkgs.lib.optionalString pkgs.stdenv.isDarwin ''
+              postFixup = lib.optionalString pkgs.stdenv.isDarwin ''
                 install_name_tool -change \
                   "$(otool -L $out/bin/flakehub-push | grep libiconv | awk '{print $1}')" \
                   /usr/lib/libiconv.2.dylib \
