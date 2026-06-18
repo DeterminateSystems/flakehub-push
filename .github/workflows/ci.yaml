@@ -85,8 +85,6 @@ jobs:
       visibility: public
       runner-map: |
         {
-          "aarch64-darwin": "namespace-profile-mac-m2-12c28g",
-          "aarch64-linux": "UbuntuLatest32Cores128GArm",
           "x86_64-linux": "UbuntuLatest32Cores128G"
         }
 
@@ -147,11 +145,11 @@ jobs:
           nix build -j0 .#packages.x86_64-linux.default
           cp -r ./result/bin/flakehub-push ./artifacts/X64-Linux
 
-          nix build -j0 .#packages.aarch64-linux.default
-          cp -r ./result/bin/flakehub-push ./artifacts/ARM64-Linux
+          # nix build -j0 .#packages.aarch64-linux.default
+          # cp -r ./result/bin/flakehub-push ./artifacts/ARM64-Linux
 
-          nix build -j0 .#packages.aarch64-darwin.default
-          cp -r ./result/bin/flakehub-push ./artifacts/ARM64-macOS
+          # nix build -j0 .#packages.aarch64-darwin.default
+          # cp -r ./result/bin/flakehub-push ./artifacts/ARM64-macOS
 
       - uses: DeterminateSystems/push-artifact-ids@main
         with:
