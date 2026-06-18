@@ -113,6 +113,12 @@ inputs:
   source-url:
     description: A URL pointing to a `flakehub-push` binary. Overrides all other `source-*` options.
     required: false
+  source-checksums-url:
+    description: wip
+    required: false
+  source-checksums-sha256:
+    description: wip
+    required: false
   _internal-strict-mode:
     description: Whether to fail when any errors are thrown. Used only to test the Action; do not set this in your own workflows.
     default: false

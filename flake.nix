@@ -133,6 +133,7 @@
                 cargo
 
                 nodejs_latest
+                typescript-language-server
                 bacon
 
                 self.formatter.${system}
