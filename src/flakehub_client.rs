@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use color_eyre::eyre::{eyre, Context, Result};
 use http::StatusCode;
 use reqwest::header::HeaderMap;
@@ -20,6 +22,7 @@ pub struct Tarball {
 #[derive(serde::Deserialize)]
 pub(crate) struct StageResult {
     pub(crate) s3_upload_url: String,
+    pub(crate) s3_upload_headers: HashMap<String, String>,
     pub(crate) uuid: Uuid,
 }
 
