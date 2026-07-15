@@ -125,7 +125,6 @@
               [
                 rustfmt
                 cargo-outdated
-                cargo-watch
                 rust-analyzer
                 rustc
                 cargo
