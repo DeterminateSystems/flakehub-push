@@ -1,7 +1,7 @@
 use std::{fmt::Display, io::IsTerminal, process::ExitCode};
 
 use clap::Parser;
-use color_eyre::eyre::{eyre, Result};
+use color_eyre::eyre::{eyre, Context as _, Result};
 use error::Error;
 use http::StatusCode;
 use reqwest::Response;
@@ -148,7 +148,7 @@ async fn execute() -> Result<std::process::ExitCode> {
                     let stage_result: StageResult = response
                         .json()
                         .await
-                        .map_err(|_| eyre!("Decoding release metadata POST response"))?;
+                        .context("Decoding release metadata POST response")?;
 
                     stage_result
                 }
@@ -192,8 +192,12 @@ async fn execute() -> Result<std::process::ExitCode> {
         }
     };
 
-    // upload tarball to s3
-    s3::upload_release_to_s3(stage_result.s3_upload_url, ctx.tarball).await?;
+    s3::upload_release_to_s3(
+        stage_result.s3_upload_url,
+        stage_result.s3_upload_headers,
+        ctx.tarball,
+    )
+    .await?;
 
     // "publish.rs" - publish the release after upload
     fhclient.release_publish(stage_result.uuid).await?;
