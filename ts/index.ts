@@ -28,6 +28,7 @@ type ExecutionEnvironment = {
   FLAKEHUB_PUSH_MIRROR?: string;
   FLAKEHUB_PUSH_ROLLING_MAJOR?: string;
   FLAKEHUB_PUSH_ROLLING_MINOR?: string;
+  FLAKEHUB_PUSH_SBOM_PATH?: string;
   GITHUB_CONTEXT?: string;
 };
 
@@ -52,6 +53,7 @@ class FlakeHubPushAction extends DetSysAction {
   private name: string | null;
   private rollingMajor: number | null;
   private rollingMinor: number | null;
+  private sbomPath: string | null;
 
   constructor() {
     super({
@@ -82,6 +84,7 @@ class FlakeHubPushAction extends DetSysAction {
     this.name = inputs.getStringOrNull("name");
     this.rollingMajor = inputs.getNumberOrNull("rolling-major");
     this.rollingMinor = inputs.getNumberOrNull("rolling-minor");
+    this.sbomPath = inputs.getStringOrNull("sbom-path");
   }
 
   async main(): Promise<void> {
@@ -149,6 +152,10 @@ class FlakeHubPushAction extends DetSysAction {
 
     if (this.rollingMinor !== null) {
       env.FLAKEHUB_PUSH_ROLLING_MINOR = this.rollingMinor.toString();
+    }
+
+    if (this.sbomPath !== null) {
+      env.FLAKEHUB_PUSH_SBOM_PATH = this.sbomPath.toString();
     }
 
     return env;

@@ -137,6 +137,10 @@ pub(crate) struct FlakeHubPushCli {
     /// The GitHub GraphQL API URL base.
     #[clap(long, env = "FLAKEHUB_GITHUB_GRAPHQL_URL", value_parser = StringToNoneParser, default_value = "")]
     pub(crate) github_graphql_url: OptionString,
+
+    /// Path to the SBOM for the uploaded flake.
+    #[clap(long, env = "FLAKEHUB_PUSH_SBOM_PATH", value_parser = PathBufToNoneParser, default_value = "")]
+    pub(crate) sbom_path: OptionPathBuf,
 }
 
 #[derive(Clone, Debug)]

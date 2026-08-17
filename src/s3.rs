@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
 use color_eyre::eyre::{eyre, Result, WrapErr};
-use http::header::{CONTENT_LENGTH, CONTENT_TYPE};
+use http::header::{CONTENT_ENCODING, CONTENT_LENGTH, CONTENT_TYPE};
 use http::{HeaderName, HeaderValue};
 use reqwest::header::HeaderMap;
 
-use crate::flakehub_client::Tarball;
+use crate::flakehub_client::{Sbom, Tarball};
 
 pub async fn upload_release_to_s3(
     presigned_s3_url: String,
@@ -25,6 +25,43 @@ pub async fn upload_release_to_s3(
         .put(presigned_s3_url)
         .headers(headers)
         .body(tarball.bytes)
+        .send()
+        .await
+        .wrap_err("Sending tarball PUT")?;
+
+    let tarball_put_response_status = tarball_put_response.status();
+    tracing::trace!(
+        status = tracing::field::display(tarball_put_response_status),
+        "Got tarball PUT response"
+    );
+    if !tarball_put_response_status.is_success() {
+        return Err(eyre!(
+            "Got {tarball_put_response_status} status from PUT request"
+        ));
+    }
+
+    Ok(())
+}
+
+pub async fn upload_sbom_to_s3(
+    presigned_s3_url: String,
+    s3_headers: HashMap<String, String>,
+    sbom: Sbom,
+) -> Result<()> {
+    let overrides: HashMap<&str, String> = HashMap::from_iter([
+        (CONTENT_LENGTH.as_str(), sbom.bytes.len().to_string()),
+        (CONTENT_ENCODING.as_str(), "zstd".to_string()),
+        (CONTENT_TYPE.as_str(), "application/json".to_string()),
+        ("x-amz-checksum-sha256", sbom.hash_base64),
+    ]);
+
+    let headers = build_headers(&s3_headers, &overrides)?;
+
+    let client = reqwest::Client::new();
+    let tarball_put_response = client
+        .put(presigned_s3_url)
+        .headers(headers)
+        .body(sbom.bytes)
         .send()
         .await
         .wrap_err("Sending tarball PUT")?;
