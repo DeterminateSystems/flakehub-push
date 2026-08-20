@@ -210,6 +210,56 @@ async fn execute() -> Result<std::process::ExitCode> {
 
     set_release_outputs(&ctx.upload_name, &ctx.release_version).await;
 
+    if let Some(sbom) = ctx.sbom {
+        let stage_result = fhclient
+            .sbom_stage(&ctx.upload_name, &ctx.release_version, &sbom)
+            .await;
+
+        let stage_result: StageResult = match stage_result {
+            Err(e) => {
+                return Err(e)?;
+            }
+            Ok(response) => {
+                let response_status = response.status();
+                match response_status {
+                    StatusCode::OK => {
+                        let stage_result: StageResult = response
+                            .json()
+                            .await
+                            .context("Decoding SBOM POST response")?;
+
+                        stage_result
+                    }
+                    StatusCode::UNAUTHORIZED => {
+                        return Err(Error::Unauthorized(response_text(response).await))?;
+                    }
+                    StatusCode::BAD_REQUEST => {
+                        return Err(Error::BadRequest(response_text(response).await))?;
+                    }
+                    _ => {
+                        return Err(eyre!(
+                            "\
+                            Status {} from SBOM POST\n\
+                            {}\
+                            ",
+                            response_status,
+                            response_text(response).await,
+                        ));
+                    }
+                }
+            }
+        };
+
+        s3::upload_sbom_to_s3(
+            stage_result.s3_upload_url,
+            stage_result.s3_upload_headers,
+            sbom,
+        )
+        .await?;
+
+        fhclient.sbom_publish(stage_result.uuid).await?;
+    }
+
     Ok(ExitCode::SUCCESS)
 }
 

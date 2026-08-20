@@ -1,9 +1,14 @@
 use color_eyre::eyre::{eyre, Context, Result};
 
 use crate::{
-    build_http_client, cli::FlakeHubPushCli, flakehub_auth_fake, flakehub_client::Tarball,
-    git_context::GitContext, github::graphql::GithubGraphqlDataQuery,
-    release_metadata::ReleaseMetadata, revision_info::RevisionInfo,
+    build_http_client,
+    cli::FlakeHubPushCli,
+    flakehub_auth_fake,
+    flakehub_client::{Sbom, Tarball},
+    git_context::GitContext,
+    github::graphql::GithubGraphqlDataQuery,
+    release_metadata::ReleaseMetadata,
+    revision_info::RevisionInfo,
 };
 
 #[derive(Clone)]
@@ -46,6 +51,7 @@ pub(crate) struct PushContext {
     // the goods
     pub(crate) metadata: ReleaseMetadata,
     pub(crate) tarball: Tarball,
+    pub(crate) sbom: Option<Sbom>,
 }
 
 impl PushContext {
@@ -181,6 +187,38 @@ impl PushContext {
         let (release_metadata, flake_tarball) =
             ReleaseMetadata::new(cli, &git_ctx, Some(&exec_env)).await?;
 
+        let sbom = if let Some(sbom_path) = &cli.sbom_path.0 {
+            let sbom_string = tokio::fs::read_to_string(sbom_path)
+                .await
+                .context("reading SBOM path to string")?;
+            let _: serde_json::Value =
+                serde_json::from_str(&sbom_string).context("validating SBOM is JSON")?;
+            let compressed_sbom = tokio::task::spawn_blocking(move || {
+                zstd::stream::encode_all(sbom_string.as_bytes(), 9)
+            })
+            .await
+            .context("spawn_blocking failed")?
+            .context("zstd compression failed")?;
+
+            let sbom_hash = {
+                let mut context = ring::digest::Context::new(&ring::digest::SHA256);
+                context.update(&compressed_sbom);
+                context.finish()
+            };
+            let sbom_hash_base64 = {
+                // TODO: Use URL_SAFE_NO_PAD
+                use base64::{engine::general_purpose::STANDARD, Engine as _};
+                STANDARD.encode(sbom_hash)
+            };
+
+            Some(Sbom {
+                hash_base64: sbom_hash_base64,
+                bytes: compressed_sbom,
+            })
+        } else {
+            None
+        };
+
         let ctx = Self {
             flakehub_host: cli.host.clone(),
             token_context,
@@ -192,6 +230,7 @@ impl PushContext {
 
             metadata: release_metadata,
             tarball: flake_tarball,
+            sbom,
         };
 
         Ok(ctx)
@@ -214,6 +253,7 @@ impl PushContext {
             error_if_release_conflicts,
             metadata,
             tarball,
+            sbom,
         } = self;
 
         let (token, token_context) = match token_context {
@@ -261,6 +301,7 @@ impl PushContext {
             error_if_release_conflicts,
             metadata,
             tarball,
+            sbom,
         };
 
         Ok((token, ctx))
