@@ -87,6 +87,10 @@ inputs:
     description: Whether to register the output paths of each flake output with FlakeHub.
     required: false
     default: false
+  sbom-path:
+    description: The path to the SBOM for this flake.
+    required: false
+    default: ""
 
   my-flake-is-too-big:
     description: Please read the source code of flakehub-push before using this.

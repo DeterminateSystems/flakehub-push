@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use color_eyre::eyre::{eyre, Context, Result};
+use http::header::CONTENT_ENCODING;
 use http::StatusCode;
 use reqwest::header::HeaderMap;
 use reqwest::Response;
@@ -15,6 +16,11 @@ pub struct FlakeHubClient {
 }
 
 pub struct Tarball {
+    pub hash_base64: String,
+    pub bytes: Vec<u8>,
+}
+
+pub struct Sbom {
     pub hash_base64: String,
     pub bytes: Vec<u8>,
 }
@@ -94,6 +100,68 @@ impl FlakeHubClient {
 
     pub async fn release_publish(&self, release_uuidv7: Uuid) -> Result<()> {
         let relative_url = format!("publish/{}", release_uuidv7);
+        let publish_post_url = self.host.join(&relative_url)?;
+
+        tracing::debug!(url = %publish_post_url, "Computed publish POST URL");
+
+        let publish_response = self
+            .client
+            .post(publish_post_url)
+            .bearer_auth(&self.bearer_token)
+            .headers(flakehub_headers())
+            .send()
+            .await
+            .wrap_err("Publishing release")?;
+
+        let publish_response_status = publish_response.status();
+        tracing::trace!(
+            status = tracing::field::display(publish_response_status),
+            "Got publish POST response"
+        );
+
+        if publish_response_status != StatusCode::OK {
+            return Err(eyre!(
+                "\
+                    Status {publish_response_status} from publish POST\n\
+                    {}\
+                ",
+                String::from_utf8_lossy(&publish_response.bytes().await.unwrap())
+            ));
+        }
+
+        Ok(())
+    }
+
+    pub async fn sbom_stage(
+        &self,
+        upload_name: &str,
+        release_version: &str,
+        sbom: &Sbom,
+    ) -> Result<Response> {
+        let sbom_hash_base64 = &sbom.hash_base64;
+        let sbom_len = sbom.bytes.len();
+        let relative_url =
+            format!("sbom/upload/{upload_name}/{release_version}/{sbom_len}/{sbom_hash_base64}");
+
+        let sbom_post_url = self.host.join(&relative_url)?;
+
+        tracing::debug!(
+            url = %sbom_post_url,
+            "Computed release metadata POST URL"
+        );
+
+        self.client
+            .post(sbom_post_url)
+            .bearer_auth(&self.bearer_token)
+            .headers(flakehub_headers())
+            .header(CONTENT_ENCODING, "zstd")
+            .send()
+            .await
+            .wrap_err("Publishing release")
+    }
+
+    pub async fn sbom_publish(&self, sbom_uuidv7: Uuid) -> Result<()> {
+        let relative_url = format!("sbom/publish/{}", sbom_uuidv7);
         let publish_post_url = self.host.join(&relative_url)?;
 
         tracing::debug!(url = %publish_post_url, "Computed publish POST URL");

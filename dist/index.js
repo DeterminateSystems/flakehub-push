@@ -116812,6 +116812,7 @@ var FlakeHubPushAction = class extends DetSysAction {
     this.name = inputs_exports.getStringOrNull("name");
     this.rollingMajor = inputs_exports.getNumberOrNull("rolling-major");
     this.rollingMinor = inputs_exports.getNumberOrNull("rolling-minor");
+    this.sbomPath = inputs_exports.getStringOrNull("sbom-path");
   }
   async main() {
     await this.pushFlakeToFlakeHub();
@@ -116862,6 +116863,9 @@ var FlakeHubPushAction = class extends DetSysAction {
     }
     if (this.rollingMinor !== null) {
       env.FLAKEHUB_PUSH_ROLLING_MINOR = this.rollingMinor.toString();
+    }
+    if (this.sbomPath !== null) {
+      env.FLAKEHUB_PUSH_SBOM_PATH = this.sbomPath.toString();
     }
     return env;
   }
