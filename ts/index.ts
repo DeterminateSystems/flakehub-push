@@ -181,10 +181,6 @@ class FlakeHubPushAction extends DetSysAction {
           ? this.sourceBinary
           : await this.fetchExecutable();
 
-      log.debug(
-        `execution environment: ${JSON.stringify(executionEnv, null, 2)}`,
-      );
-
       const exitCode = await actionsExec.exec(flakeHubPushBinary, [], {
         ignoreReturnCode: true,
         env: {
