@@ -171733,8 +171733,10 @@ var FlakeHubPushAction = class extends DetSysAction {
         ignoreReturnCode: true,
         env: {
           ...executionEnv,
-          ...process.env
+          ...process.env,
           // To get PATH, etc.
+          // Let flakehub-push's own telemetry join this Action's trace.
+          ...await this.getTelemetryEnvironment()
         }
       });
       span.setAttribute(ATTR_EXIT_CODE, exitCode);
