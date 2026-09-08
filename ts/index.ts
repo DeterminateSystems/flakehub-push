@@ -1,11 +1,16 @@
-import * as actionsCore from "@actions/core";
 import * as actionsExec from "@actions/exec";
 import * as actionsGithub from "@actions/github";
-import { DetSysAction, inputs } from "@determinate-systems/detsys-ts";
+import {
+  DetSysAction,
+  inputs,
+  log,
+  withSpan,
+} from "@determinate-systems/detsys-ts";
 
-const EVENT_EXECUTION_FAILURE = "execution_failure";
+const EVENT_EXECUTION_FAILURE = "detsys.execution_failure";
 
-const FACT_PUSH_ATTEMPT_FROM_PR = "push_attempt_from_pr";
+const ATTR_EXIT_CODE = "detsys.exit_code";
+const ATTR_PUSH_ATTEMPT_FROM_PR = "detsys.flakehub_push.push_attempt_from_pr";
 
 type ExecutionEnvironment = {
   FLAKEHUB_PUSH_VISIBILITY?: string;
@@ -162,41 +167,42 @@ class FlakeHubPushAction extends DetSysAction {
   }
 
   async pushFlakeToFlakeHub(): Promise<void> {
-    if (actionsGithub.context.payload.pull_request) {
-      actionsCore.setFailed(
-        "flakehub-push cannot be triggered from pull requests",
-      );
-      this.addFact(FACT_PUSH_ATTEMPT_FROM_PR, true);
-      return;
-    }
+    return await withSpan("push_flake_to_flakehub", async (span) => {
+      if (actionsGithub.context.payload.pull_request) {
+        this.setAttribute(ATTR_PUSH_ATTEMPT_FROM_PR, true);
+        log.setFailed("flakehub-push cannot be triggered from pull requests");
+        return;
+      }
 
-    const executionEnv = this.executionEnvironment();
+      const executionEnv = this.executionEnvironment();
 
-    const flakeHubPushBinary =
-      this.sourceBinary !== null
-        ? this.sourceBinary
-        : await this.fetchExecutable();
+      const flakeHubPushBinary =
+        this.sourceBinary !== null
+          ? this.sourceBinary
+          : await this.fetchExecutable();
 
-    actionsCore.debug(
-      `execution environment: ${JSON.stringify(executionEnv, null, 2)}`,
-    );
+      const exitCode = await actionsExec.exec(flakeHubPushBinary, [], {
+        ignoreReturnCode: true,
+        env: {
+          ...executionEnv,
+          ...process.env, // To get PATH, etc.
 
-    const exitCode = await actionsExec.exec(flakeHubPushBinary, [], {
-      ignoreReturnCode: true,
-      env: {
-        ...executionEnv,
-        ...process.env, // To get PATH, etc.
-      },
-    });
-
-    if (exitCode !== 0) {
-      this.recordEvent(EVENT_EXECUTION_FAILURE, {
-        exitCode,
+          // Let flakehub-push's own telemetry join this Action's trace.
+          ...(await this.getTelemetryEnvironment()),
+        },
       });
-      actionsCore.setFailed(`non-zero exit code of ${exitCode} detected`);
-    } else {
-      actionsCore.info(`Flake release was successfully published`);
-    }
+
+      span.setAttribute(ATTR_EXIT_CODE, exitCode);
+
+      if (exitCode !== 0) {
+        this.addEvent(EVENT_EXECUTION_FAILURE, {
+          [ATTR_EXIT_CODE]: exitCode,
+        });
+        log.setFailed(`non-zero exit code of ${exitCode} detected`);
+      } else {
+        log.info(`Flake release was successfully published`);
+      }
+    });
   }
 }
 
