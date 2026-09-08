@@ -171726,9 +171726,6 @@ var FlakeHubPushAction = class extends DetSysAction {
       }
       const executionEnv = this.executionEnvironment();
       const flakeHubPushBinary = this.sourceBinary !== null ? this.sourceBinary : await this.fetchExecutable();
-      log_exports.debug(
-        `execution environment: ${JSON.stringify(executionEnv, null, 2)}`
-      );
       const exitCode = await exec_exec(flakeHubPushBinary, [], {
         ignoreReturnCode: true,
         env: {
