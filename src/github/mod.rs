@@ -44,12 +44,12 @@ pub(crate) fn print_unauthenticated_error() {
         if owner.kind == GITHUB_ACTOR_TYPE_USER {
             msg = format!(
                 "::error title=FlakeHub registration required.::Please create an account for {} on FlakeHub.com to publish flakes.",
-                &owner.login
+                owner.login
             );
         } else if owner.kind == GITHUB_ACTOR_TYPE_ORGANIZATION {
             msg = format!(
                 "::error title=FlakeHub registration required.::Please create an organization for {} on FlakeHub.com to publish flakes.",
-                &owner.login
+                owner.login
             );
         }
     };
