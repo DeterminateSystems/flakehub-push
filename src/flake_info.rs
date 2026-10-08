@@ -137,7 +137,7 @@ impl FlakeMetadata {
                     String::new()
                 }
             );
-            return Err(eyre!(msg))?;
+            return Err(eyre!(msg));
         }
 
         Ok(())
@@ -183,7 +183,7 @@ impl FlakeMetadata {
                         String::new()
                     }
                 );
-                return Err(eyre!(msg))?;
+                return Err(eyre!(msg));
             }
         }
         Ok(())
